@@ -1,0 +1,33 @@
+appId: com.thai2d3d.desktop
+productName: Thai2D3D
+copyright: Thai2D3D
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - main.js
+  - preload.js
+  - scripts/**
+  - package.json
+
+extraResources:
+  - from: stage/laravel
+    to: laravel
+  - from: stage/php
+    to: php
+
+linux:
+  target:
+    - AppImage
+  category: Office
+  syncDesktopName: true
+  # Maintainer field is required by some AppImage tooling.
+
+win:
+  target:
+    - portable
+
+asar: true
+publish: null

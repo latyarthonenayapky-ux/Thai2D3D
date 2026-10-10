@@ -1,0 +1,21 @@
+{
+  "name": "thai2d3d-desktop",
+  "productName": "Thai2D3D",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Native desktop wrapper (Windows .exe + Linux .AppImage) for the Thai2D3D web app.",
+  "main": "main.js",
+  "desktopName": "com.thai2d3d.desktop.desktop",
+  "author": "Thai2D3D",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "npm run dist:linux && npm run dist:win",
+    "dist:linux": "node scripts/prepare.js linux && electron-builder --linux AppImage --config.directories.output=dist/standalone-linux --publish never",
+    "dist:win": "node scripts/download-php-win.js && node scripts/prepare.js win && electron-builder --win portable --config.directories.output=dist/standalone-win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  }
+}

@@ -1,59 +1,61 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Thai2D3D
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Thai2D3D သည် 2D နေ့စဉ် Round များနှင့် 3D လစဉ် Draw များအတွက် sales entry,
+Agent စီမံခန့်ခွဲမှု၊ ရလဒ်၊ settlement နှင့် summary များကို စီမံသည့် application
+ဖြစ်သည်။
 
-## About Laravel
+## ယခု Linux ကွန်ပျူတာပေါ်တွင် ဖွင့်သုံးရန်
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Linux x86-64 အတွက် standalone AppImage ကို ဤ project folder ၏ root တွင်
+ထားပေးထားသည်။
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+**ဖွင့်ရန် — `Thai2D3D-1.1.0.AppImage` ကို File Manager မှ double-click နှိပ်ပါ။**
+ဖိုင်ကို executable အဖြစ်ပြင်ဆင်ထားပြီး PHP သို့မဟုတ် Composer ကို သီးခြား
+install လုပ်ရန်မလိုပါ။ ပထမဆုံးဖွင့်ချိန်တွင် Owner အမည်၊ email နှင့်
+အနည်းဆုံး 12 လုံးရှိသော password ဖြင့် local Owner account တည်ဆောက်ပါ။
+နောက်တစ်ကြိမ်ဖွင့်လျှင် အဲဒီ account ဖြင့် login ဝင်ပါ။
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+File Manager က launch ခွင့်မပေးလျှင် ဖိုင်ပေါ် right-click → **Properties** →
+**Permissions** ထဲက executable/run ခွင့်ကို ဖွင့်ပြီး double-click ပြန်နှိပ်ပါ။
+လိုအပ်လျှင် Terminal မှ တစ်ကြိမ်သာ အောက်ပါအတိုင်းဖွင့်နိုင်သည်။
 
-## Learning Laravel
+```sh
+chmod +x ./Thai2D3D-1.1.0.AppImage
+./Thai2D3D-1.1.0.AppImage
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+App ပိတ်ရန် window ကိုပိတ်ပါ။ Local SQLite database နှင့် app data ကို
+`~/.config/Thai2D3D/` အောက်တွင် သိမ်းထားသည်။ Backup/restore မလုပ်မီ app ကို
+အရင်ပိတ်ပါ။ ဒီ standalone build ၏ database သည် ဒီကွန်ပျူတာပေါ်မှာသာရှိပြီး
+VPS/online server သို့ အလိုအလျောက် sync မလုပ်ပါ။
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**Windows:** portable offline app ကို
+`Thai2D3D-1.1.0-Windows.exe` အမည်ဖြင့် build လုပ်ထားသည်။ Windows 10/11 x64
+ကွန်ပျူတာတွင် double-click ဖြင့်ဖွင့်နိုင်ပြီး ပထမဆုံးအကြိမ်တွင် local Owner
+account တည်ဆောက်ပါ။ PHP/Composer ကို သီးခြား install လုပ်စရာမလိုပါ။
+PHP runtime အတွက် Microsoft Visual C++ 2015–2022 Redistributable (x64)
+မရှိသေးသော Windows ကွန်ပျူတာတွင် ၎င်းကို ထပ်မံတပ်ဆင်ရန် လိုနိုင်သည်။
+ဤ `.exe` တွင် code-signing certificate မပါသောကြောင့် Windows SmartScreen
+သတိပေးချက် ပြနိုင်သည်။ ယခင် `1.0.0.exe` သည် online
+website wrapper အဟောင်းဖြစ်ပြီး standalone offline app မဟုတ်ပါ။
 
-## Laravel Sponsors
+## စာရွက်စာတမ်း
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- [Burmese User Manual](docs/USER_MANUAL_MM.md) — login, role, 2D/3D sales,
+  settings, results, settlement နှင့် offline queue
+- [VPS Setup Guide](docs/VPS_SETUP_MM.md) — Ubuntu, MySQL, PHP, HTTPS,
+  scheduler, Owner စတင်ဖန်တီးခြင်း၊ backup နှင့် update
+- [Production Go-live Checklist](docs/production-deployment.md)
+- [Desktop App Guide](desktop/README.md)
 
-### Premium Partners
+## VPS နှင့် Desktop အကြား အရေးကြီးသော ကွာခြားချက်
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+AppImage သည် ကွန်ပျူတာတစ်လုံးချင်းစီအတွက် သီးခြား local SQLite app ဖြစ်သည်။
+VPS deployment သည် internet မှဝင်သုံးသည့် Laravel web app ဖြစ်ပြီး VPS ပေါ်ရှိ
+MySQL database ကို အသုံးပြုသည်။ AppImage မှ VPS သို့ database sync လုပ်ပေးသည့်
+feature မပါဝင်ပါ။ VPS ကို setup လုပ်မည့်အခါ User Manual ထဲက online server
+လမ်းကြောင်းကို လိုက်နာပါ။
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+ဤ folder ထဲတွင် ရှိပြီးသား `.env` နှင့် local database configuration ကို
+အစားမထိုးပါနှင့်။ Source code ပြင်ဆင်ခြင်း သို့မဟုတ် server deployment ပြုလုပ်ရန်
+[VPS Setup Guide](docs/VPS_SETUP_MM.md) ကိုလိုက်နာပါ။

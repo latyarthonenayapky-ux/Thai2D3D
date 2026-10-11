@@ -28,6 +28,7 @@ return [
 
     'env' => env('APP_ENV', 'production'),
     'desktop_mode' => env('THAI2D3D_DESKTOP', false),
+    'currency' => env('CURRENCY', 'MMK'),
 
     /*
     |--------------------------------------------------------------------------

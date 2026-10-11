@@ -45,7 +45,7 @@ class UserController extends Controller
                 'required',
                 Rule::in($actor->isOwner() ? ['admin', 'temp_admin'] : ['operator']),
             ],
-            'password' => ['nullable', 'string', 'confirmed', 'min:12'],
+            'password' => ['nullable', 'string', 'confirmed', 'min:6', 'max:255'],
         ]);
 
         $newUser = DB::transaction(function () use ($validated, $actor): User {

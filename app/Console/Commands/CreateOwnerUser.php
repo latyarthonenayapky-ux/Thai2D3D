@@ -26,7 +26,7 @@ class CreateOwnerUser extends Command
 
         $name = $this->ask('Owner name');
         $email = $this->ask('Owner email');
-        $password = $this->secret('Password (at least 12 characters)');
+        $password = $this->secret('Password (at least 6 characters)');
         $confirmation = $this->secret('Confirm password');
 
         $validator = Validator::make([
@@ -37,7 +37,7 @@ class CreateOwnerUser extends Command
         ], [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(12)],
+            'password' => ['required', 'confirmed', Password::min(6)->max(255)],
         ]);
 
         if ($validator->fails()) {

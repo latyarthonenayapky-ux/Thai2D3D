@@ -5,7 +5,7 @@
 
 | အမျိုးအစား | အသုံးပြုရာ | Database |
 |---|---|---|
-| Standalone AppImage | Linux ကွန်ပျူတာတစ်လုံးတွင် offline သုံးရန် | ထိုကွန်ပျူတာ၏ SQLite |
+| Standalone App (Linux/Windows) | Linux သို့မဟုတ် Windows ကွန်ပျူတာတစ်လုံးတွင် offline သုံးရန် | ထိုကွန်ပျူတာ၏ SQLite |
 | VPS Web App | Internet ရှိသည့်နေရာမှ browser ဖြင့်အသုံးပြုရန် | VPS ၏ MySQL |
 
 AppImage နှင့် VPS database များ **သီးခြားစီ** ဖြစ်ပြီး တစ်ခုမှတစ်ခုသို့
@@ -16,12 +16,26 @@ AppImage နှင့် VPS database များ **သီးခြားစီ
 
 ### Linux standalone AppImage
 
-1. Project folder ထဲရှိ `Thai2D3D-1.1.0.AppImage` ကို double-click နှိပ်ပါ။
-2. ပထမဆုံးစတင်ချိန်တွင် Owner အမည်၊ email နှင့် အနည်းဆုံး 12 လုံးရှိသော
-   password ဖြည့်ပြီး local Owner account ဖန်တီးပါ။
+1. `release/Linux/` folder ထဲရှိ `Thai2D3D-1.1.0.AppImage` ကို double-click နှိပ်ပါ။
+2. ပထမဆုံးစတင်ချိန်တွင် Owner အမည်၊ email နှင့် အနည်းဆုံး 6 လုံးရှိသော
+   password ဖြည့်ပါ (Step 1)။ ထို့နောက် မိမိထည့်သွင်းလိုသော email ကို
+   ဆော့ဖ်ဝဲပေးသူထံ ပေးပို့၍ ရယူထားသော Install pass key — ထို email
+   အတွက် ထုတ်ပေးထားသည့် key — ကို Step 2 တွင် ဖြည့်ပြီး local Owner
+   account ဖန်တီးပါ။ Key မမှန်လျှင် account ဖန်တီးမည်မဟုတ်ပါ။
 3. နောက်တစ်ကြိမ်ဖွင့်ရာတွင် အဲဒီ email/password ဖြင့် login ဝင်ပါ။
 4. App ပိတ်ချိန် window ကိုပိတ်ပါ။ Data ကို `~/.config/Thai2D3D/` အောက်တွင်
    ထိန်းသိမ်းထားသည်။
+
+### Windows portable app
+
+1. `release/Windows/` folder ထဲရှိ `Start Thai2D3D.cmd` ကို double-click နှိပ်ပါ
+   (သို့မဟုတ် အတွင်းရှိ `Thai2D3D\Thai2D3D.exe` ကို တိုက်ရိုက် double-click)။
+   Folder ကို အခြား computer သို့ ကူးယူသွားလျှင်လည်း အလုပ်လုပ်ပါသည်။
+2. ပထမဆုံးစတင်ချိန်တွင် Owner အမည်၊ email နှင့် အနည်းဆုံး 6 လုံး password
+   ဖြည့်ပါ (Step 1)။ ထို့နောက် ထို email အတွက် ရယူထားသော Install pass key
+   ကို Step 2 တွင် ဖြည့်ပါ။ Key မမှန်လျှင် account ဖန်တီးမည်မဟုတ်ပါ။
+3. Data ကို `%APPDATA%\Thai2D3D\` အောက်တွင် ထိန်းသိမ်းထားသည်။ Backup
+   မလုပ်မီ app ကို အရင်ပိတ်ပါ။
 
 ### VPS Web App
 
@@ -66,7 +80,7 @@ limit, settlement နှင့် report များကို သက်ဆိ�
 
 1. Owner **User access** မှ Admin account ဖန်တီးပါ။
 2. Admin ဖြင့် login ဝင်ပြီး User access မှ Operator account များ ဖန်တီးပါ။
-   Password သည် အနည်းဆုံး 12 လုံးရှိရမည်။
+   Password သည် အနည်းဆုံး 6 လုံးရှိရမည်။
 3. **2D Settings → Agents and 2D Round assignments** မှ Agent code, အမည်,
    optional phone နှင့် 2D commission ထည့်ပါ။
 4. **3D Settings** မှ Agent တစ်ခုချင်းစီ၏ 3D commission ကို သီးခြားသတ်မှတ်ပါ။

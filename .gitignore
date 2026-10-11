@@ -27,8 +27,7 @@ Thumbs.db
 .history/
 
 # Local desktop builds and downloaded runtimes
-/Thai2D3D-1.1.0.AppImage
-/Thai2D3D-1.1.0-Windows.exe
+/release/
 /php-8.3.3-nts-Win32-vs16-x64.zip
 /.qoder/
 /workspaces_*.md

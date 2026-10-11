@@ -32,6 +32,16 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        if ($request->user()->isExpired()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'This temporary account has expired.',
+            ]);
+        }
+
         $request->session()->regenerate();
 
         return redirect()->route($request->user()->isAdmin() || $request->user()->isOperator()

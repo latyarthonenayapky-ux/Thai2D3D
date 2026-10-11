@@ -69,6 +69,7 @@
         <p>2D Number Limit blocks listed values (00–99) per Round; it is not a sales-count cap. Hot Numbers are also managed per Round.</p>
         @if($rounds->isEmpty())
             <p class="muted">Daily Rounds will be generated after saving the schedule. Blocked 2D values are configured per Round using the Number Limit.</p>
+            <p class="muted">If this list stays empty after saving, the Laravel scheduler is not running. On a VPS run it with cron every minute (see <code>docs/VPS_SETUP_MM.md</code> §7): <code>* * * * * cd /var/www/thai2d3d &amp;&amp; /usr/bin/php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code></p>
         @else
             <form method="GET" action="{{ route('admin.settings.index') }}" class="row">
                 <label for="round_id" style="margin:0">Select Round</label>

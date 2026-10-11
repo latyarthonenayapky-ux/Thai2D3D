@@ -1,6 +1,7 @@
 @extends('layouts.app', ['title' => '3D summaries'])
 
 @section('content')
+@php $currency = config('app.currency', 'MMK'); @endphp
 <style>
     .three-report{max-width:1440px;margin:24px auto;padding:0 20px}
     .three-report-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:18px}
@@ -18,7 +19,7 @@
 </style>
 <main class="three-report">
     <header class="three-report-heading">
-        <div><h1>{{ $isAdmin ? '3D business summaries' : 'Your 3D summaries' }}</h1><p>Completed 3D Draws · Draw dates on the 1st and 16th · Asia/Yangon.</p></div>
+        <div><h1>{{ $isAdmin ? '3D business summaries' : 'Your 3D summaries' }}</h1><p>Completed 3D Draws · Draw dates on the 1st and 16th · Asia/Yangon. Amounts in {{ $currency }}.</p></div>
         <nav class="three-report-actions" aria-label="Report navigation">
             <a class="button secondary" href="{{ route('reports.summary', ['mode' => '2d']) }}">2D summaries</a>
             @if($isAdmin)<a class="button secondary" href="{{ route('admin.three-digit.results') }}">3D results</a>@endif
@@ -47,7 +48,7 @@
                     @endforeach
                 </select>
             </div>
-            <div><button class="button" type="submit">Show 3D summary</button></div>
+            <div class="row" style="gap:8px;grid-column:1/-1"><button class="button" type="submit">Show 3D summary</button><a class="button secondary" href="{{ route('reports.summary.export', request()->query()) }}">Download CSV</a></div>
         </form>
         <p style="margin-bottom:0">Showing {{ ucfirst($report['period']) }} · {{ $report['start_date']->toDateString() }} to {{ $report['end_date']->toDateString() }} · {{ $report['draw_count'] }} completed Draw(s)</p>
     </section>
@@ -55,11 +56,11 @@
         <div class="notice" role="status">At least one completed Draw is missing its official result. Winnings and business net for that Draw remain provisional until the result is entered.</div>
     @endif
     <section class="three-report-totals" aria-label="3D financial totals">
-        <div><span>Accepted stakes</span><strong>{{ number_format($report['totals']['total_stake'], 2) }}</strong></div>
-        <div><span>Winning stakes</span><strong>{{ number_format($report['totals']['winning_stake'], 2) }}</strong></div>
-        <div><span>Winnings</span><strong>{{ number_format($report['totals']['winnings'], 2) }}</strong></div>
-        <div><span>Agent commissions</span><strong>{{ number_format($report['totals']['commission'], 2) }}</strong></div>
-        <div><span>Business net</span><strong>{{ number_format($report['totals']['business_net'], 2) }}</strong></div>
+        <div><span>Accepted stakes ({{ $currency }})</span><strong>{{ number_format($report['totals']['total_stake'], 2) }}</strong></div>
+        <div><span>Winning stakes ({{ $currency }})</span><strong>{{ number_format($report['totals']['winning_stake'], 2) }}</strong></div>
+        <div><span>Winnings ({{ $currency }})</span><strong>{{ number_format($report['totals']['winnings'], 2) }}</strong></div>
+        <div><span>Agent commissions ({{ $currency }})</span><strong>{{ number_format($report['totals']['commission'], 2) }}</strong></div>
+        <div><span>Business net ({{ $currency }})</span><strong>{{ number_format($report['totals']['business_net'], 2) }}</strong></div>
     </section>
     @if(! $report['payout_configured'])
         <div class="error" role="alert">The business 3D payout multiplier is not configured. Set it in 3D Settings before relying on winnings.</div>
@@ -100,7 +101,7 @@
             <table class="three-report-table">
                 <thead><tr><th>Agent</th><th>Draw date</th><th>Winning number</th><th>Draw handler</th><th>Accepted stakes</th><th>Winning stake</th><th>Winnings</th><th>Commission</th><th>Business net</th><th></th></tr></thead>
                 <tbody>
-                @forelse($report['agent_rows'] as $row)
+                @forelse($detailRows as $row)
                     <tr><td>{{ $row['agent_code'] }} · {{ $row['agent_name'] }}</td><td>{{ $row['draw_date'] }}</td><td>{{ $row['result'] ?? 'Not entered' }}</td><td>{{ $row['handler_name'] ?? '—' }}</td><td>{{ number_format($row['total_stake'], 2) }}</td><td>{{ number_format($row['winning_stake'], 2) }}</td><td>{{ number_format($row['winnings'], 2) }}</td><td>{{ number_format($row['commission'], 2) }}</td><td>{{ number_format($row['business_net'], 2) }}</td><td>@if($isAdmin)<a href="{{ route('admin.three-digit.results.show', $row['draw_id']) }}">Settlement</a>@else—@endif</td></tr>
                 @empty
                     <tr><td colspan="10" class="muted">No Agent sales in this period.</td></tr>
@@ -108,6 +109,7 @@
                 </tbody>
             </table>
         </div>
+        @include('partials.pagination', ['paginator' => $detailRows])
     </section>
 </main>
 @endsection

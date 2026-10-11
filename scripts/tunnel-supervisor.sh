@@ -16,7 +16,7 @@ set -uo pipefail
 SSH_KEY="${1:-$HOME/.ssh/id_ed25519}"
 TUNNEL_LOG="${2:?tunnel log path required}"
 LISTEN_PORT="${3:-8000}"
-PROJECT_DIR="${4:-/home/waiyanaung/Projects/Thai2D3D}"
+PROJECT_DIR="${4:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PIDFILE="${5:-}"
 
 URL_FILE="$PROJECT_DIR/storage/logs/public-url.txt"

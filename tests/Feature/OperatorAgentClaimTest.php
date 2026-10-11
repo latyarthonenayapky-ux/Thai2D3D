@@ -79,7 +79,7 @@ class OperatorAgentClaimTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Live sales dashboard')
-            ->assertSee('refreshes every 15 seconds')
+            ->assertSee('updates in place every 15 seconds')
             ->assertSee('A1 · Lower Sales')
             ->assertSee('A2 · Higher Sales')
             ->assertSee('6,000.00')

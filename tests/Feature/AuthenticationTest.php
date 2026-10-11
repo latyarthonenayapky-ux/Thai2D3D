@@ -70,7 +70,7 @@ class AuthenticationTest extends TestCase
         $this->artisan('thai2d3d:make-owner')
             ->expectsQuestion('Owner name', 'First Owner')
             ->expectsQuestion('Owner email', 'owner@example.test')
-            ->expectsQuestion('Password (at least 12 characters)', 'a-very-secure-password')
+            ->expectsQuestion('Password (at least 6 characters)', 'a-very-secure-password')
             ->expectsQuestion('Confirm password', 'a-very-secure-password')
             ->assertSuccessful();
 

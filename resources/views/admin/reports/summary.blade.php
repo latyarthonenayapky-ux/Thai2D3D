@@ -1,6 +1,7 @@
 @extends('layouts.app', ['title' => 'Period summaries'])
 
 @section('content')
+@php $currency = config('app.currency', 'MMK'); @endphp
 <main class="main">
     @if($isAdmin)
         <a href="{{ route('admin.settlements.index') }}">← Round settlements</a>
@@ -9,7 +10,7 @@
     @endif
     <div class="eyebrow" style="margin-top:20px">Business reports</div>
     <h1 class="page-title" style="margin-top:8px">{{ $isAdmin ? 'Business' : 'Your' }} summaries</h1>
-    <p class="subtitle">Daily, weekly, monthly, or yearly results for completed 2D Rounds. Filter by Agent and Round for a separate breakdown.</p>
+    <p class="subtitle">Daily, weekly, monthly, or yearly results for completed 2D Rounds. Filter by Agent and Round for a separate breakdown. All amounts in {{ $currency }}.</p>
     <p class="row"><a class="button secondary" href="{{ route('reports.summary', ['mode' => '3d']) }}">3D Draw summaries</a>@if($isAdmin)<a class="button secondary" href="{{ route('admin.three-digit.results') }}">3D results and settlements</a>@endif</p>
 
     @if($errors->any())
@@ -56,7 +57,7 @@
                     @endforeach
                 </select>
             </div>
-            <div><button class="button" type="submit">Show summary</button></div>
+            <div class="row" style="gap:8px;grid-column:1/-1"><button class="button" type="submit">Show summary</button><a class="button secondary" href="{{ route('reports.summary.export', request()->query()) }}">Download CSV</a></div>
         </form>
         <p style="margin-bottom:0">Showing {{ ucfirst($report['period']) }} · {{ $report['start_date']->toDateString() }} to {{ $report['end_date']->toDateString() }} · {{ $report['totals']['round_count'] }} completed Round(s)</p>
     </section>
@@ -86,11 +87,11 @@
     </section>
 
     <section class="grid" style="margin-bottom:20px">
-        <div class="card"><div class="eyebrow">2D accepted stakes</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['total_stake'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D winning stakes</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winning_stake'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D winnings expense</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winnings'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D agent commissions</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['commission'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D business net</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['business_net'], 2) }}</h2><p style="margin-bottom:0">Accepted stakes − winnings − commissions</p></div>
+        <div class="card"><div class="eyebrow">2D accepted stakes ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['total_stake'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">2D winning stakes ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winning_stake'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">2D winnings expense ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winnings'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">2D agent commissions ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['commission'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">2D business net ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['business_net'], 2) }}</h2><p style="margin-bottom:0">Accepted stakes − winnings − commissions</p></div>
     </section>
 
     <section class="card" style="margin-bottom:20px">
@@ -123,7 +124,7 @@
             <table>
                 <thead><tr><th>Agent</th><th>Date</th><th>Round</th><th>Round handler</th><th>2D result</th><th>Accepted stakes</th><th>Winning stakes</th><th>Winnings</th><th>Commission</th><th>Business net</th><th></th></tr></thead>
                 <tbody>
-                @forelse($report['agent_rows'] as $row)
+                @forelse($detailRows as $row)
                     <tr>
                         <td>{{ $row['agent_code'] }} · {{ $row['agent_name'] }}</td>
                         <td>{{ \Carbon\Carbon::parse($row['date'])->format('Y-m-d') }}</td>
@@ -149,6 +150,7 @@
                 </tbody>
             </table>
         </div>
+        @include('partials.pagination', ['paginator' => $detailRows])
     </section>
 </main>
 @endsection

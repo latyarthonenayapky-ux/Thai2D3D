@@ -23,7 +23,7 @@ This checklist covers authenticated 2D/3D sales entry, Admin live sales, Round m
    composer install --no-dev --prefer-dist --optimize-autoloader
    ```
 
-3. Configure `.env` with `APP_ENV=production`, `APP_DEBUG=false`, the HTTPS `APP_URL`, a generated `APP_KEY`, MySQL credentials (`DB_CONNECTION=mysql`), secure session cookies (`SESSION_SECURE_COOKIE=true`), and working SMTP settings. Keep this file private and preserve the same `APP_KEY` across deployments and backups.
+3. Configure `.env` with `APP_ENV=production`, `APP_DEBUG=false`, the HTTPS `APP_URL`, a generated `APP_KEY`, MySQL credentials (`DB_CONNECTION=mysql`), secure session cookies (`SESSION_SECURE_COOKIE=true`), the report currency label (`CURRENCY=MMK`), and working SMTP settings. Set `TRUSTED_PROXIES` only when running behind a reverse proxy or load balancer, and never to `*`. Keep this file private and preserve the same `APP_KEY` across deployments and backups.
 4. Grant the web process write access to `storage/` and `bootstrap/cache/`. Run database migrations and seed the built-in parser rules:
 
    ```sh
@@ -48,6 +48,8 @@ This checklist covers authenticated 2D/3D sales entry, Admin live sales, Round m
    ```cron
    * * * * * cd /path/to/Thai2D3D && php artisan schedule:run >> /dev/null 2>&1
    ```
+
+   The scheduler runs `rounds:sync-schedule` every minute and `users:expire-temp` hourly. Also schedule the bundled `scripts/backup-db.sh` (for example daily) and copy backups off the server.
 
 8. Before accepting live sales, sign in as Owner, create the Admin, then have the Admin create Operators and Agents. Configure the Round times, any 2D values to block (`00`–`99`), 3D number-count limits, 2D/3D payout multipliers, Agent commission rates, and any 2D/3D Hot Numbers and per-Agent Amount Limits. Use a separate Operator login to claim an Agent and enter controlled 2D and 3D sales.
 

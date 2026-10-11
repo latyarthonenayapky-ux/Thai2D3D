@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AdminBusinessSetting;
 use App\Models\Agent;
+use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\Round;
 use App\Models\RoundResult;
@@ -158,6 +159,8 @@ class PeriodSummaryReportTest extends TestCase
             ->get(route('reports.summary'))
             ->assertForbidden();
 
+        $this->get(route('reports.summary.export'))->assertForbidden();
+
         [$admin] = $this->createBusiness();
         $this->actingAs($admin)
             ->from(route('reports.summary'))
@@ -172,6 +175,99 @@ class PeriodSummaryReportTest extends TestCase
             'date' => '2026-10-07',
             'round_no' => 4,
         ]))->assertSessionHasErrors('round_no');
+    }
+
+    public function test_summary_csv_export_streams_detail_rows_totals_and_currency_headers(): void
+    {
+        [$admin, $firstOperator, , $agentOne] = $this->createBusiness();
+        AdminBusinessSetting::query()->where('admin_id', $admin->id)->update([
+            'payout_2d_multiplier' => '5.00',
+        ]);
+        $agentOne->update(['commission_2d_percent' => '10.00']);
+        $round = $this->createClosedRound($admin, $agentOne, $firstOperator, '2026-10-05', 1, '12', 1);
+        $this->enterSales($firstOperator, $round, ['121000']);
+
+        $response = $this->actingAs($admin)->get(route('reports.summary.export', [
+            'mode' => '2d',
+            'period' => 'weekly',
+            'date' => '2026-10-07',
+        ]));
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $this->assertSame(
+            'attachment; filename=thai2d3d-2d-weekly-2026-10-05-2026-10-11.csv',
+            $response->headers->get('Content-Disposition')
+        );
+
+        $csv = (string) $response->streamedContent();
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $csv);
+
+        $lines = preg_split('/\r\n|\n/', trim(preg_replace('/^\xEF\xBB\xBF/', '', $csv)));
+        $this->assertCount(3, $lines);
+        $header = str_getcsv($lines[0]);
+        $this->assertSame('Agent code', $header[0]);
+        $this->assertSame('Date', $header[2]);
+        $this->assertSame('Accepted stakes (MMK)', $header[6]);
+        $row = str_getcsv($lines[1]);
+        $this->assertSame(['A1', 'Alpha', '2026-10-05', '1'], array_slice($row, 0, 4));
+        $this->assertSame('12', $row[5]);
+        $this->assertSame(['1000', '1000', '5000', '100', '-4100'], array_slice($row, 6));
+        $total = str_getcsv($lines[2]);
+        $this->assertSame('TOTAL', $total[0]);
+        $this->assertSame(['1000', '1000', '5000', '100', '-4100'], array_slice($total, 6));
+    }
+
+    public function test_summary_csv_export_neutralises_spreadsheet_formulas_in_agent_names(): void
+    {
+        [$admin, $firstOperator, , $agentOne] = $this->createBusiness();
+        $agentOne->update(['agent_name' => '=2+2']);
+        $round = $this->createClosedRound($admin, $agentOne, $firstOperator, '2026-10-05', 1, '12', 1);
+        $this->enterSales($firstOperator, $round, ['121000']);
+
+        $csv = (string) $this->actingAs($admin)->get(route('reports.summary.export', [
+            'mode' => '2d',
+            'period' => 'daily',
+            'date' => '2026-10-05',
+        ]))->streamedContent();
+
+        $this->assertStringContainsString("A1,'=2+2,", $csv);
+        $this->assertStringNotContainsString('A1,=2+2,', $csv);
+    }
+
+    public function test_summary_details_table_is_paginated_at_fifty_rows(): void
+    {
+        [$admin, $firstOperator, , $agentOne] = $this->createBusiness();
+        AdminBusinessSetting::query()->where('admin_id', $admin->id)->update([
+            'payout_2d_multiplier' => '5.00',
+        ]);
+        $round = $this->createClosedRound($admin, $agentOne, $firstOperator, '2026-10-05', 1, '12', 1);
+        $this->enterSales($firstOperator, $round, ['121000']);
+
+        for ($index = 1; $index <= 50; $index++) {
+            $agent = Agent::query()->create([
+                'admin_id' => $admin->id,
+                'agent_code' => 'P'.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+                'agent_name' => 'Page Agent '.$index,
+            ]);
+            AgentRoundSetting::query()->create([
+                'agent_id' => $agent->id,
+                'round_id' => $round->id,
+                'operator_id' => $firstOperator->id,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('reports.summary', ['period' => 'daily', 'date' => '2026-10-05']))
+            ->assertOk()
+            ->assertSee('Showing 1–50 of 51 rows')
+            ->assertSee('Page 1 of 2')
+            ->assertSee('page=2');
+
+        $this->get(route('reports.summary', ['period' => 'daily', 'date' => '2026-10-05', 'page' => 2]))
+            ->assertOk()
+            ->assertSee('Showing 51–51 of 51 rows')
+            ->assertSee('Page 2 of 2');
     }
 
     private function createBusiness(): array

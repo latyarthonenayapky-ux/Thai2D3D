@@ -5,22 +5,44 @@ The desktop app starts the bundled Laravel application and PHP server on
 remote website. The database and Laravel writable files live in the current
 OS user's application-data directory, not inside the installed app.
 
-## Ready-to-run Linux package
+## Ready-to-run packages
 
-The clean project folder includes the tested Linux x86-64 package at its root:
-`../Thai2D3D-1.1.0.AppImage`. Double-click it in the file manager to run it.
-On first launch, create the local Owner account shown by the app. If the file
-manager blocks launching it, enable executable permission in file Properties.
+The clean project folder ships the tested standalone packages under `release/`:
 
-The package is standalone for offline use. It does not start a tunnel or sync
-its SQLite database to a VPS. For the Burmese operating guide, see
+- **Linux x86-64** — `../release/Linux/Thai2D3D-1.1.0.AppImage`. Double-click it
+  in the file manager to run it. If the file manager blocks launching it, enable
+  executable permission in file Properties.
+- **Windows x64** — run `../release/Windows/Start Thai2D3D.cmd` (or
+  `Thai2D3D\Thai2D3D.exe` inside that folder). The app is a portable folder —
+  copy it anywhere and run it; no installation is needed.
+
+On first launch, create the local Owner account shown by the app.
+
+The packages are standalone for offline use. They do not start a tunnel or sync
+their SQLite database to a VPS. For the Burmese operating guide, see
 [`../docs/USER_MANUAL_MM.md`](../docs/USER_MANUAL_MM.md).
 
 ## First use
 
-Open the `.AppImage` or portable `.exe`. On first launch, create a local Owner
-account with an email and a password of at least 12 characters. The app then
-opens the login/dashboard workflow without requiring internet access.
+Open the `.AppImage`, or on Windows run `Start Thai2D3D.cmd` (or the
+`Thai2D3D.exe` inside the app folder). On first launch, create a local Owner
+account with an email and a password of at least 6 characters (step 1), then
+enter the install pass key issued for that email (step 2). Without a matching
+key the Owner account cannot be created. The app then opens the
+login/dashboard workflow without requiring internet access.
+
+## Issuing install pass keys
+
+The setup wizard only accepts a pass key that matches the admin email entered
+in step 1. The customer sends you the email they will install with; issue the
+key with the vendor-only keygen tool:
+
+- Open `keygen/keygen.html` in any browser (works offline, no install needed), or
+- Run `keygen/keygen.bat` (uses the bundled PHP runtime), or
+- Run `php keygen/keygen.php <email>` with any PHP 8.
+
+All three derive the same key, so a key can always be re-issued later. The
+`keygen` folder is vendor-only and is not part of the packaged app.
 
 ## Local data
 
@@ -48,3 +70,12 @@ Run commands from this directory after installing dependencies with `npm ci`:
 
 The Windows build needs network access to `windows.php.net` the first time.
 The Linux build bundles the local PHP CLI and its SQLite/runtime libraries.
+
+After a Windows rebuild, refresh the portable folder by replacing
+`../release/Windows/Thai2D3D/` with the new `dist/standalone-win/win-unpacked/`
+contents; `Start Thai2D3D.cmd` and `_superseded/` stay as they are. On a
+machine without Node.js the same folder can be reassembled manually: copy
+`win-unpacked`, replace `resources/laravel` and `resources/php` with a fresh
+`stage/` built by the same copy rules as `scripts/prepare.js`, and repack
+`resources/app.asar` from `main.js`, `preload.js`, `package.json` and
+`scripts/` using `@electron/asar` from `node_modules`.

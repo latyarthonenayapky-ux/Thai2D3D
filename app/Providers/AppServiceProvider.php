@@ -2,8 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\ActivityLog;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->forceHttpsForPublicHosts();
+        $this->recordAuthenticationEvents();
 
         RateLimiter::for('login', function (Request $request) {
             $email = mb_strtolower((string) $request->input('email'));
@@ -31,6 +37,25 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by(
                 $email.'|'.$request->ip()
             );
+        });
+    }
+
+    private function recordAuthenticationEvents(): void
+    {
+        Event::listen(Login::class, function (Login $event): void {
+            ActivityLog::record('auth.login', null, ['email' => $event->user->email], $event->user);
+        });
+
+        Event::listen(Logout::class, function (Logout $event): void {
+            if ($event->user !== null) {
+                ActivityLog::record('auth.logout', null, ['email' => $event->user->email], $event->user);
+            }
+        });
+
+        Event::listen(Failed::class, function (Failed $event): void {
+            ActivityLog::record('auth.failed', null, [
+                'email' => $event->credentials['email'] ?? null,
+            ]);
         });
     }
 

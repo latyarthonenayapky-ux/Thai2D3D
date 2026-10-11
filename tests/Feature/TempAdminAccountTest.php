@@ -101,6 +101,22 @@ class TempAdminAccountTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_expired_temp_admin_cannot_start_a_session_by_logging_in(): void
+    {
+        $temp = User::factory()->create([
+            'role' => 'temp_admin',
+            'status' => true,
+            'expires_at' => Carbon::now('Asia/Yangon')->subMinute(),
+        ]);
+
+        $this->post(route('login.store'), [
+            'email' => $temp->email,
+            'password' => 'password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
     public function test_expire_command_deactivates_expired_accounts_and_their_operators(): void
     {
         $expired = User::factory()->create([

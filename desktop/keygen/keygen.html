@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="my">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thai2D3D Install Key Generator</title>
+    <style>
+        :root{font-family:ui-sans-serif,system-ui,sans-serif;color:#14211c;background:#f4f7f5}
+        *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}
+        main{width:min(100%,560px);padding:30px;background:#fff;border:1px solid #d9e3dd;border-radius:14px;box-shadow:0 12px 36px #183a2a12}
+        h1{margin:0 0 6px;font-size:25px;letter-spacing:-.04em}
+        .sub{margin:0 0 18px;color:#5e7168;line-height:1.55}
+        .note{margin:0 0 20px;padding:12px 14px;background:#f0f7f3;border:1px solid #d4e6dc;border-radius:9px;font-size:13px;line-height:1.7}
+        label{display:block;margin:16px 0 7px;font-size:13px;font-weight:700}
+        input[type=email],input[type=text]{width:100%;min-height:46px;padding:10px 12px;border:1px solid #cbd8d0;border-radius:7px;font:inherit}
+        input:focus{outline:3px solid #087b5933;border-color:#087b59}
+        button{min-height:46px;border:0;border-radius:7px;background:#087b59;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+        #generate{width:100%;margin-top:22px}
+        button:disabled{opacity:.5;cursor:default}
+        .keyrow{display:flex;gap:8px}
+        .keyrow input{flex:1;font-weight:700;letter-spacing:.06em}
+        .keyrow button{padding:0 18px;background:#0b3d2e}
+        #output{margin-top:22px;padding-top:20px;border-top:1px solid #e3ebe6}
+        .error{margin-top:10px;color:#923723;font-size:13px}
+        .foot{margin:22px 0 0;padding-top:16px;border-top:1px solid #e3ebe6;color:#5e7168;font-size:12px;line-height:1.8}
+        .status{margin-top:14px;font-size:12px;font-weight:700}
+        .status.ok{color:#087b59}.status.bad{color:#923723}
+        [hidden]{display:none!important}
+    </style>
+</head>
+<body>
+<main>
+    <h1>Install Key Generator</h1>
+    <p class="sub">Thai2D3D ထည့်သွင်းရာတွင် အသုံးပြုမည့် Install pass key ထုတ်ပေးသည့် ကိရိယာ။</p>
+
+    <div class="note">
+        အသုံးပြုပုံ — ၁။ Customer ပေးပို့လာသော Admin email ကို ထည့်ပါ။
+        ၂။ Generate Key ကို နှိပ်ပါ။
+        ၃။ ရလာသော Key ကို Customer ထံ ပေးပါ။ Customer သည် Thai2D3D ကို စတင်ထည့်သွင်းစဉ် Admin account အချက်အလက် ဖြည့်ပြီးနောက် ထို Key ကို အတိအကျ ထည့်သွင်းရပါမည်။
+    </div>
+
+    <label for="email">Admin email</label>
+    <input id="email" type="email" placeholder="owner@example.com" autocomplete="off" spellcheck="false">
+
+    <button id="generate" type="button">Generate Key</button>
+    <div id="error" class="error" hidden></div>
+
+    <div id="output" hidden>
+        <label for="key">Install pass key</label>
+        <div class="keyrow">
+            <input id="key" type="text" readonly>
+            <button id="copy" type="button">Copy</button>
+        </div>
+    </div>
+
+    <p class="foot">
+        • Email သည် စာလုံးအကြီး/အသေး မခွဲခြားပါ။<br>
+        • Email ၏ အစ/အဆုံးရှိ space များကို လျစ်လျူရှုပါသည်။<br>
+        • ထို email အတွက် Key သည် အမြဲတူညီပါသည်၊ လိုအပ်ပါက ပြန်လည်ထုတ်နိုင်ပါသည်။<br>
+        • Email မတူလျှင် Key လည်း မတူပါ။
+    </p>
+
+    <p id="selftest" class="status"></p>
+</main>
+<script src="install-key.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var emailField = document.getElementById('email');
+    var generateButton = document.getElementById('generate');
+    var copyButton = document.getElementById('copy');
+    var output = document.getElementById('output');
+    var keyField = document.getElementById('key');
+    var errorBox = document.getElementById('error');
+
+    function showError(message) {
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+    }
+
+    generateButton.addEventListener('click', function () {
+        errorBox.hidden = true;
+        output.hidden = true;
+
+        var email = emailField.value.trim();
+
+        if (email === '') {
+            showError('Admin email ထည့်ပါ။');
+            return;
+        }
+
+        keyField.value = window.installKey.deriveInstallKey(email);
+        output.hidden = false;
+        copyButton.textContent = 'Copy';
+        keyField.focus();
+        keyField.select();
+    });
+
+    copyButton.addEventListener('click', function () {
+        keyField.select();
+        keyField.setSelectionRange(0, keyField.value.length);
+
+        var done = function () {
+            copyButton.textContent = 'Copied';
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(keyField.value).then(done, function () {
+                document.execCommand('copy');
+                done();
+            });
+        } else {
+            document.execCommand('copy');
+            done();
+        }
+    });
+
+    // Bit-rot guard: verify the bundled algorithm against the shared
+    // known-answer vector every time the tool is opened.
+    var status = document.getElementById('selftest');
+    var vector = window.installKey.deriveInstallKey('owner@thai2d3d.local');
+    if (vector === 'HNIMR-YCWQS-NY3PQ-FURJE') {
+        status.textContent = 'Self-test: OK';
+        status.className = 'status ok';
+    } else {
+        status.textContent = 'Self-test: FAILED — install-key.js ပျက်စီးနေပါသည်။';
+        status.className = 'status bad';
+    }
+})();
+</script>
+</body>
+</html>

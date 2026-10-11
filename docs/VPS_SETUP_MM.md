@@ -70,7 +70,8 @@ sudo chown -R "$USER":www-data /var/www/thai2d3d
 ဤ project ကို upload လုပ်နိုင်သော development ကွန်ပျူတာမှ အောက်ပါပုံစံဖြင့်
 source code ကို ပို့နိုင်သည် (VPS user/IP ကို ကိုယ့်တန်ဖိုးဖြင့် အစားထိုးပါ)။
 VPS SSH key နဲ့ဝင်လို့ရကြောင်း ကြိုစမ်းထားပါ။ `.env`, Git metadata,
-dependencies, local log နှင့် AppImage ကို VPS သို့ မပို့ပါ။
+dependencies, local log နှင့် `release/` folder ထဲက binary များကို VPS သို့
+မပို့ပါ။
 
 ```sh
 cd /path/to/Thai2D3D-clean-20261009
@@ -79,12 +80,19 @@ rsync -avz \
   --exclude='/.env' \
   --exclude='/vendor/' \
   --exclude='/desktop/' \
-  --exclude='/Thai2D3D-1.1.0.AppImage' \
+  --exclude='/release/' \
   --exclude='/storage/logs/***' \
   --exclude='/storage/framework/views/***' \
   --exclude='/storage/framework/cache/***' \
   --exclude='/storage/framework/sessions/***' \
   ./ VPS_USER@VPS_IP:/var/www/thai2d3d/
+```
+
+သို့မဟုတ် project ထဲတွင် အသင့်ပြင်ထားသော `release/VPS/` folder ကို တိုက်ရိုက်
+ပို့နိုင်သည် (မလိုအပ်သော ဖိုင်များ ဖယ်ထားပြီးဖြစ်သည်):
+
+```sh
+rsync -avz ./release/VPS/ VPS_USER@VPS_IP:/var/www/thai2d3d/
 ```
 
 Source code မရှိသေးပါက deployment မစတင်ခင် project owner ထံမှ အတည်ပြုထားသော
@@ -108,10 +116,19 @@ Git တွင် မထည့်ပါနှင့်။
 CREATE DATABASE thai2d3d CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'thai2d3d_app'@'localhost'
   IDENTIFIED BY 'REPLACE_WITH_A_LONG_RANDOM_PASSWORD';
-GRANT ALL PRIVILEGES ON thai2d3d.* TO 'thai2d3d_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES
+  ON thai2d3d.* TO 'thai2d3d_app'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
+
+App user ကို ဤ database အတွက် လိုအပ်သည့် privilege များသာ ပေးပါ။ ပုံမှန်
+အလုပ်လုပ်ချိန်တွင် SELECT/INSERT/UPDATE/DELETE လိုပြီး `php artisan migrate`
+run ချိန်တွင်သာ CREATE/ALTER/DROP/INDEX/REFERENCES လိုသည်။ `GRANT ALL`
+သို့မဟုတ် `SUPER`/`FILE`/`PROCESS` ကဲ့သို့ server-level privilege များကို
+မပေးပါနှင့် — app password ပေါက်ကြားလျှင်ပင် ဤ database တစ်ခုကိုသာ
+ထိခိုက်နိုင်စေရန် ဖြစ်သည်။ App user ကို `root` သို့မဟုတ် အခြား database
+များအတွက် အသုံးမပြုပါနှင့်။
 
 Database port `3306` ကို internet သို့ မဖွင့်ပါနှင့်။ App နှင့် MySQL တူညီသော
 VPS ပေါ်ရှိသောကြောင့် `localhost` connection ကိုသာ အသုံးပြုပါ။
@@ -146,6 +163,11 @@ SESSION_DRIVER=file
 SESSION_SECURE_COOKIE=true
 CACHE_STORE=file
 QUEUE_CONNECTION=sync
+CURRENCY=MMK
+
+# Reverse proxy (Cloudflare, load balancer) အောက်တွင်သာ ထည့်ပါ။
+# Proxy မရှိလျှင် comment လုပ်ထားသည့်အတိုင်း ထားပါ (default 127.0.0.1)။
+# TRUSTED_PROXIES=127.0.0.1
 
 MAIL_MAILER=smtp
 MAIL_SCHEME=smtp
@@ -156,6 +178,15 @@ MAIL_PASSWORD=YOUR_SMTP_PASSWORD
 MAIL_FROM_ADDRESS=YOUR_VERIFIED_SENDER_ADDRESS
 MAIL_FROM_NAME="Thai2D3D"
 ```
+
+`SESSION_SECURE_COOKIE=true` သည် HTTPS-only cookie ဖြစ်ပြီး public deployment
+တွင် မဖြစ်မနေ ထားပါ။ `CURRENCY` သည် report များနှင့် CSV export တွင်
+ပြသမည့် ငွေကြေး label သာဖြစ်ပြီး (default `MMK`) တွက်ချက်မှုကို
+မပြောင်းလဲပါ။ `TRUSTED_PROXIES` ကို ကိုယ့် proxy ၏ IP သို့မဟုတ် CIDR များသာ
+ထည့်ပါ — public server တွင် `*` ကို ဘယ်တော့မှ မသုံးပါနှင့် (မဟုတ်လျှင်
+မည်သူမဆို `X-Forwarded-*` header အတုဖြင့် HTTPS အခြေအနေကို
+လှည့်စားနိုင်သည်)။ Default `127.0.0.1` သည် proxy မရှိသော single-server
+စနစ်အတွက် မှန်ကန်ပြီး ထိုအတိုင်း ထားနိုင်သည်။
 
 `APP_URL` တွင် `https://` နှင့် ကိုယ်ပိုင် domain ကို အတိအကျသုံးပါ။ `APP_KEY`
 ကို ပထမဆုံး install လုပ်ချိန်တွင်သာ generate လုပ်ပါ။ Existing database/app
@@ -173,13 +204,14 @@ sudo chown -R "$USER":www-data /var/www/thai2d3d
 sudo find storage bootstrap/cache -type d -exec chmod 2775 {} \;
 sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
 chmod 640 .env
+chmod +x scripts/*.sh
 php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
 php artisan thai2d3d:make-owner
 ```
 
-Owner command မှ အမည်၊ email နှင့် အနည်းဆုံး 12-character password မေးပါမည်။
+Owner command မှ အမည်၊ email နှင့် အနည်းဆုံး 6-character password မေးပါမည်။
 Password ကို terminal မှ လျှို့ဝှက် input အဖြစ်ထည့်ပါ။ ဒီ command သည် user account
 တစ်ခုခုရှိနေပါက ထပ်မလုပ်နိုင်ပါ။ အရင်က Owner သို့မဟုတ် account ရှိပြီးသား
 database ကို စစ်ဆေးခြင်းမရှိဘဲ fresh install ကဲ့သို့ ဆက်မလုပ်ပါနှင့်။
@@ -246,7 +278,11 @@ Certificate renew dry-run အောင်မြင်ကြောင်း အ�
 ## 7. Scheduler ဖွင့်ပြီး service စစ်ဆေးခြင်း
 
 Application သည် daily Round နှင့် 1/16 ရက် 3D Draw schedule ကို စစ်ဆေးဖို့
-Laravel scheduler ကို **မိနစ်တိုင်း** run ရသည်။
+Laravel scheduler ကို **မိနစ်တိုင်း** run ရသည်။ ဤ scheduler သည်
+`rounds:sync-schedule` (မိနစ်တိုင်း — Round/Draw ဖွင့်/ပိတ်) နှင့်
+`users:expire-temp` (နာရီတိုင်း — သက်တမ်းကုန်သွားသော Temp Admin အကောင့်များကို
+ပိတ်) တို့ကို အလိုအလျောက် run ပါသည်။ Cron entry တစ်ကြောင်းတည်းဖြင့်
+နှစ်မျိုးလုံး အလုပ်လုပ်သည်။
 
 ```sh
 sudo crontab -u www-data -e
@@ -257,6 +293,18 @@ Crontab ထဲ ဒီတစ်ကြောင်းထည့်ပါ။
 ```cron
 * * * * * cd /var/www/thai2d3d && /usr/bin/php artisan schedule:run >> /dev/null 2>&1
 ```
+
+နေ့စဉ် database backup အတွက် ဒီတစ်ကြောင်း ထပ်ထည့်ပါ (project ပါ
+`scripts/backup-db.sh` သည် `.env` ထဲက MySQL အချက်အလက်ကို အသုံးပြုပြီး
+`storage/backups/` ထဲ gzip dump ထုတ်သည်၊ ရက် 14 ကြာ သိမ်းထားသည် —
+`BACKUP_KEEP_DAYS` ဖြင့် ပြောင်းနိုင်သည်)။
+
+```cron
+15 2 * * * /var/www/thai2d3d/scripts/backup-db.sh >> /var/www/thai2d3d/storage/logs/backup.log 2>&1
+```
+
+Backup ဖိုင်များကို server အပြင်ဘက်သို့ ကူးထားခြင်းနှင့် restore စမ်းသပ်ခြင်း
+အဆင့်များအတွက် §9 ကို ကြည့်ပါ။
 
 Production cache ဖန်တီးပြီး service များ restart/reload လုပ်ပါ။
 
@@ -337,6 +385,20 @@ Update step တစ်ခုခု error ဖြစ်ပါက ပြဿနာက
 `php artisan up` ဖြင့် maintenance mode ပိတ်ပြီး site ပြန်ဖွင့်ပါ။ Migration များကို
 backup မရှိဘဲ rollback မလုပ်ပါနှင့်။ Source code version နှင့် DB migration အခြေအနေ
 ကို မှတ်တမ်းတင်ထားပါ။
+
+## 10. Audit log (activity_logs)
+
+Login အောင်မြင်ခြင်း/မြင်ခြင်း၊ logout နှင့် Admin area ၏ write လုပ်ဆောင်ချက်များ
+(route အမည်၊ သက်ဆိုင်ရာ record၊ လုပ်ဆောင်သူ user၊ IP နှင့် အချိန်) ကို
+`activity_logs` table တွင် အလိုအလျောက် မှတ်တမ်းတင်သည်။ Password နှင့် form
+အထဲက အကွက်များကို လုံးဝ မှတ်တမ်းမတင်ပါ။ ဤ table သည် database ထဲတွင်ရှိသဖြင့်
+DB backup တွင် အပါအဝင်ဖြစ်သည်။ ဖတ်ရှုရန် screen မရှိသေးသဖြင့် လိုအပ်လျှင်
+MySQL client ဖြင့် စစ်ပါ။
+
+```sh
+mysql -h 127.0.0.1 -u thai2d3d_app -p thai2d3d \
+  -e "SELECT created_at, action, user_id, ip FROM activity_logs ORDER BY id DESC LIMIT 20;"
+```
 
 ## Go-live မလုပ်မီ
 

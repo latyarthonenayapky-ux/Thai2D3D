@@ -260,6 +260,60 @@ class SaleEntryController extends Controller
             ));
     }
 
+    public function storeBatch(
+        Request $request,
+        AgentSession $agentSession,
+        SaleProcessor $processor,
+        ThreeDigitSaleProcessor $threeDigitProcessor
+    ): JsonResponse {
+        $this->authorizeSession($request, $agentSession);
+        abort_unless($agentSession->status === 'open' && $agentSession->round->status === 'open', 409, 'This Round is closed to sales.');
+
+        $validated = $request->validate([
+            'sale_type' => ['nullable', 'in:2d,3d'],
+            'inputs' => ['required', 'array', 'min:1', 'max:200'],
+            'inputs.*.input' => ['required', 'string', 'max:255'],
+            'inputs.*.client_uuid' => ['nullable', 'uuid'],
+        ]);
+
+        $saleMode = $validated['sale_type'] ?? '2d';
+        $results = [];
+
+        foreach ($validated['inputs'] as $item) {
+            $clientUuid = $item['client_uuid'] ?? null;
+
+            try {
+                if ($saleMode === '3d') {
+                    $saleInput = $threeDigitProcessor->process($item['input'], $agentSession, $clientUuid);
+                    $details = $saleInput->details()->get(['number', 'amount', 'status', 'reject_reason']);
+                } else {
+                    $saleInput = $processor->process($item['input'], $agentSession, $clientUuid);
+                    $details = $saleInput->details()->get(['number', 'amount', 'status', 'reject_reason', 'is_excluded']);
+                }
+            } catch (InvalidArgumentException $exception) {
+                $results[] = ['client_uuid' => $clientUuid, 'status' => 'invalid', 'message' => $exception->getMessage()];
+                continue;
+            } catch (RuntimeException $exception) {
+                $results[] = ['client_uuid' => $clientUuid, 'status' => 'error', 'message' => $exception->getMessage()];
+                continue;
+            }
+
+            $results[] = [
+                'client_uuid' => $clientUuid,
+                'status' => 'saved',
+                'message' => sprintf(
+                    '%s · %d accepted number(s), %d rejected.',
+                    ucfirst($saleInput->status),
+                    $details->where('status', 'accepted')->count(),
+                    $details->where('status', 'rejected')->count()
+                ),
+                'details' => $details->values(),
+            ];
+        }
+
+        return response()->json(['results' => $results]);
+    }
+
     private function soldItemsForSession(int $agentSessionId, string $saleMode): array
     {
         if ($saleMode === '3d') {

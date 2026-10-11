@@ -55,7 +55,7 @@ class ResetUserPassword extends Command
 
         $this->line("Resetting password for: <comment>{$user->name}</comment> <{$user->email}> (role: {$user->role})");
 
-        $password = $this->secret('New password (at least 12 characters)');
+        $password = $this->secret('New password (at least 6 characters)');
         $confirmation = $this->secret('Confirm new password');
 
         $validator = Validator::make([
@@ -63,7 +63,7 @@ class ResetUserPassword extends Command
             'password' => $password,
             'password_confirmation' => $confirmation,
         ], [
-            'password' => ['required', 'confirmed', Password::min(12)],
+            'password' => ['required', 'confirmed', Password::min(6)->max(255)],
         ]);
 
         if ($validator->fails()) {

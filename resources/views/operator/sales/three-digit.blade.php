@@ -41,6 +41,7 @@
 <main class="three-sale"
       data-three-draft-workspace
       data-sale-action="{{ $draw && $selectedAgent ? route('three-digit.sales.store', [$draw, $selectedAgent]) : '' }}"
+      data-batch-action="{{ $draw && $selectedAgent ? route('three-digit.sales.store-batch', [$draw, $selectedAgent]) : '' }}"
       data-csrf="{{ csrf_token() }}"
       data-storage-key="thai2d3d-3d-drafts-{{ auth()->id() }}-{{ $draw?->id ?? 'next' }}-{{ $selectedAgent?->id ?? 'none' }}">
     <header class="three-sale-heading">
@@ -227,40 +228,81 @@
         try { const stored = localStorage.getItem(storageKey); if (stored) drafts = JSON.parse(stored); }
         catch (error) { displayStatus(`Could not read saved drafts: ${error.message}. Keep this page open and copy the inputs.`, true); }
         render();
+        const stageInputs = values => {
+            const staged = [];
+            for (const raw of values) {
+                const value = raw.trim();
+                if (!value) continue;
+                staged.push({ id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`, input: value, createdAt: new Date().toISOString() });
+            }
+            if (!staged.length) return false;
+            drafts.push(...staged);
+            try { persist(); render(); input.focus(); return true; }
+            catch (error) {
+                drafts = drafts.filter(draft => !staged.includes(draft));
+                displayStatus(`Could not save this draft locally: ${error.message}. Copy it before retrying.`, true);
+                return false;
+            }
+        };
         form.addEventListener('submit', event => {
-            event.preventDefault(); const value = input.value.trim(); if (!value) return;
-            drafts.push({ id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`, input: value, createdAt: new Date().toISOString() });
-            try { persist(); input.value = ''; render(); input.focus(); }
-            catch (error) { drafts.pop(); displayStatus(`Could not save this draft locally: ${error.message}. Copy it before retrying.`, true); }
+            event.preventDefault();
+            if (!input.value.trim()) return;
+            if (stageInputs([input.value])) input.value = '';
+        });
+        input.addEventListener('paste', event => {
+            const text = event.clipboardData?.getData('text');
+            if (!text || !/[\r\n]/.test(text)) return;
+            event.preventDefault();
+            if (stageInputs(text.split(/[\r\n]+/))) input.value = '';
         });
         select?.addEventListener('change', () => { if (select.value) window.location.assign(select.value); });
         saveButton.addEventListener('click', async () => {
             if (!drafts.length) { displayStatus('Recent Sales is empty. Add an input first.'); input.focus(); return; }
-            saveButton.disabled = true; let saved = 0; let failed = 0;
-            for (const draft of [...drafts]) {
+            saveButton.disabled = true; let saved = 0; let failed = 0; let fatal = false;
+            const pending = [...drafts];
+            const batchSize = 50;
+            for (let index = 0; index < pending.length; index += batchSize) {
+                const chunk = pending.slice(index, index + batchSize);
                 try {
-                    const body = new FormData(); body.set('_token', workspace.dataset.csrf); body.set('input', draft.input); body.set('client_uuid', draft.id);
-                    const response = await fetch(workspace.dataset.saleAction, { method: 'POST', body, credentials: 'same-origin', headers: { Accept: 'application/json' } });
-                    const result = await response.json();
+                    const response = await fetch(workspace.dataset.batchAction, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': workspace.dataset.csrf },
+                        body: JSON.stringify({ inputs: chunk.map(draft => ({ input: draft.input, client_uuid: draft.id })) }),
+                    });
+                    const result = await response.json().catch(() => ({}));
                     if (!response.ok) {
-                        draft.error = result.message || `Server returned ${response.status}.`; failed++; persist(); render();
+                        const message = result.message || `Server returned ${response.status}.`;
+                        for (const draft of chunk) { draft.error = message; failed++; }
+                        persist(); render();
                         if ([401, 419, 500, 502, 503, 504].includes(response.status)) break;
                         continue;
                     }
-                    for (const detail of result.details || []) {
-                        if (detail.status === 'accepted') { sold.set(detail.number, (sold.get(detail.number) || 0) + Number(detail.amount)); acceptedCount++; acceptedAmount += Number(detail.amount); }
-                        else rejectedCount++;
+                    for (const draft of chunk) {
+                        const item = (result.results || []).find(entry => entry.client_uuid === draft.id);
+                        if (!item) { draft.error = 'No server response for this input.'; failed++; continue; }
+                        if (item.status === 'saved') {
+                            for (const detail of item.details || []) {
+                                if (detail.status === 'accepted') { sold.set(detail.number, (sold.get(detail.number) || 0) + Number(detail.amount)); acceptedCount++; acceptedAmount += Number(detail.amount); }
+                                else rejectedCount++;
+                            }
+                            drafts = drafts.filter(row => row.id !== draft.id); saved++;
+                        } else {
+                            draft.error = item.message || 'Server rejected this input.'; failed++;
+                        }
                     }
-                    drafts = drafts.filter(item => item.id !== draft.id); saved++; persist(); render();
+                    persist(); render();
                 } catch (error) {
-                    draft.error = 'Connection failed; this input is still saved on this device.'; failed++; persist(); render(); break;
+                    for (const draft of chunk) { draft.error = 'Connection failed; this input is still saved on this device.'; failed++; }
+                    try { persist(); } catch (storageError) { displayStatus(`Connection failed and the local draft could not be updated: ${storageError.message}. Do not close this page.`, true); fatal = true; break; }
+                    render(); break;
                 }
             }
             document.querySelector('[data-three-accepted-count]').textContent = acceptedCount.toLocaleString();
             document.querySelector('[data-three-accepted-amount]').textContent = acceptedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             document.querySelector('[data-three-rejected-count]').textContent = rejectedCount.toLocaleString();
             renderSold(); saveButton.disabled = false;
-            displayStatus(`${saved} input${saved === 1 ? '' : 's'} saved${failed ? `; ${failed} remain in Recent Sales with errors` : ''}.`, failed > 0);
+            if (!fatal) displayStatus(`${saved} input${saved === 1 ? '' : 's'} saved${failed ? `; ${failed} remain in Recent Sales with errors` : ''}.`, failed > 0);
         });
         window.addEventListener('keydown', event => {
             if (event.key === 'F1') { event.preventDefault(); saveButton.click(); }

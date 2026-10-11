@@ -248,6 +248,53 @@ class ThreeDigitSaleController extends Controller
         return back()->with('status', $message);
     }
 
+    public function storeBatch(
+        Request $request,
+        ThreeDigitDraw $draw,
+        Agent $agent,
+        ThreeDigitSaleProcessor $processor
+    ): JsonResponse {
+        $user = $request->user();
+        abort_unless($user->isAdmin() || $user->isOperator(), 403);
+        $adminId = $user->isAdmin() ? $user->id : $user->admin_id;
+        abort_unless((int) $draw->admin_id === (int) $adminId, 404);
+        abort_unless((int) $agent->admin_id === (int) $adminId, 404);
+
+        $validated = $request->validate([
+            'inputs' => ['required', 'array', 'min:1', 'max:200'],
+            'inputs.*.input' => ['required', 'string', 'max:255'],
+            'inputs.*.client_uuid' => ['nullable', 'uuid'],
+        ]);
+
+        $results = [];
+
+        foreach ($validated['inputs'] as $item) {
+            $clientUuid = $item['client_uuid'] ?? null;
+
+            try {
+                $saleInput = $processor->processForDraw($item['input'], $draw, $agent, $user, $clientUuid);
+            } catch (InvalidArgumentException|RuntimeException $exception) {
+                $results[] = ['client_uuid' => $clientUuid, 'status' => 'invalid', 'message' => $exception->getMessage()];
+                continue;
+            }
+
+            $details = $saleInput->details()->get(['number', 'amount', 'status', 'reject_reason']);
+            $results[] = [
+                'client_uuid' => $clientUuid,
+                'status' => 'saved',
+                'message' => sprintf(
+                    '%s · %d accepted, %d rejected.',
+                    ucfirst($saleInput->status),
+                    $details->where('status', 'accepted')->count(),
+                    $details->where('status', 'rejected')->count()
+                ),
+                'details' => $details,
+            ];
+        }
+
+        return response()->json(['results' => $results]);
+    }
+
     private function drawIsOpenNow(ThreeDigitDraw $draw): bool
     {
         $now = Carbon::now('Asia/Yangon');

@@ -27,6 +27,19 @@ function ensureDirectory(directory) {
     fs.mkdirSync(directory, { recursive: true });
 }
 
+// Windows 8.3 short names ("PEARLI~1") contain "~", which PHP's ini parser
+// rejects; the whole php.ini is then discarded and no extension loads.
+function toIniPath(target) {
+    let resolved = target;
+    try {
+        resolved = fs.realpathSync.native(target);
+    } catch (error) {
+        resolved = target;
+    }
+    if (resolved.startsWith('\\\\?\\')) resolved = resolved.slice(4);
+    return resolved.replaceAll('\\', '/');
+}
+
 function appendProcessLog(name, stream, directory) {
     const logPath = path.join(directory, `${name}.log`);
     stream.on('data', chunk => {
@@ -187,7 +200,7 @@ async function startLocalApp() {
 
     const appKey = loadOrCreateAppKey(userData);
     const iniContents = fs.readFileSync(PHP_INI, 'utf8')
-        .replace(/^extension_dir=.*$/m, `extension_dir=${path.join(PHP_ROOT, 'ext').replaceAll('\\', '/')}`);
+        .replace(/^extension_dir=.*$/m, `extension_dir="${toIniPath(path.join(PHP_ROOT, 'ext'))}"`);
     fs.writeFileSync(iniPath, iniContents);
     const port = await getAvailablePort();
     serverOrigin = `http://127.0.0.1:${port}`;

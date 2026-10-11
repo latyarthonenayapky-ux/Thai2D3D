@@ -16,7 +16,11 @@
 
 set -uo pipefail
 
-PROJECT_DIR="/home/waiyanaung/Projects/Thai2D3D"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ ! -f "$PROJECT_DIR/artisan" ]; then
+    echo "This script must live beside the Laravel app (missing $PROJECT_DIR/artisan)." >&2
+    exit 1
+fi
 SSH_KEY="$HOME/.ssh/id_ed25519"
 LISTEN_HOST="127.0.0.1"
 LISTEN_PORT="8000"

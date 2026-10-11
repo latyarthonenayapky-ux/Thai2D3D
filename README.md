@@ -6,22 +6,24 @@ Agent စီမံခန့်ခွဲမှု၊ ရလဒ်၊ settlement �
 
 ## ယခု Linux ကွန်ပျူတာပေါ်တွင် ဖွင့်သုံးရန်
 
-Linux x86-64 အတွက် standalone AppImage ကို ဤ project folder ၏ root တွင်
-ထားပေးထားသည်။
+Linux x86-64 အတွက် standalone AppImage ကို `release/Linux/` folder ထဲတွင်
+ထားပေးထားသည်။ ထို folder ကို ကူးယူသွားလျှင်လည်း အလုပ်လုပ်ပါသည်။
 
-**ဖွင့်ရန် — `Thai2D3D-1.1.0.AppImage` ကို File Manager မှ double-click နှိပ်ပါ။**
+**ဖွင့်ရန် — `release/Linux/Thai2D3D-1.1.0.AppImage` ကို File Manager မှ
+double-click နှိပ်ပါ။**
 ဖိုင်ကို executable အဖြစ်ပြင်ဆင်ထားပြီး PHP သို့မဟုတ် Composer ကို သီးခြား
-install လုပ်ရန်မလိုပါ။ ပထမဆုံးဖွင့်ချိန်တွင် Owner အမည်၊ email နှင့်
-အနည်းဆုံး 12 လုံးရှိသော password ဖြင့် local Owner account တည်ဆောက်ပါ။
-နောက်တစ်ကြိမ်ဖွင့်လျှင် အဲဒီ account ဖြင့် login ဝင်ပါ။
+install လုပ်ရန်မလိုပါ။ ပထမဆုံးဖွင့်ချိန်တွင် Owner အမည်၊ email၊ အနည်းဆုံး
+6 လုံးရှိသော password နှင့် ထို email အတွက် ရယူထားသော Install pass key တို့ဖြင့်
+local Owner account တည်ဆောက်ပါ။ နောက်တစ်ကြိမ်ဖွင့်လျှင် အဲဒီ account ဖြင့်
+login ဝင်ပါ။
 
 File Manager က launch ခွင့်မပေးလျှင် ဖိုင်ပေါ် right-click → **Properties** →
 **Permissions** ထဲက executable/run ခွင့်ကို ဖွင့်ပြီး double-click ပြန်နှိပ်ပါ။
 လိုအပ်လျှင် Terminal မှ တစ်ကြိမ်သာ အောက်ပါအတိုင်းဖွင့်နိုင်သည်။
 
 ```sh
-chmod +x ./Thai2D3D-1.1.0.AppImage
-./Thai2D3D-1.1.0.AppImage
+chmod +x ./release/Linux/Thai2D3D-1.1.0.AppImage
+./release/Linux/Thai2D3D-1.1.0.AppImage
 ```
 
 App ပိတ်ရန် window ကိုပိတ်ပါ။ Local SQLite database နှင့် app data ကို
@@ -29,15 +31,36 @@ App ပိတ်ရန် window ကိုပိတ်ပါ။ Local SQLite dat
 အရင်ပိတ်ပါ။ ဒီ standalone build ၏ database သည် ဒီကွန်ပျူတာပေါ်မှာသာရှိပြီး
 VPS/online server သို့ အလိုအလျောက် sync မလုပ်ပါ။
 
-**Windows:** portable offline app ကို
-`Thai2D3D-1.1.0-Windows.exe` အမည်ဖြင့် build လုပ်ထားသည်။ Windows 10/11 x64
-ကွန်ပျူတာတွင် double-click ဖြင့်ဖွင့်နိုင်ပြီး ပထမဆုံးအကြိမ်တွင် local Owner
-account တည်ဆောက်ပါ။ PHP/Composer ကို သီးခြား install လုပ်စရာမလိုပါ။
-PHP runtime အတွက် Microsoft Visual C++ 2015–2022 Redistributable (x64)
-မရှိသေးသော Windows ကွန်ပျူတာတွင် ၎င်းကို ထပ်မံတပ်ဆင်ရန် လိုနိုင်သည်။
-ဤ `.exe` တွင် code-signing certificate မပါသောကြောင့် Windows SmartScreen
-သတိပေးချက် ပြနိုင်သည်။ ယခင် `1.0.0.exe` သည် online
-website wrapper အဟောင်းဖြစ်ပြီး standalone offline app မဟုတ်ပါ။
+**Windows:** portable offline app ကို `release/Windows/Thai2D3D/` folder
+(`Thai2D3D.exe` အပါ) အဖြစ် ထားပေးထားသည်။ ဖွင့်ရန် `release/Windows/Start
+Thai2D3D.cmd` ကို double-click နှိပ်ပါ (သို့မဟုတ် `Thai2D3D\Thai2D3D.exe` ကို
+တိုက်ရိုက် double-click)။ Folder ကို ကူးယူသွားလျှင်လည်း အလုပ်လုပ်ပါသည်။
+ပထမဆုံးအကြိမ်တွင် Owner email၊ အနည်းဆုံး 6 လုံး password နှင့် ထို email
+အတွက် ရယူထားသော Install pass key တို့ဖြင့် local Owner account တည်ဆောက်ပါ။
+PHP/Composer ကို သီးခြား install လုပ်စရာမလိုပါ။ PHP runtime အတွက်
+Microsoft Visual C++ 2015–2022 Redistributable (x64) မရှိသေးသော Windows
+ကွန်ပျူတာတွင် ၎င်းကို ထပ်မံတပ်ဆင်ရန် လိုနိုင်သည်။ ဤ app တွင် code-signing
+certificate မပါသောကြောင့် Windows SmartScreen သတိပေးချက် ပြနိုင်သည်။
+`release/Windows/_superseded/` ထဲရှိ ယခင် single-file `.exe` သည် အလုပ်မလုပ်
+တော့သော version ဖြစ်၍ အသုံးမပြုပါနှင့်။
+
+## Release folder များ
+
+- `release/Windows/` — Windows portable app folder (`Thai2D3D\Thai2D3D.exe` နှင့်
+  `Start Thai2D3D.cmd`)။ Folder ကို ကူးယူပြီး double-click နှိပ်ရုံဖြင့်
+  အသုံးပြုနိုင်သည် — install မလိုပါ။ `_superseded/` ထဲတွင် ယခင် single-file
+  `.exe` အဟောင်းကို သိမ်းထားသည် (အသုံးမပြုရန်)။
+- `release/Linux/` — Linux AppImage (`.AppImage`)။
+- `release/VPS/` — VPS server သို့ upload လုပ်ရန် web app source (လက်ရှိ source
+  code မှ တိုက်ရိုက်ကူးထားသည်)။ [VPS Setup Guide](docs/VPS_SETUP_MM.md) အတိုင်း
+  အသုံးပြုပါ။
+
+`release/Windows/Thai2D3D/` ကို 2026-10-11 တွင် လက်ရှိ source မှ ပြန်လည်
+တည်ဆောက်ထားသည် (openssl fix၊ Install pass key အပါအဝင်)။ `release/Linux/`
+AppImage သည် ယခင် build အတိုင်း ဖြစ်သည်။ Source ပြောင်းလဲမှုများ ပါဝင်စေရန်
+Node.js ရှိသော computer တွင် `cd desktop && npm run dist` ဖြင့် ပြန်တည်ဆောက်ပြီး
+ထွက်လာသည့် ဖိုင်များကို `release/` folder များထဲ အစားထိုးပါ။ `release/VPS/`
+သည် snapshot ဖြစ်သဖြင့် source code ပြင်ဆင်တိုင်း ပြန်လည်ကူးယူသင့်သည်။
 
 ## စာရွက်စာတမ်း
 

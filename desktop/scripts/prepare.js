@@ -68,17 +68,33 @@ if (target === 'win') {
     }
 
     fs.cpSync(runtimeSource, phpStage, { recursive: true });
+
+    // openssl is required for Laravel cookie/session encryption and is a dynamic
+    // extension in the official Windows PHP build, so it must be enabled here.
+    const requiredExtensions = ['mbstring', 'fileinfo', 'curl', 'openssl', 'pdo_sqlite', 'sqlite3'];
     const iniPath = path.join(phpStage, 'php.ini');
     if (!fs.existsSync(iniPath)) {
         fs.writeFileSync(iniPath, [
             'extension_dir=ext',
-            'extension=pdo_sqlite',
-            'extension=sqlite3',
+            ...requiredExtensions.map(extension => `extension=${extension}`),
             'date.timezone=Asia/Yangon',
             'display_errors=Off',
             'log_errors=On',
             '',
         ].join('\n'));
+    }
+
+    for (const extension of requiredExtensions) {
+        const dll = path.join(phpStage, 'ext', `php_${extension}.dll`);
+        if (!fs.existsSync(dll)) {
+            throw new Error(`Missing ext/php_${extension}.dll in the Windows PHP runtime.`);
+        }
+    }
+
+    const iniContents = fs.readFileSync(iniPath, 'utf8');
+    const missing = requiredExtensions.filter(extension => !new RegExp(`^\\s*extension\\s*=\\s*${extension}\\s*$`, 'm').test(iniContents));
+    if (missing.length > 0) {
+        fs.writeFileSync(iniPath, `${iniContents.trimEnd()}\n${missing.map(extension => `extension=${extension}`).join('\n')}\n`);
     }
 } else {
     const runtimeSource = path.join(desktopRoot, 'runtime', 'php-linux');

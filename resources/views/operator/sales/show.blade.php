@@ -72,6 +72,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
 <main class="sale-workspace" data-sale-workspace
       data-sale-mode="{{ $saleMode }}"
       data-sale-action="{{ route('operator.sales.store', $agentSession) }}"
+      data-batch-action="{{ route('operator.sales.store-batch', $agentSession) }}"
       data-csrf="{{ csrf_token() }}"
       data-storage-key="thai2d3d-sale-drafts-{{ auth()->id() }}-{{ $agentSession->id }}-{{ $saleMode }}">
     <div class="sale-heading">
@@ -87,6 +88,9 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                     <a href="{{ route('operator.sales.show', [$agentSession, 'mode' => $saleMode]) }}">Live of items sold · all Agents</a>
                 @endif
                 <a href="{{ route('operator.sales.workspace') }}">Choose another Agent</a>
+                @if(auth()->user()->isOperator() && $canEnterSales)
+                    <a href="{{ route('operator.sales.offline', $agentSession) }}">Offline sales</a>
+                @endif
             </div>
         </div>
     </div>
@@ -161,8 +165,8 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                     <button class="button secondary" type="submit" @disabled(! $canEnterSales)>Add</button>
                 </form>
                 <div class="sale-shortcuts"><span><kbd>Enter</kbd> Add to Recent Sales</span><span><kbd>F3</kbd> Input</span><span><kbd>F1</kbd> Save all</span></div>
-                @if($saleMode === '2d' && config('app.desktop_mode'))
-                    <div class="muted">2D codes auto-uppercase; typing * enters R. Pasted legacy * lists remain unchanged.</div>
+                @if($saleMode === '2d')
+                    <div class="muted">2D codes auto-uppercase; typing * enters R. Paste a list (one entry per line) to stage many at once.</div>
                 @endif
             </div>
             <div class="sale-panel-title"><span>Recent Sales</span><span data-draft-count>0</span></div>
@@ -347,7 +351,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         </div>
     </section>
 </main>
-@if($saleMode === '2d' && config('app.desktop_mode'))
+@if($saleMode === '2d')
     <script src="{{ asset('js/sale-entry-keyboard.js') }}"></script>
 @endif
 <script>
@@ -538,22 +542,39 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         renderTopSales();
         renderOverLimit();
 
-        form.addEventListener('submit', event => {
-            event.preventDefault();
-            const value = input.value.trim();
-            if (!value) return;
-            const draft = { id: draftId(), input: value, createdAt: new Date().toISOString() };
-            drafts.push(draft);
+        const stageInputs = values => {
+            const staged = [];
+            for (const raw of values) {
+                const value = raw.trim();
+                if (!value) continue;
+                staged.push({ id: draftId(), input: value, createdAt: new Date().toISOString() });
+            }
+            if (!staged.length) return false;
+            drafts.push(...staged);
             try {
                 persist();
-                input.value = '';
                 renderDrafts();
-                showStatus(`${value} added to Recent Sales. Press Save (F1) to send it to the server.`);
+                showStatus(staged.length === 1
+                    ? `${staged[0].input} added to Recent Sales. Press Save (F1) to send it to the server.`
+                    : `${staged.length} inputs added to Recent Sales. Press Save (F1) to send them to the server.`);
                 input.focus();
+                return true;
             } catch (error) {
-                drafts.pop();
-                showStatus(`Could not save this draft on the device: ${error.message}. Copy the input before retrying.`, true);
+                drafts = drafts.filter(draft => !staged.includes(draft));
+                showStatus(`Could not save this on the device: ${error.message}. Copy the input before retrying.`, true);
+                return false;
             }
+        };
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            if (!input.value.trim()) return;
+            if (stageInputs([input.value])) input.value = '';
+        });
+        input.addEventListener('paste', event => {
+            const text = event.clipboardData?.getData('text');
+            if (!text || !/[\r\n]/.test(text)) return;
+            event.preventDefault();
+            if (stageInputs(text.split(/[\r\n]+/))) input.value = '';
         });
         saveButton.addEventListener('click', async () => {
             if (!drafts.length) {
@@ -564,40 +585,61 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             saveButton.disabled = true;
             let saved = 0;
             let failed = 0;
-            for (const draft of [...drafts]) {
-                draft.error = '';
+            let fatal = false;
+            const pending = [...drafts];
+            const batchSize = 50;
+            for (let index = 0; index < pending.length; index += batchSize) {
+                const chunk = pending.slice(index, index + batchSize);
                 try {
-                    persist();
-                    const data = new FormData();
-                    data.set('_token', workspace.dataset.csrf);
-                    data.set('sale_type', mode);
-                    data.set('input', draft.input);
-                    data.set('client_uuid', draft.id);
-                    const response = await fetch(workspace.dataset.saleAction, {
+                    const response = await fetch(workspace.dataset.batchAction, {
                         method: 'POST',
-                        body: data,
                         credentials: 'same-origin',
-                        headers: { Accept: 'application/json' },
+                        headers: {
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': workspace.dataset.csrf,
+                        },
+                        body: JSON.stringify({
+                            sale_type: mode,
+                            inputs: chunk.map(draft => ({ input: draft.input, client_uuid: draft.id })),
+                        }),
                     });
-                    const result = await response.json();
+                    const result = await response.json().catch(() => ({}));
                     if (!response.ok) {
-                        draft.error = result.message || Object.values(result.errors || {}).flat().join(' ') || `Server returned ${response.status}.`;
-                        failed++;
+                        const message = result.message || `Server returned ${response.status}.`;
+                        for (const draft of chunk) {
+                            draft.error = message;
+                            failed++;
+                        }
                         persist();
                         renderDrafts();
                         if ([401, 419, 500, 502, 503, 504].includes(response.status)) break;
                         continue;
                     }
-                    addAcceptedDetails(result.details || []);
-                    drafts = drafts.filter(item => item.id !== draft.id);
-                    saved++;
+                    for (const draft of chunk) {
+                        const item = (result.results || []).find(entry => entry.client_uuid === draft.id);
+                        if (!item) {
+                            draft.error = 'No server response for this input.';
+                            failed++;
+                        } else if (item.status === 'saved') {
+                            addAcceptedDetails(item.details || []);
+                            drafts = drafts.filter(row => row.id !== draft.id);
+                            saved++;
+                        } else {
+                            draft.error = item.message || 'Server rejected this input.';
+                            failed++;
+                        }
+                    }
                     persist();
                     renderDrafts();
                 } catch (error) {
-                    draft.error = 'Connection failed. This input is still saved on this device.';
-                    failed++;
+                    for (const draft of chunk) {
+                        draft.error = 'Connection failed. This input is still saved on this device.';
+                        failed++;
+                    }
                     try { persist(); } catch (storageError) {
                         showStatus(`Connection failed and the local draft could not be updated: ${storageError.message}. Do not close this page.`, true);
+                        fatal = true;
                         break;
                     }
                     renderDrafts();
@@ -605,7 +647,9 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 }
             }
             saveButton.disabled = false;
-            showStatus(`${saved} input${saved === 1 ? '' : 's'} saved${failed ? `; ${failed} remain in Recent Sales with errors` : ''}.`, failed > 0);
+            if (!fatal) {
+                showStatus(`${saved} input${saved === 1 ? '' : 's'} saved${failed ? `; ${failed} remain in Recent Sales with errors` : ''}.`, failed > 0);
+            }
         });
         document.querySelector('[data-focus-agent]').addEventListener('click', () => agent.focus());
         agent.addEventListener('change', () => {

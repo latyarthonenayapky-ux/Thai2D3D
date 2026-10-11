@@ -27,15 +27,51 @@
 <main class="main">
     @if(auth()->user()->isAdmin())
         <h1 class="page-title">Live sales dashboard</h1>
-        <p class="subtitle">Open daily Rounds · accepted 2D sales across your business · refreshes every 15 seconds while this page is open</p>
+        <p class="subtitle">Open daily Rounds · accepted 2D sales across your business · updates in place every 15 seconds while this page is open</p>
         <script>
-            let liveRefreshTimer = window.setTimeout(() => window.location.reload(), 15000);
-            document.addEventListener('visibilitychange', () => {
-                window.clearTimeout(liveRefreshTimer);
-                if (document.visibilityState === 'visible') {
-                    liveRefreshTimer = window.setTimeout(() => window.location.reload(), 15000);
-                }
-            });
+            (() => {
+                const endpoint = @json(route('dashboard.live'));
+                const formatCount = value => Number(value).toLocaleString();
+                const formatAmount = value => Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const refreshLive = async () => {
+                    try {
+                        const response = await fetch(endpoint, {
+                            headers: { Accept: 'application/json' },
+                            credentials: 'same-origin',
+                        });
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        const rounds = data.rounds || [];
+                        const renderedRounds = [...document.querySelectorAll('[data-live-round]')].map(section => section.dataset.liveRound);
+                        if (rounds.length !== renderedRounds.length || rounds.some(round => !renderedRounds.includes(String(round.id)))) {
+                            window.location.reload();
+                            return;
+                        }
+                        for (const round of rounds) {
+                            const count = document.querySelector(`[data-live-round-count="${round.id}"]`);
+                            const amount = document.querySelector(`[data-live-round-amount="${round.id}"]`);
+                            if (count) count.textContent = formatCount(round.accepted_count);
+                            if (amount) amount.textContent = formatAmount(round.accepted_amount);
+                            for (const agent of round.agents || []) {
+                                const row = document.querySelector(`[data-live-agent-row="${round.id}-${agent.agent_id}"]`);
+                                if (!row) { window.location.reload(); return; }
+                                row.querySelector('[data-live-agent-count]').textContent = formatCount(agent.accepted_count);
+                                row.querySelector('[data-live-agent-amount]').textContent = formatAmount(agent.accepted_amount);
+                                const pill = row.querySelector('[data-live-limit-pill]');
+                                if (pill) pill.style.display = (agent.amount_limit !== null && agent.accepted_amount >= agent.amount_limit) ? '' : 'none';
+                            }
+                        }
+                    } catch (error) {
+                        // Keep showing the last known totals; the next tick retries.
+                    }
+                };
+
+                window.setInterval(refreshLive, 15000);
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') refreshLive();
+                });
+            })();
         </script>
 
         @if(session('status'))
@@ -148,19 +184,33 @@
                 window.setInterval(() => {
                     if (document.visibilityState === 'visible') poll();
                 }, 10000);
-
-                let liveRefreshTimer = window.setTimeout(() => window.location.reload(), 30000);
-                document.addEventListener('visibilitychange', () => {
-                    window.clearTimeout(liveRefreshTimer);
-                    if (document.visibilityState === 'visible') {
-                        liveRefreshTimer = window.setTimeout(() => window.location.reload(), 30000);
-                    }
-                });
             })();
         </script>
 
+        @if($setupPending)
+            <section class="card" style="margin-bottom:18px" aria-label="First-run checklist">
+                <h2>Get started checklist</h2>
+                <ol style="margin:10px 0 0;padding-left:20px">
+                    @foreach($setupChecklist as $item)
+                        <li style="margin:6px 0">
+                            @if($item['done'])
+                                <s>{{ $item['label'] }}</s> <span class="pill off">Done</span>
+                            @else
+                                {{ $item['label'] }} · <a href="{{ $item['href'] }}">{{ $item['action'] }}</a>
+                            @endif
+                        </li>
+                    @endforeach
+                </ol>
+                <p class="muted" style="margin:12px 0 0">
+                    Rounds open and close automatically only while the Laravel scheduler runs every minute.
+                    On the VPS add this cron line (details in <code>docs/VPS_SETUP_MM.md</code> §7):
+                    <code>* * * * * cd /var/www/thai2d3d &amp;&amp; /usr/bin/php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code>
+                </p>
+            </section>
+        @endif
+
         @forelse($adminRounds as $round)
-            <section class="card live-round-list" style="margin-bottom:18px">
+            <section class="card live-round-list" style="margin-bottom:18px" data-live-round="{{ $round->id }}">
                 <div class="live-round-heading">
                     <div>
                         <h2 style="margin:0">{{ $round->round_date->format('Y-m-d') }} · Round {{ $round->round_no }}</h2>
@@ -170,8 +220,8 @@
                 </div>
 
                 <div class="live-round-totals" aria-label="Round accepted sales totals">
-                    <div><span class="muted">Accepted numbers</span><strong>{{ number_format($round->accepted_count) }}</strong></div>
-                    <div><span class="muted">2D accepted amount</span><strong>{{ number_format($round->accepted_amount, 2) }}</strong></div>
+                    <div><span class="muted">Accepted numbers</span><strong data-live-round-count="{{ $round->id }}">{{ number_format($round->accepted_count) }}</strong></div>
+                    <div><span class="muted">2D accepted amount</span><strong data-live-round-amount="{{ $round->id }}">{{ number_format($round->accepted_amount, 2) }}</strong></div>
                 </div>
 
                 <div class="live-table-labels" aria-hidden="true">
@@ -182,7 +232,7 @@
                         @php
                             $amountLimitReached = $agent->amount_limit !== null && $agent->accepted_amount >= $agent->amount_limit;
                         @endphp
-                        <article class="live-agent">
+                        <article class="live-agent" data-live-agent-row="{{ $round->id }}-{{ $agent->agent_id }}">
                             <div class="live-agent-name">
                                 {{ $agent->agent_code }} · {{ $agent->agent_name }}
                                 @if($agent->assigned_user_id === auth()->id() && $agent->agent_session_id)
@@ -193,9 +243,7 @@
                                         <button class="button secondary" type="submit">{{ $agent->assigned_user_id === null ? 'Claim Agent' : 'Resume Agent' }}</button>
                                     </form>
                                 @endif
-                                @if($amountLimitReached)
-                                    <span class="pill off">Limit reached</span>
-                                @endif
+                                <span class="pill off" data-live-limit-pill @if(!$amountLimitReached) style="display:none" @endif>Limit reached</span>
                             </div>
                             <div class="live-agent-operator">
                                 @if($agent->assigned_user_id === null)
@@ -206,8 +254,8 @@
                                     {{ $agent->handler_name }} ({{ ucfirst($agent->handler_role) }})
                                 @endif
                             </div>
-                            <div class="live-agent-count live-agent-value">{{ number_format($agent->accepted_count) }}</div>
-                            <div class="live-agent-amount live-agent-value">{{ number_format($agent->accepted_amount, 2) }}</div>
+                            <div class="live-agent-count live-agent-value" data-live-agent-count>{{ number_format($agent->accepted_count) }}</div>
+                            <div class="live-agent-amount live-agent-value" data-live-agent-amount>{{ number_format($agent->accepted_amount, 2) }}</div>
                             <div class="live-agent-limit">
                                 @if($agent->amount_limit === null)
                                     <span class="muted">Not set</span>
@@ -226,6 +274,7 @@
             <section class="card">
                 <h2>No open Rounds</h2>
                 <p class="muted">Set the daily schedule in Settings. Configure a Round’s blocked 2D values from Sale Entry; this is separate from the 3D number-count limit.</p>
+                <p class="muted">Rounds appear only while the Laravel scheduler runs every minute. On a VPS, check the cron entry (see <code>docs/VPS_SETUP_MM.md</code> §7): <code>* * * * * cd /var/www/thai2d3d &amp;&amp; /usr/bin/php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code></p>
                 <a class="button" href="{{ route('admin.settings.index') }}#round-schedule">Configure Round schedule</a>
             </section>
         @endforelse

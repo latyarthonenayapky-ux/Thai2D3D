@@ -48,12 +48,12 @@
                 @endif
                 <div>
                     <label for="password">Password</label>
-                    <input id="password" name="password" type="password" autocomplete="new-password" required minlength="12">
-                    <span class="muted" style="font-size:12px">At least 12 characters.</span>
+                    <input id="password" name="password" type="password" autocomplete="new-password" required minlength="6">
+                    <span class="muted" style="font-size:12px">At least 6 characters.</span>
                 </div>
                 <div>
                     <label for="password_confirmation">Confirm password</label>
-                    <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required minlength="12">
+                    <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required minlength="6">
                 </div>
             </div>
             <button class="button" style="margin-top:18px" type="submit">Create account</button>

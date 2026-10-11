@@ -128,6 +128,28 @@ class IndependentThreeDigitDrawTest extends TestCase
             ->assertSee('3D Agent totals')
             ->assertSee('500,000.00');
 
+        $export = $this->get(route('reports.summary.export', [
+            'mode' => '3d',
+            'period' => 'daily',
+            'date' => '2026-10-16',
+        ]));
+        $export->assertOk()
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $exportCsv = (string) $export->streamedContent();
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $exportCsv);
+
+        $lines = preg_split('/\r\n|\n/', trim(preg_replace('/^\xEF\xBB\xBF/', '', $exportCsv)));
+        $this->assertCount(3, $lines);
+        $header = str_getcsv($lines[0]);
+        $this->assertSame('Agent code', $header[0]);
+        $this->assertSame('Accepted stakes (MMK)', $header[5]);
+        $row = str_getcsv($lines[1]);
+        $this->assertSame(['D3-01', 'Draw Agent', '2026-10-16', '124'], array_slice($row, 0, 4));
+        $this->assertSame(['500', '500', '500000', '50', '-499550'], array_slice($row, 5));
+        $total = str_getcsv($lines[2]);
+        $this->assertSame('TOTAL', $total[0]);
+        $this->assertSame(['500', '500', '500000', '50', '-499550'], array_slice($total, 5));
+
         $this->postJson(route('three-digit.sales.store', [$draw, $agent]), [
             'input' => '125500',
             'client_uuid' => (string) Str::uuid(),

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\DataBackupController;
+use App\Http\Controllers\Admin\MobileAppPackageController;
 use App\Http\Controllers\Admin\OfflineSyncReviewController;
 use App\Http\Controllers\Admin\PeriodReportController;
 use App\Http\Controllers\Admin\PreferenceController;
@@ -225,6 +226,14 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
             SettingsController::class,
             'updateAgentThreeDigitCommission',
         ])->middleware('throttle:120,1')->name('settings.agents.three-digit-commission');
+        Route::post('/settings/agents/mobile-access/issue-all', [
+            SettingsController::class,
+            'issueAllAgentMobileAccess',
+        ])->middleware('throttle:10,1')->name('settings.agents.mobile-access.issue-all');
+        Route::post('/settings/agents/{agent}/mobile-access/issue', [
+            SettingsController::class,
+            'issueAgentMobileAccess',
+        ])->middleware('throttle:30,1')->name('settings.agents.mobile-access.issue');
         Route::patch('/settings/agents/{agent}/mobile-access', [
             SettingsController::class,
             'updateAgentMobileAccess',
@@ -237,6 +246,18 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
             SettingsController::class,
             'disableAgentMobileAccess',
         ])->middleware('throttle:30,1')->name('settings.agents.mobile-access.disable');
+        Route::post('/settings/mobile-app', [
+            MobileAppPackageController::class,
+            'store',
+        ])->middleware('throttle:10,1')->name('settings.mobile-app.store');
+        Route::get('/settings/mobile-app/download', [
+            MobileAppPackageController::class,
+            'download',
+        ])->middleware('throttle:30,1')->name('settings.mobile-app.download');
+        Route::delete('/settings/mobile-app', [
+            MobileAppPackageController::class,
+            'destroy',
+        ])->middleware('throttle:10,1')->name('settings.mobile-app.destroy');
         Route::patch('/settings/rounds/{round}/agents/{agent}/amount-limit', [
             SettingsController::class,
             'updateAgentRoundAmountLimit',

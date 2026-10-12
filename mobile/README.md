@@ -21,8 +21,26 @@ flutter build apk --release --dart-define=WYA_SERVER_URL=https://your-vps-addres
 `flutter create` fills in `android/` (gradle files, manifest, wrapper). It does
 not touch `lib/`, `pubspec.yaml` or `analysis_options.yaml`.
 
-The build also runs in GitHub Actions (`.github/workflows/android-apk.yml`),
-which uploads the debug APK as an artifact for testing.
+## Building it on GitHub Actions (no Flutter needed)
+
+`.github/workflows/android-apk.yml` runs on every push that touches `mobile/**`
+(or manually, from **Actions → Android APK → Run workflow**, where you can type
+the VPS address). It installs Flutter 3.24.5, generates `android/`, labels the
+app **WYA Agent**, allows a plain-HTTP VPS, and uploads two artifacts:
+
+| Artifact | File | Use it for |
+| --- | --- | --- |
+| `wya-agent-debug-apk` | `app-debug.apk` | quick checks; verbose logs, kept 30 days |
+| `wya-agent-release-apk` | `app-release.apk` | handing to Agents; smaller, kept 90 days |
+
+Flutter signs release builds with the debug key, so `app-release.apk` installs on
+a phone as-is. Before relying on in-place upgrades from the Play-less sideload,
+replace it with a real keystore stored as a repository secret.
+
+Download the artifact from the run page, then publish it under **Settings →
+Agent mobile app (APK)** on the office webapp. That page is the only place the
+file can be pulled from: it lives on the private disk and the download route is
+admin-only, so Operators and Agents get 403.
 
 ## Server address
 
@@ -31,7 +49,7 @@ The baked-in default comes from `--dart-define=WYA_SERVER_URL`
 screen; the value they use is stored on the phone.
 
 For a VPS without HTTPS yet, allow cleartext traffic in
-`android/app/src/main/AndroidManifest.xml`:
+`android/app/src/main/AndroidManifest.xml` (the CI build does this for you):
 
 ```xml
 <application android:usesCleartextTraffic="true" ...>

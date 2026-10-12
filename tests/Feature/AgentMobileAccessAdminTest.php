@@ -159,6 +159,140 @@ class AgentMobileAccessAdminTest extends TestCase
         $this->assertNull($agent->fresh()->mobile_login_code);
     }
 
+    public function test_issuing_credentials_returns_a_pin_that_signs_in_once_and_is_never_shown_again(): void
+    {
+        $admin = $this->businessAdmin();
+        $agent = $this->agent($admin);
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.agents.mobile-access.issue', $agent))
+            ->assertRedirect()
+            ->assertSessionHas('mobile_credentials');
+
+        $credential = session()->get('mobile_credentials')[0] ?? null;
+        $this->assertNotNull($credential);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $credential['pin']);
+        $this->assertSame('AGT-'.str_pad((string) $agent->id, 4, '0', STR_PAD_LEFT), $credential['login_code']);
+
+        $agent->refresh();
+        $this->assertSame($credential['login_code'], $agent->mobile_login_code);
+        $this->assertTrue(Hash::check($credential['pin'], $agent->mobile_password));
+
+        $this->postJson(route('api.v1.auth.login'), [
+            'login_code' => $credential['login_code'],
+            'password' => $credential['pin'],
+        ])->assertCreated();
+
+        // The handover sheet shows the PIN on the next page load, then the flash
+        // bag ages out. Checking the card marker rather than the raw PIN matters:
+        // a six-digit PIN is a substring of the random CSRF token often enough to
+        // make assertDontSee($pin) flaky.
+        $this->actingAs($admin)
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertSee($credential['pin'])
+            ->assertSee('Sign in at')
+            ->assertSee($credential['login_code']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertDontSee('Sign in at')
+            ->assertSessionMissing('mobile_credentials');
+    }
+
+    public function test_bulk_issue_only_touches_active_agents_without_credentials(): void
+    {
+        $admin = $this->businessAdmin();
+        $ready = $this->agent($admin, 'AG-READY', 'MOB-READY', 'long-enough');
+        $this->agent($admin, 'AG-TWO');
+        $this->agent($admin, 'AG-THREE');
+        $this->agent($admin, 'AG-OFF', null, null, 'inactive');
+        $token = $this->postJson(route('api.v1.auth.login'), [
+            'login_code' => 'MOB-READY',
+            'password' => 'long-enough',
+        ])->json('token');
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.agents.mobile-access.issue-all'))
+            ->assertRedirect();
+
+        $issued = session()->get('mobile_credentials');
+        $this->assertCount(2, $issued);
+        $this->assertSame(['AG-THREE', 'AG-TWO'], array_column($issued, 'agent_code'));
+
+        $this->assertSame('MOB-READY', $ready->fresh()->mobile_login_code);
+        $this->assertNull(Agent::query()->where('agent_code', 'AG-OFF')->firstOrFail()->mobile_login_code);
+        $this->withToken($token)->getJson(route('api.v1.me'))->assertOk();
+    }
+
+    public function test_reissuing_credentials_signs_out_every_phone(): void
+    {
+        $admin = $this->businessAdmin();
+        $agent = $this->agent($admin, 'AG-RE', 'MOB-RE', 'long-enough');
+        $token = $this->postJson(route('api.v1.auth.login'), [
+            'login_code' => 'MOB-RE',
+            'password' => 'long-enough',
+        ])->json('token');
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.agents.mobile-access.issue', $agent))
+            ->assertSessionHas('mobile_credentials');
+
+        $new = session()->get('mobile_credentials')[0];
+        $this->assertSame('MOB-RE', $new['login_code']);
+        $this->withToken($token)->getJson(route('api.v1.me'))->assertUnauthorized();
+        $this->postJson(route('api.v1.auth.login'), [
+            'login_code' => 'MOB-RE',
+            'password' => 'long-enough',
+        ])->assertUnauthorized();
+        $this->postJson(route('api.v1.auth.login'), [
+            'login_code' => 'MOB-RE',
+            'password' => $new['pin'],
+        ])->assertCreated();
+    }
+
+    public function test_a_custom_login_code_is_normalised_and_must_be_unique(): void
+    {
+        $admin = $this->businessAdmin();
+        $first = $this->agent($admin, 'AG-A');
+        $second = $this->agent($admin, 'AG-B');
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.agents.mobile-access.issue', $first), [
+                'mobile_login_code' => 'agt-custom',
+            ])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('AGT-CUSTOM', $first->fresh()->mobile_login_code);
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.agents.mobile-access.issue', $second), [
+                'mobile_login_code' => 'AGT-CUSTOM',
+            ])
+            ->assertSessionHasErrors('mobile_login_code');
+        $this->assertNull($second->fresh()->mobile_login_code);
+    }
+
+    public function test_operators_cannot_reach_the_issue_endpoints(): void
+    {
+        $admin = $this->businessAdmin();
+        $agent = $this->agent($admin);
+        $operator = User::factory()->create([
+            'role' => 'operator',
+            'admin_id' => $admin->id,
+            'status' => true,
+        ]);
+
+        $this->actingAs($operator)
+            ->post(route('admin.settings.agents.mobile-access.issue', $agent))
+            ->assertForbidden();
+        $this->actingAs($operator)
+            ->post(route('admin.settings.agents.mobile-access.issue-all'))
+            ->assertForbidden();
+
+        $this->assertNull($agent->fresh()->mobile_login_code);
+    }
+
     private function businessAdmin(): User
     {
         $admin = User::factory()->create(['role' => 'admin', 'status' => true]);
@@ -167,12 +301,13 @@ class AgentMobileAccessAdminTest extends TestCase
         return $admin;
     }
 
-    private function agent(User $admin, string $code = 'WYA-01', ?string $loginCode = null, ?string $password = null): Agent
+    private function agent(User $admin, string $code = 'WYA-01', ?string $loginCode = null, ?string $password = null, string $status = 'active'): Agent
     {
         return Agent::query()->create([
             'admin_id' => $admin->id,
             'agent_code' => $code,
             'agent_name' => "Agent {$code}",
+            'status' => $status,
             'mobile_login_code' => $loginCode,
             'mobile_password' => $password,
         ]);

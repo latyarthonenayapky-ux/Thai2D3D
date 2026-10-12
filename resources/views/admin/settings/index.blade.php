@@ -219,6 +219,10 @@
         </div>
         <h3 style="margin-top:24px">{{ __('app.settings.mobile_access_title') }}</h3>
         <p>{{ __('app.settings.mobile_access_help') }}</p>
+        <form method="POST" action="{{ route('admin.settings.agents.mobile-access.issue-all') }}">
+            @csrf
+            <button class="button" type="submit">{{ __('app.settings.issue_mobile_all') }}</button>
+        </form>
         <div class="table-wrap">
             <table>
                 <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.settings.col_mobile_login_code') }}</th><th>{{ __('app.settings.col_mobile_password') }}</th><th>{{ __('app.settings.mobile_devices') }}</th><th>{{ __('app.common.action') }}</th></tr></thead>
@@ -236,6 +240,10 @@
                         <td><input form="agent-mobile-{{ $agent->id }}" aria-label="{{ __('app.settings.col_mobile_password') }} · {{ $agent->agent_name }}" type="password" name="mobile_password" minlength="6" maxlength="64" autocomplete="new-password" placeholder="{{ $agent->mobile_password ? __('app.settings.mobile_password_keep') : __('app.settings.col_mobile_password') }}"></td>
                         <td>@if($agent->mobile_login_code){{ $agent->active_devices_count }}@else<span class="muted">{{ __('app.settings.mobile_not_enabled') }}</span>@endif</td>
                         <td>
+                            <form method="POST" action="{{ route('admin.settings.agents.mobile-access.issue', $agent) }}" style="display:inline">
+                                @csrf
+                                <button class="button" type="submit">{{ __('app.settings.issue_mobile_access') }}</button>
+                            </form>
                             <button class="button secondary" type="submit" form="agent-mobile-{{ $agent->id }}">{{ __('app.settings.save_mobile_access') }}</button>
                             @if($agent->mobile_login_code)
                                 <form method="POST" action="{{ route('admin.settings.agents.mobile-access.devices', $agent) }}" style="display:inline">
@@ -257,6 +265,46 @@
                 </tbody>
             </table>
         </div>
+        @if(session('mobile_credentials'))
+            <div class="card" style="margin-top:16px">
+                <h4>{{ __('app.settings.mobile_credentials_title') }}</h4>
+                <p>{{ __('app.settings.mobile_credentials_help') }}</p>
+                <textarea readonly rows="{{ count(session('mobile_credentials')) * 4 + 1 }}" style="width:100%;font-family:monospace">@foreach(session('mobile_credentials') as $credential)
+{{ __('app.common.agent') }}: {{ $credential['agent_code'] }} · {{ $credential['agent_name'] }}
+{{ __('app.settings.mobile_sign_in_url') }}: {{ $credential['sign_in_url'] }}
+{{ __('app.settings.col_mobile_login_code') }}: {{ $credential['login_code'] }}
+{{ __('app.settings.col_mobile_password') }}: {{ $credential['pin'] }}
+@endforeach</textarea>
+            </div>
+        @endif
+        <h3 style="margin-top:24px">{{ __('app.settings.mobile_app_title') }}</h3>
+        <p>{{ __('app.settings.mobile_app_help') }}</p>
+        @if($mobileAppPackage && $mobileAppPackage->hasFile())
+            <p>
+                {{ $mobileAppPackage->file_name }} ·
+                {{ number_format($mobileAppPackage->size_bytes / 1048576, 1) }} MB ·
+                {{ $mobileAppPackage->version ?: __('app.settings.mobile_app_no_version') }} ·
+                {{ $mobileAppPackage->published_at?->format('Y-m-d H:i') }}
+            </p>
+            <a class="button" href="{{ route('admin.settings.mobile-app.download') }}">{{ __('app.settings.mobile_app_download') }}</a>
+            <form method="POST" action="{{ route('admin.settings.mobile-app.destroy') }}" style="display:inline">
+                @csrf
+                @method('DELETE')
+                <button class="button danger" type="submit">{{ __('app.settings.mobile_app_remove') }}</button>
+            </form>
+        @else
+            <p class="muted">{{ __('app.settings.mobile_app_none') }}</p>
+        @endif
+        <form method="POST" action="{{ route('admin.settings.mobile-app.store') }}" enctype="multipart/form-data">
+            @csrf
+            <label>{{ __('app.settings.mobile_app_file') }}
+                <input type="file" name="package" accept=".apk,application/vnd.android.package-archive" required>
+            </label>
+            <label>{{ __('app.settings.mobile_app_version') }}
+                <input type="text" name="version" maxlength="32" placeholder="1.1.0" value="{{ old('version') }}">
+            </label>
+            <button class="button" type="submit">{{ __('app.settings.mobile_app_publish') }}</button>
+        </form>
         @if($selectedRound)
             <h3 style="margin-top:24px">{{ __('app.settings.amount_limits_title') }} · {{ $selectedRound->round_date->format('Y-m-d') }} · {{ __('app.common.round') }} {{ $selectedRound->round_no }}</h3>
             <p>{{ __('app.settings.amount_limits_help') }}</p>

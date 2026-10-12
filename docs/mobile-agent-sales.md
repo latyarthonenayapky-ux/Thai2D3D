@@ -19,14 +19,34 @@ Agents have no web login. The office issues mobile credentials:
 
 | Action | Route |
 | --- | --- |
-| Set login code + password | `PATCH /admin/settings/agents/{agent}/mobile-access` |
+| Issue credentials automatically | `POST /admin/settings/agents/{agent}/mobile-access/issue` |
+| Issue for every Agent without access | `POST /admin/settings/agents/mobile-access/issue-all` |
+| Set login code + password by hand | `PATCH /admin/settings/agents/{agent}/mobile-access` |
 | Sign out every phone | `DELETE /admin/settings/agents/{agent}/mobile-access/devices` |
 | Disable mobile access | `DELETE /admin/settings/agents/{agent}/mobile-access` |
+
+**Issue credentials** is the normal path when handing a phone to an Agent: the
+login code becomes `AGT-0001` (the Agent's id, zero-padded; a suffix is added if
+that code is already taken somewhere) and a random six-digit PIN is generated.
+The Settings page then shows a one-time handover card with the sign-in URL from
+`APP_URL`, the login code and the PIN in a copyable text block. Flash data ages
+after that page load, so the PIN can never be read again — issue again to
+replace a lost one. Re-issuing keeps the login code the Agent already knows and
+only replaces the PIN, which signs every phone out.
+
+`Issue for every Agent without access` does the same for every **active** Agent
+in the business that is missing a code or a password, skips Agents that already
+have credentials (their phones stay signed in), and lists all of the new PINs in
+one handover card.
 
 - Login code: 4–32 characters from `A-Z 0-9 . _ -`, stored uppercase, unique
   across every business.
 - Password: 6–64 characters, bcrypt hashed, never shown again.
-- Rotating the password or disabling access revokes all bearer tokens at once.
+- Rotating the password, re-issuing, or disabling access revokes all bearer
+  tokens at once.
+
+The install file those phones need is published from the same Settings page —
+see §5.
 
 ## 2. Token model
 
@@ -105,7 +125,55 @@ flutter create --platforms=android --org com.wya --project-name wya_agent_mobile
 flutter build apk --release --dart-define=WYA_SERVER_URL=https://your-vps-address
 ```
 
-## 5. CI/CD
+GitHub Actions does the same build for you: `android-apk.yml` runs on any push
+that touches `mobile/**` (or on **Run workflow**, where the VPS address can be
+typed in) and uploads `wya-agent-debug-apk` plus `wya-agent-release-apk`. The
+workflow labels the app **WYA Agent** and enables cleartext so a VPS without
+HTTPS yet can still be reached. Take `app-release.apk` from the run page and
+publish it under **Settings → Agent mobile app (APK)** in §5 — that page is the
+only way Agents can obtain the file. See `mobile/README.md` for the details.
+
+## 5. Handing the APK to Agents (admin-only)
+
+The install file is distributed from the webapp, not from a public folder.
+**Settings → Agent mobile app** (`admin/settings` page) lets the business admin
+upload the APK built in §4 and give Agents a download link they cannot share.
+
+| Action | Route |
+| --- | --- |
+| Publish an APK | `POST /admin/settings/mobile-app` |
+| Download it | `GET /admin/settings/mobile-app/download` |
+| Remove it | `DELETE /admin/settings/mobile-app` |
+
+- One row per business (`mobile_app_packages` is unique on `admin_id`), so
+  publishing again replaces the previous build instead of accumulating versions.
+  Each business keeps its own file under `mobile-apps/{admin}/`.
+- The download is saved as **`{business-name}-agent-app-{version}.apk`** (the
+  admin's own account name, or `admin-{id}` when that name is not ASCII, e.g.
+  Burmese) so a phone holding builds handed out by two offices can tell them
+  apart before installing one.
+- The file lands on the **private** `local` disk at
+  `storage/app/private/mobile-apps/{admin}/agent-app.apk`. Nothing is ever
+  written to `storage/app/public`, so the only way to fetch it is the download
+  route, which streams it with `Content-Type: application/vnd.android.package-archive`.
+- Every route sits behind the `admin` middleware, so Operators, Agents and
+  guests get 403 (guests are redirected to the login page). Downloading is
+  therefore limited to the signed-in admin's own session — hand the file to a
+  phone over USB/Share, or open the Settings page on that phone once.
+- Uploads are validated as `extensions:apk`, capped at 120 MB, and are throttled
+  to 10/min. The optional version field (32 characters) is only a label shown
+  next to the file name and size.
+- Removing the app deletes both the stored file and the row.
+- Nothing crosses between businesses: the download and remove routes only ever
+  look up `admin_id = the signed-in admin`, and every mobile API call resolves
+  through the signed-in Agent's own `admin_id` — a Round of another business 404s
+  on `POST /sessions/open`, another business' session is refused by
+  `POST /sales/upload` and 404s on `GET /sessions/{id}/state`, and login codes are
+  unique across the whole install. `AgentMobileBusinessIsolationTest` and
+  `MobileAppPackageTest::test_each_admin_only_reaches_their_own_published_app`
+  pin this down.
+
+## 6. CI/CD
 
 `.github/workflows/`:
 

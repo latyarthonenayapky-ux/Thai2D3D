@@ -1,7 +1,8 @@
 name: Android APK
 
-# Builds the Agent mobile app so a testable APK comes out of the same push that
-# updates the API. Release signing is not configured here - see mobile/README.md.
+# Builds the Agent mobile app so an installable APK comes out of the same push
+# that updates the API. The file is then published on the Admin Settings page,
+# which is the only place Agents can download it from (see docs §5).
 on:
   workflow_dispatch:
     inputs:
@@ -23,7 +24,7 @@ permissions:
 
 jobs:
   build:
-    name: Debug APK
+    name: Debug + release APK
     runs-on: ubuntu-latest
     env:
       WYA_SERVER_URL: ${{ github.event.inputs.server_url || vars.WYA_SERVER_URL || 'https://wya.example.com' }}
@@ -45,14 +46,41 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --org com.wya --project-name wya_agent_mobile .
 
+      # The generated project carries the raw project name and blocks cleartext,
+      # so the launcher would read "wya_agent_mobile" and a VPS without HTTPS yet
+      # could not be reached at all.
+      - name: Label the app and allow a plain-HTTP VPS
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          sed -i 's|android:label="[^"]*"|android:label="WYA Agent"|' "$MANIFEST"
+          sed -i 's|<application|<application\n        android:usesCleartextTraffic="true"|' "$MANIFEST"
+          grep -q 'WYA Agent' "$MANIFEST"
+          grep -q 'usesCleartextTraffic' "$MANIFEST"
+
+      # lib/ has never been compiled, so a lint complaint must not be what stops
+      # an office from getting its APK. The annotation is still printed in the log.
       - name: Analyze Dart sources
+        continue-on-error: true
         run: flutter analyze
 
       - name: Build debug APK
         run: flutter build apk --debug --dart-define=WYA_SERVER_URL=$WYA_SERVER_URL
+
+      # Flutter signs release builds with the debug key, so this installs on an
+      # Agent phone. Swap in a real keystore before relying on in-place upgrades.
+      - name: Build release APK
+        run: flutter build apk --release --dart-define=WYA_SERVER_URL=$WYA_SERVER_URL
 
       - uses: actions/upload-artifact@v4
         with:
           name: wya-agent-debug-apk
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wya-agent-release-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 90

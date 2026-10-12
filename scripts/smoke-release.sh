@@ -197,6 +197,13 @@ code="$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Accept: application/j
 [ "$code" = "401" ]
 check "a bad mobile sign-in is rejected" $? "HTTP $code"
 
+php_artisan route:list --json 2>/dev/null | grep -q "settings.mobile-app.download"
+check "the admin-only APK routes are registered" $?
+
+code="$(curl -s -o /dev/null -w '%{http_code}' "$APP_URL/admin/settings/mobile-app/download")"
+[ "$code" = "302" ]
+check "the APK is not downloadable without an admin session" $? "HTTP $code"
+
 log_lines=0
 [ -s "$LOG_FILE" ] && log_lines="$(wc -l < "$LOG_FILE" | tr -d ' ')"
 check "the Laravel log stayed empty" "$((log_lines == 0 ? 0 : 1))" "$log_lines line(s)"

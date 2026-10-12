@@ -243,6 +243,36 @@ class AgentMobileApiTest extends TestCase
         $this->assertDatabaseHas('sale_details', ['number' => '14', 'status' => 'accepted']);
     }
 
+    public function test_mobile_uploads_appear_on_the_sale_entry_page_without_a_manual_sync(): void
+    {
+        [$admin, $operator, $round, $session, $agent] = $this->createBusiness();
+        $token = $this->signIn($agent);
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.sales.upload'), [
+                'records' => [$this->record($session, '2d', '171000'), $this->record($session, '2d', '452000')],
+            ])
+            ->assertOk()
+            ->assertJsonPath('results.0.status', 'synced')
+            ->assertJsonPath('results.1.status', 'synced');
+
+        $this->assertSame(2, SaleInput::query()->where('agent_session_id', $session->id)->count());
+
+        // The handler's own Sale Entry screen shows them immediately.
+        $this->actingAs($operator)
+            ->get(route('operator.sales.show', $session))
+            ->assertOk()
+            ->assertSee('3,000.00')
+            ->assertSee('17');
+
+        // Only the claiming handler may open the live Sale Entry page, so the
+        // admin's view of the same upload is the Period summary report.
+        $this->actingAs($admin)
+            ->get(route('reports.summary', ['period' => 'daily', 'date' => '2026-10-13']))
+            ->assertOk()
+            ->assertSee($agent->agent_code);
+    }
+
     private function createBusiness(): array
     {
         $admin = User::factory()->create(['role' => 'admin', 'status' => true]);

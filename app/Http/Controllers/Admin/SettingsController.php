@@ -7,10 +7,12 @@ use App\Models\AdminBusinessSetting;
 use App\Models\Agent;
 use App\Models\CodeRule;
 use App\Models\HotNumber;
+use App\Models\MobileAppPackage;
 use App\Models\Round;
 use App\Models\RoundSchedule;
 use App\Models\ThreeDigitHotNumber;
 use App\Services\AgentAccessTokenGuard;
+use App\Services\AgentMobileAccessService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,6 +57,9 @@ class SettingsController extends Controller
                     ['admin_id' => $request->user()->id],
                     ['payout_2d_multiplier' => null, 'payout_3d_multiplier' => null]
                 ),
+            'mobileAppPackage' => MobileAppPackage::query()
+                ->where('admin_id', $request->user()->id)
+                ->first(),
             'agents' => Agent::query()
                 ->where('admin_id', $request->user()->id)
                 ->withCount(['accessTokens as active_devices_count' => function ($query): void {
@@ -239,6 +244,51 @@ class SettingsController extends Controller
         $agent->update($validated);
 
         return back()->with('status', 'Agent settings saved.');
+    }
+
+    public function issueAgentMobileAccess(Request $request, Agent $agent, AgentAccessTokenGuard $tokens, AgentMobileAccessService $access): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+        abort_unless((int) $agent->admin_id === (int) $request->user()->id, 404);
+
+        // Normalized before the unique rule so MySQL and SQLite agree on case.
+        if ($request->filled('mobile_login_code')) {
+            $request->merge([
+                'mobile_login_code' => strtoupper(trim((string) $request->input('mobile_login_code'))),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'mobile_login_code' => [
+                'nullable',
+                'string',
+                'min:4',
+                'max:32',
+                'regex:/^[A-Z0-9._-]+$/',
+                Rule::unique('agents', 'mobile_login_code')->ignore($agent->id),
+            ],
+        ]);
+
+        $credential = $access->issue($agent, $tokens, $validated['mobile_login_code'] ?? null);
+
+        $request->session()->flash('mobile_credentials', [$credential]);
+
+        return back()->with('status', "Mobile access issued for {$agent->agent_code}.");
+    }
+
+    public function issueAllAgentMobileAccess(Request $request, AgentAccessTokenGuard $tokens, AgentMobileAccessService $access): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+
+        $issued = $access->issueForAgentsWithoutAccess((int) $request->user()->id, $tokens);
+
+        if ($issued === []) {
+            return back()->with('status', 'Every active Agent already has mobile access.');
+        }
+
+        $request->session()->flash('mobile_credentials', $issued);
+
+        return back()->with('status', 'Issued mobile sign-in credentials for '.count($issued).' Agent(s).');
     }
 
     public function updateAgentMobileAccess(Request $request, Agent $agent, AgentAccessTokenGuard $tokens): RedirectResponse

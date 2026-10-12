@@ -45,8 +45,9 @@ admin-only, so Operators and Agents get 403.
 ## Server address
 
 The baked-in default comes from `--dart-define=WYA_SERVER_URL`
-(see `lib/main.dart`). Each Agent can also change the address on the sign-in
-screen; the value they use is stored on the phone.
+(see `lib/main.dart`); the repository default is `https://wya2d3d.site`, the
+office VPS at `118.27.150.3`. Each Agent can also change the address on the
+sign-in screen; the value they use is stored on the phone.
 
 For a VPS without HTTPS yet, allow cleartext traffic in
 `android/app/src/main/AndroidManifest.xml` (the CI build does this for you):

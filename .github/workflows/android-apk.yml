@@ -9,7 +9,7 @@ on:
       server_url:
         description: Office VPS address baked into the APK
         required: false
-        default: ''
+        default: 'https://wya2d3d.site'
   push:
     branches: [master, VPS2D3D]
     paths:
@@ -27,7 +27,7 @@ jobs:
     name: Debug + release APK
     runs-on: ubuntu-latest
     env:
-      WYA_SERVER_URL: ${{ github.event.inputs.server_url || vars.WYA_SERVER_URL || 'https://wya.example.com' }}
+      WYA_SERVER_URL: ${{ github.event.inputs.server_url || vars.WYA_SERVER_URL || 'https://wya2d3d.site' }}
     defaults:
       run:
         working-directory: mobile

@@ -21,6 +21,30 @@ domain သို့မဟုတ် SSL certificate အလိုအလျော�
 4. DNS ပြောင်းလဲမှု public DNS မှာ အလုပ်လုပ်ကြောင်းစစ်ပြီးမှ HTTPS certificate
    ထုတ်ပါ။
 
+### Z.com Domain (wya2d3d.site) DNS records
+
+Z.com control panel ၏ DNS / Resource Record အပိုင်းတွင် အောက်ပါ record များကို
+ထည့်ပါ (VPS public IPv4 = `118.27.150.3`)။
+
+| Host / Name | Type | Value | TTL |
+| --- | --- | --- | --- |
+| `@` (blank/host ဖြစ်လျှင် `wya2d3d.site`) | `A` | `118.27.150.3` | 3600 |
+| `www` | `CNAME` | `wya2d3d.site` | 3600 |
+| `@` (IPv6 ရှိမှသာ) | `AAAA` | VPS ၏ public IPv6 | 3600 |
+
+Z.com nameserver (`ns`/`pdns` ကို domain page တွင် စစ်ပါ) သည် registry ဘက်တွင်
+တက်နေပြီးဖြစ်သည် — လက်ရှိစစ်ချက်အရ zone ထဲ record မရှိသေးသဖြင့် အထက်ပါ A
+record ကို ထည့်ပြီးမှသာ domain ရွှေ့မည်။ ထည့်ပြီးပါက စစ်ပါ-
+
+```sh
+nslookup wya2d3d.site 8.8.8.8
+nslookup www.wya2d3d.site 8.8.8.8
+curl -s "https://dns.google/resolve?name=wya2d3d.site&type=A" | head -40
+```
+
+Public DNS တွင် ၁၅–၃၀ မိနစ်ကြာနိုင်သည်။ `A` record မပေါ်မီ certbot မ run ပါနှင့်
+(HTTP-01 challenge ချက်ချင်း fail ဖြစ်မည်)။
+
 ## 2. Server package များ install လုပ်ခြင်း
 
 ```sh
@@ -188,7 +212,16 @@ MAIL_FROM_NAME="Winning Yields Always (WYA)"
 လှည့်စားနိုင်သည်)။ Default `127.0.0.1` သည် proxy မရှိသော single-server
 စနစ်အတွက် မှန်ကန်ပြီး ထိုအတိုင်း ထားနိုင်သည်။
 
-`APP_URL` တွင် `https://` နှင့် ကိုယ်ပိုင် domain ကို အတိအကျသုံးပါ။ `APP_KEY`
+`APP_URL` တွင် `https://` နှင့် ကိုယ်ပိုင် domain ကို အတိအကျသုံးပါ (ဤ project အတွက်
+`APP_URL=https://wya2d3d.site`)။ `.env` ကို ပြောင်းတိုင်း `php artisan config:clear`
+နောက် `php artisan optimize` run ပါ — config cache ထဲ ကျန်နေသေးသော ဟောင်း
+`APP_URL` ကို Laravel က ဆက်သုံးနေတတ်သည်။
+
+HTTPS certificate မထုတ်ရသေးဘဲ HTTP ဖြင့်သာ စမ်းသပ်နေရလျှင်
+`APP_URL=http://wya2d3d.site` ထည့်ပြီး `SESSION_SECURE_COOKIE=false` ယာယီထားပါ
+(`true` ဆက်ထားလျှင် browser က login cookie ကို ပယ်ဖျက်ပြီး login ဝင်လို့မရတော့ပါ)။
+HTTPS ပြီးမြောက်သည်နှင့် နှစ်ခုလုံးကို `https://` / `true` ဖြင့် ပြန်ပြောင်းပြီး
+`php artisan config:clear && php artisan optimize` run ပါ။ `APP_KEY`
 ကို ပထမဆုံး install လုပ်ချိန်တွင်သာ generate လုပ်ပါ။ Existing database/app
 အတွက် `key:generate` ကို ထပ်မ run ပါနှင့်၊ key ပြောင်းလဲလျှင် session/cookie များ
 ဖတ်မရတော့နိုင်ပါ။ Password
@@ -219,7 +252,29 @@ database ကို စစ်ဆေးခြင်းမရှိဘဲ fresh ins
 ## 6. HTTPS Nginx virtual host
 
 Domain ကို DNS ဖြင့် VPS IP သို့ ညွှန်ပြီးနောက် Nginx site file ဖန်တီးပါ။
-`YOUR_DOMAIN` ကို domain အမှန်ဖြင့် အစားထိုးပါ။
+
+**အမြန်လမ်း (wya2d3d.site):** repo ထဲ `deploy/nginx/wya2d3d.site.conf` သည် အသင့်
+configuration ဖြစ်သည် (server names, `public/` root, ACME allow, dotfile deny,
+နှင့် `client_max_body_size 130M` အထိ)။ Deploy ဖိုင် `docs` နှင့်အတူ VPS သို့
+ရောက်နေမည်-
+
+```sh
+sudo cp deploy/nginx/wya2d3d.site.conf /etc/nginx/sites-available/wya2d3d.site
+sudo ln -s /etc/nginx/sites-available/wya2d3d.site /etc/nginx/sites-enabled/wya2d3d.site
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Admin Settings မှ Agent APK တင်ရန် PHP ၏ upload limit ကိုလည်း မြှင့်ပါ (Nginx တစ်ခုတည်း
+မြှင့်လျှင် PHP-FPM က 8 MB ဖြင့် ဖြတ်စတင်မည်)-
+
+```sh
+printf 'upload_max_filesize = 130M\npost_max_size = 135M\n' \
+  | sudo tee /etc/php/8.3/fpm/conf.d/99-wya-uploads.ini
+sudo systemctl reload php8.3-fpm
+```
+
+Domain အသစ်အတွက် manual template လိုချင်လျှင် အောက်ပါအတိုင်း `YOUR_DOMAIN` နေရာတွင်
+domain အမှန်ထည့်ပါ။
 
 ```sh
 sudo nano /etc/nginx/sites-available/thai2d3d
@@ -272,7 +327,24 @@ sudo certbot --nginx -d YOUR_DOMAIN
 sudo certbot renew --dry-run
 ```
 
-Certbot wizard က email, terms နှင့် HTTPS redirect ကို သတ်မှတ်ခိုင်းပါမည်။
+**wya2d3d.site အတွက် အတိအကျ** (§1 ရှိ `A` record က public DNS တွင်
+မြင်ပြီးမှသာ run ပါ — မမြင်ဘဲ run လျှင် HTTP-01 challenge ချက်ချင်း fail မည်):
+
+```sh
+sudo certbot --nginx -d wya2d3d.site -d www.wya2d3d.site
+sudo certbot renew --dry-run
+```
+
+Certbot wizard က email, terms နှင့် HTTP→HTTPS redirect ကို သတ်မှတ်ခိုင်းပြီး
+nginx config ထဲ 443 server block နှင့် certificate path များကို အလိုအလျောက်
+ရေးထည့်ကာ nginx ကို reload ပါသည်။ ထို့ကြောင့် certbot run မတင်မီ §1 DNS နှင့်
+§6 vhost (`server_name` တွင် `www.wya2d3d.site` လည်း ပါရမည်) မှန်ကြောင်း အရင်စစ်ပါ-
+
+```sh
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://wya2d3d.site/up
+curl -sI https://wya2d3d.site/up
+```
+
 Certificate renew dry-run အောင်မြင်ကြောင်း အတည်ပြုပါ။
 
 ## 7. Scheduler ဖွင့်ပြီး service စစ်ဆေးခြင်း
@@ -315,7 +387,7 @@ sudo systemctl restart php8.3-fpm
 sudo systemctl reload nginx
 ```
 
-Browser မှ `https://YOUR_DOMAIN/up` ကိုဖွင့်ပြီး healthy response ရကြောင်း
+Browser မှ `https://wya2d3d.site/up` (သို့ ကိုယ့် domain) ကိုဖွင့်ပြီး healthy response ရကြောင်း
 စစ်ဆေးပါ။ HTTPS certificate warning မရှိဘဲ `/login` ပွင့်ကြောင်း၊ Owner login
 ဝင်နိုင်ကြောင်း အတည်ပြုပါ။ PHP/Nginx error များအတွက်
 `/var/log/nginx/error.log` နှင့် `storage/logs/laravel.log` ကို စစ်ပါ။

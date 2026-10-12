@@ -8,7 +8,7 @@ import 'storage.dart';
 /// this is only the address baked into the APK build.
 const String defaultServerUrl = String.fromEnvironment(
   'WYA_SERVER_URL',
-  defaultValue: 'https://wya.example.com',
+  defaultValue: 'https://wya2d3d.site',
 );
 
 void main() => runApp(const WyaAgentApp());

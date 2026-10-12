@@ -181,12 +181,16 @@ upload the APK built in §4 and give Agents a download link they cannot share.
 | --- | --- | --- |
 | `laravel-ci.yml` | push/PR to `master`, `VPS2D3D`, `MasterW` | `composer install` + full PHPUnit suite on PHP 8.3 (SQLite) |
 | `deploy-vps.yml` | after CI succeeds on `master`, or manually | rsync app files (never `storage/`, `.env`, `vendor`), then `composer install --no-dev`, `migrate --force`, `db:seed --force`, `optimize`, health check `/up` |
-| `android-apk.yml` | changes under `mobile/**`, or manually | `flutter analyze` + debug APK artifact |
+| `android-apk.yml` | changes under `mobile/**`, or manually | labels the app `WYA Agent`, `flutter analyze`, then debug and release APK artifacts |
 
 Required repository secrets for deployment: `VPS_HOST`, `VPS_USER`,
 `VPS_SSH_PRIVATE_KEY`, `VPS_PATH`, optional `VPS_SSH_PORT`. Optional variables:
-`VPS_HEALTH_URL` (for example `https://your-domain/up`) and `WYA_SERVER_URL`
-(baked into CI-built APKs). The deploy SSH key must be able to write
+`VPS_HEALTH_URL` and `WYA_SERVER_URL` (baked into CI-built APKs). For this
+deployment both point at the Z.com domain registered against the VPS at
+`118.27.150.3`: `VPS_HOST=118.27.150.3`, `VPS_HEALTH_URL=https://wya2d3d.site/up`
+and `WYA_SERVER_URL=https://wya2d3d.site`. `WYA_SERVER_URL` is only the
+build-time default — the workflow falls back to the same address, and each Agent
+can still change it on the sign-in screen. The deploy SSH key must be able to write
 `VPS_PATH`, and `VPS_PATH` should be the non-public application directory
 described in `docs/production-deployment.md`.
 

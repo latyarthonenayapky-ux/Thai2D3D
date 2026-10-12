@@ -25,7 +25,7 @@ $targets = [
     'VPS' => [
         'dest' => $root.'/release/VPS',
         'maps' => [
-            ...array_map(fn (string $dir): array => [$dir, $dir], [...$common, 'docs', 'scripts', 'tests']),
+            ...array_map(fn (string $dir): array => [$dir, $dir], [...$common, 'deploy', 'docs', 'scripts', 'tests']),
             ['.', '.'],
         ],
         'rootFiles' => [...$files, 'README.md', 'PRODUCT.md', 'phpunit.xml', 'package.json', 'vite.config.js', '.env.example'],

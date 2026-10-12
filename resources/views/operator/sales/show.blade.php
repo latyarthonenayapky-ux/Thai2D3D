@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => $saleMode.' Sale Entry · '.$agentSession->agent->agent_code])
+@extends('layouts.app', ['title' => strtoupper($saleMode).' '.__('app.sale.entry').' · '.($agentSession?->agent->agent_code ?? __('app.sale.agent'))])
 
 @section('content')
 <!-- THESIS: Spreadsheet-first sale entry keeps draft input separate from server-recorded wagers.
@@ -7,13 +7,13 @@ STORY: Choose an Agent, stage inputs with Enter, inspect the recent queue, then 
 FIRST VIEWPORT: Agent and input controls at left, the 00–99 accepted ledger centered, round totals at right.
 FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells preserve the familiar number grid. -->
 <style>
-    .sale-workspace{max-width:1600px;margin:16px auto;padding:0 20px}
-    .sale-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
-    .sale-heading h1{margin:0;font-size:23px;letter-spacing:-.03em}
+    .sale-workspace{max-width:1600px;margin:10px auto;padding:0 20px}
+    .sale-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
+    .sale-heading h1{margin:0;font-size:20px;letter-spacing:-.03em}
     .sale-meta{display:flex;gap:14px;align-items:center;color:var(--muted);font-size:13px}
-    .sale-grid{display:grid;grid-template-columns:minmax(250px,.88fr) minmax(440px,1.72fr) minmax(235px,.72fr);gap:12px;align-items:start}
+    .sale-grid{display:grid;grid-template-columns:minmax(210px,.66fr) minmax(440px,2.05fr) minmax(200px,.56fr);gap:12px;align-items:start}
     .sale-panel{min-width:0;background:var(--surface);border:1px solid var(--border)}
-    .sale-panel-title{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 12px;background:var(--surface-soft);border-bottom:1px solid var(--border);font-size:13px;font-weight:800}
+    .sale-panel-title{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 12px;background:var(--surface-soft);border-bottom:1px solid var(--border);font-size:13px;font-weight:800}
     .sale-controls{padding:12px}
     .sale-controls label{margin:0 0 5px;font-size:12px}
     .sale-controls select,.sale-controls input{min-height:40px;padding:8px 10px;border-radius:4px}
@@ -28,34 +28,47 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .draft-row small{display:block;color:var(--muted);margin-top:3px}
     .draft-row .button{padding:4px 8px;font-size:11px}
     .draft-empty{padding:12px;color:var(--muted);font-size:12px}
+    .pill.voided{background:var(--surface-soft);color:var(--muted)}
+    .sale-void{display:inline-block}
+    .sale-void>summary{cursor:pointer;color:var(--accent);font-size:12px;font-weight:700;list-style:none}
+    .sale-void>summary::-webkit-details-marker{display:none}
+    .sale-void form{display:flex;gap:6px;align-items:center;margin-top:6px}
+    .sale-void input{width:150px;min-height:30px;padding:5px 7px;font-size:12px}
+    .sale-history .button{min-height:30px;padding:5px 9px;font-size:12px}
+    .sale-void-meta{margin-top:4px;font-size:11px}
     .ledger-wrap{max-height:min(67vh,650px);overflow:auto}
+    .ledger-wrap-full{max-height:none;overflow:visible}
     .ledger-grid{border-collapse:collapse;table-layout:fixed;width:100%;font-size:12px}
     .ledger-grid th,.ledger-grid td{padding:5px 6px;border:1px solid var(--gridline);white-space:nowrap}
     .ledger-grid th{background:var(--surface-soft);color:var(--muted);text-align:center}
     .ledger-grid .ledger-number{width:9%;text-align:center;font-weight:700}
     .ledger-grid .ledger-amount{width:16%;text-align:right;font-variant-numeric:tabular-nums}
     .ledger-grid .has-sales{background:var(--accent-soft);color:var(--accent-text);font-weight:800}
+    /* 00–99 shows in four bands of 25 compact rows, no inner scroll. */
+    .ledger-wrap-full .ledger-grid{font-size:13px}
+    .ledger-wrap-full .ledger-grid th,.ledger-wrap-full .ledger-grid td{padding:1px 6px;line-height:1.35}
+    .ledger-wrap-full .ledger-grid .ledger-num-col{width:7%}
+    .ledger-wrap-full .ledger-grid .ledger-amt-col{width:18%}
     .sold-rank-table{border-collapse:collapse;width:100%;font-size:12px}
     .sold-rank-table th,.sold-rank-table td{padding:7px 9px;border:1px solid var(--gridline);font-variant-numeric:tabular-nums}
     .sold-rank-table td:last-child{text-align:right}
+    .sale-agent-row form,.sale-agent-row>div{min-width:0}
+    .sale-agent-row select{width:100%;min-width:0}
+    .sale-limit-readout{display:flex;align-items:baseline;gap:8px;margin-top:8px;font-size:12px}
+    .rank-wrap{max-height:240px;overflow:auto;margin-top:6px;scrollbar-gutter:stable}
+    .sale-rank{table-layout:fixed;width:100%}
+    .sale-rank th:first-child,.sale-rank td:first-child{width:34%}
+    .sale-rank th:last-child,.sale-rank td:last-child{width:33%}
     .sale-stat{padding:12px;border-bottom:1px solid var(--gridline)}
     .sale-stat:last-child{border-bottom:0}
     .sale-stat-label{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
     .sale-stat-value{display:block;margin-top:5px;font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
-    .sale-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:12px}
-    .sale-summary .sale-stat{background:var(--surface);padding:9px 12px;border:0}
-    .sale-summary .sale-stat-value{font-size:17px}
-    .sale-admin-controls{padding:12px;border-top:1px solid var(--border);display:grid;gap:14px}
-    .sale-admin-controls h3{margin:0 0 5px;font-size:13px}
-    .sale-admin-controls p{margin:0 0 6px}
-    .sale-admin-controls label{margin:0 0 5px}
-    .sale-admin-controls textarea{min-height:62px;padding:7px 9px;border-radius:4px;font-size:12px}
-    .sale-admin-controls input{min-height:36px;padding:7px 9px;border-radius:4px}
-    .sale-admin-controls .button{padding:7px 10px;font-size:12px}
-    .hot-number-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
-    .hot-number-item{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--gridline);padding:3px 5px;font-size:11px}
-    .hot-number-item form{display:inline}
-    .hot-number-item button{border:0;background:transparent;color:var(--danger-text);font:inherit;font-weight:800;cursor:pointer}
+    .sale-summary{display:flex;flex-wrap:wrap;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:10px}
+    .sale-summary .sale-stat{display:flex;align-items:baseline;gap:8px;background:var(--surface);padding:5px 12px;border:0;flex:1 1 150px}
+    .sale-summary .sale-stat-label{display:inline;margin:0}
+    .sale-summary .sale-stat-value{display:inline;margin:0;font-size:16px}
+    .sale-copy{display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}
+    .sale-copy .button{min-height:32px;padding:6px 10px;font-size:12px;white-space:nowrap}
     .sale-save{margin:12px;width:calc(100% - 24px);min-height:44px}
     .sale-history{margin-top:14px}
     .sale-history table{font-size:12px}
@@ -66,30 +79,38 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-number-chip{padding:2px 5px;border:1px solid var(--gridline);font-variant-numeric:tabular-nums}
     .sale-number-chip.rejected{color:var(--danger-text);background:var(--danger-bg)}
     .sale-number-chip.excluded{color:var(--muted);background:var(--surface-soft);text-decoration:line-through}
+    .sale-number-chip.voided{color:var(--muted);background:var(--surface-soft);text-decoration:line-through}
     @media(max-width:1060px){.sale-grid{grid-template-columns:minmax(230px,.85fr) minmax(360px,1.4fr)}.sale-stats{grid-column:1/-1}}
-    @media(max-width:700px){.sale-workspace{margin:12px auto;padding:0 10px}.sale-heading{align-items:flex-start;flex-direction:column}.sale-meta{flex-wrap:wrap;gap:6px 12px}.sale-summary{grid-template-columns:1fr}.sale-summary .sale-stat{padding:8px 10px}.sale-summary .sale-stat-value{font-size:16px}.sale-grid{grid-template-columns:1fr}.sale-ledger{grid-row:2}.sale-stats{grid-column:auto}.ledger-wrap{max-height:420px}.ledger-grid{font-size:11px}.ledger-grid th,.ledger-grid td{padding:4px 3px}.sale-history{margin-top:10px}}
+    @media(max-width:700px){.sale-workspace{margin:12px auto;padding:0 10px}.sale-heading{align-items:flex-start;flex-direction:column}.sale-meta{flex-wrap:wrap;gap:6px 12px}.sale-summary .sale-stat{padding:8px 10px;flex:1 1 100%}.sale-summary .sale-stat-value{font-size:16px}.sale-copy{flex:1 1 100%;justify-content:flex-start}.sale-grid{grid-template-columns:1fr}.sale-ledger{grid-row:2}.sale-stats{grid-column:auto}.ledger-wrap{max-height:420px}.ledger-grid{font-size:11px}.ledger-grid th,.ledger-grid td{padding:4px 3px}.ledger-wrap-full{max-height:none}.ledger-wrap-full .ledger-grid{font-size:11px}.ledger-wrap-full .ledger-grid th,.ledger-wrap-full .ledger-grid td{padding:1px 2px}.sale-history{margin-top:10px}}
 </style>
 <main class="sale-workspace" data-sale-workspace
       data-sale-mode="{{ $saleMode }}"
-      data-sale-action="{{ route('operator.sales.store', $agentSession) }}"
-      data-batch-action="{{ route('operator.sales.store-batch', $agentSession) }}"
+      data-sale-action="{{ $agentSession ? route('operator.sales.store', $agentSession) : '' }}"
+      data-batch-action="{{ $agentSession ? route('operator.sales.store-batch', $agentSession) : '' }}"
       data-csrf="{{ csrf_token() }}"
-      data-storage-key="thai2d3d-sale-drafts-{{ auth()->id() }}-{{ $agentSession->id }}-{{ $saleMode }}">
+      data-over-limit-all="{{ $overLimitAllAgents ? 1 : 0 }}"
+      data-agent-code="{{ $agentSession?->agent->agent_code ?? '' }}"
+      data-storage-key="thai2d3d-sale-drafts-{{ auth()->id() }}-{{ $agentSession?->id ?? 'round-'.$round->id.'-unassigned' }}-{{ $saleMode }}">
     <div class="sale-heading">
         <div>
-            <h1>{{ $agentStatement ? 'Agent Statement' : 'Sale Entry' }} · {{ strtoupper($saleMode) }}</h1>
+            <h1>{{ $agentStatement ? __('app.sale.statement') : __('app.sale.entry') }} · {{ strtoupper($saleMode) }}</h1>
             <div class="sale-meta">
-                <span>{{ $agentSession->round->round_date->format('Y-m-d') }} · Round {{ $agentSession->round->round_no }}</span>
-                <span>{{ ucfirst($agentSession->round->status) }}</span>
-                @if($roundWide)<span>All Agents · {{ $agentSession->round->round_no }}D round</span>@endif
-                @if(auth()->user()->isAdmin() && $roundWide)
-                    <a href="{{ route('operator.sales.show', [$agentSession, 'mode' => $saleMode, 'view' => 'agent']) }}">Agent Statement</a>
-                @elseif(auth()->user()->isAdmin() && $agentStatement)
-                    <a href="{{ route('operator.sales.show', [$agentSession, 'mode' => $saleMode]) }}">Live of items sold · all Agents</a>
+                <span>{{ __('app.sale.round_line', ['date' => $round->round_date->format('Y-m-d'), 'no' => $round->round_no]) }}</span>
+                <span>{{ __('app.common.status_'.$round->status) }}</span>
+                @if($roundWide)<span>{{ __('app.sale.all_agents_round', ['mode' => $round->round_no.'D']) }}</span>@endif
+                @if($agentSession && auth()->user()->isAdmin() && $roundWide)
+                    <a href="{{ route('operator.sales.show', [$agentSession, 'mode' => $saleMode, 'view' => 'agent']) }}">{{ __('app.sale.statement') }}</a>
+                @elseif($agentSession && auth()->user()->isAdmin() && $agentStatement)
+                    <a href="{{ route('operator.sales.show', [$agentSession, 'mode' => $saleMode]) }}">{{ __('app.sale.live_all') }}</a>
                 @endif
-                <a href="{{ route('operator.sales.workspace') }}">Choose another Agent</a>
+                @if($saleMode === '2d')
+                    <a href="{{ route('operator.sales.setup', ['round_id' => $round->id]) }}">{{ __('app.sale.link_round_setup') }}</a>
+                @endif
+                @if($saleMode === '3d')
+                    <a href="{{ route('operator.sales.workspace') }}">2D {{ __('app.sale.entry') }}</a>
+                @endif
                 @if(auth()->user()->isOperator() && $canEnterSales)
-                    <a href="{{ route('operator.sales.offline', $agentSession) }}">Offline sales</a>
+                    <a href="{{ route('operator.sales.offline', $agentSession) }}">{{ __('app.sale.link_offline') }}</a>
                 @endif
             </div>
         </div>
@@ -101,100 +122,126 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     @if($errors->any())
         <div class="error sale-alert" role="alert">{{ $errors->first() }}</div>
     @endif
-    @if(! $canEnterSales)
-        <div class="error sale-alert" role="status">This Round or Agent session is closed. The ledger is read-only.</div>
+    @if($agentSession !== null && ! $canEnterSales)
+        <div class="error sale-alert" role="status">
+            {{ $roundPastCloseTime ?? false
+                ? __('app.sale.closed_by_clock', ['time' => $round->close_time])
+                : __('app.sale.closed_session') }}
+        </div>
+    @endif
+    @if($agentSession === null)
+        <div class="notice sale-alert" role="status">{{ __('app.sale.choose_agent_first') }}</div>
+    @endif
+    @if($errors->has('agent'))
+        <div class="error sale-alert" role="alert">{{ $errors->first('agent') }}</div>
     @endif
     <div class="sale-alert notice" data-sale-status role="status" aria-live="polite" hidden></div>
 
-    <section class="sale-summary" aria-label="Round sales totals">
+    <section class="sale-summary" aria-label="{{ __('app.sale.summary_aria') }}">
         <div class="sale-stat">
-            <span class="sale-stat-label">Accepted numbers</span>
+            <span class="sale-stat-label">{{ __('app.sale.accepted_numbers') }}</span>
             <span class="sale-stat-value" data-accepted-count>{{ number_format($saleMode === '2d' ? $acceptedCount : $threeDigitAcceptedCount) }}</span>
         </div>
         <div class="sale-stat">
-            <span class="sale-stat-label">Accepted amount</span>
+            <span class="sale-stat-label">{{ __('app.sale.accepted_amount') }}</span>
             <span class="sale-stat-value" data-accepted-amount>{{ number_format($saleMode === '2d' ? $acceptedAmount : $threeDigitAcceptedAmount, 2) }}</span>
         </div>
         <div class="sale-stat">
-            <span class="sale-stat-label">Rejected numbers</span>
+            <span class="sale-stat-label">{{ __('app.sale.rejected_numbers') }}</span>
             <span class="sale-stat-value" data-rejected-count>{{ number_format($saleMode === '2d' ? $rejectedCount : $threeDigitRejectedCount) }}</span>
         </div>
+        @if($saleMode === '2d')
+            <div class="sale-stat sale-copy">
+                <button class="button secondary" type="button" data-copy-over-limit
+                        title="{{ __('app.sale.copy_limit_title') }}">{{ __('app.sale.copy_limit') }}</button>
+            </div>
+        @endif
     </section>
 
     <div class="sale-grid">
         <section class="sale-panel">
-            <div class="sale-panel-title"><span>Sale input</span><span>{{ strtoupper($saleMode) }}</span></div>
+            <div class="sale-panel-title"><span>{{ __('app.sale.input_panel') }}</span><span>{{ strtoupper($saleMode) }}</span></div>
             <div class="sale-controls">
-                <div class="sale-agent-row">
-                    <div>
-                        <label for="sale-agent">Agent</label>
-                        <select id="sale-agent">
-                            @if(auth()->user()->isAdmin() && $saleMode === '2d')
-                                @foreach($agentChoices as $choice)
-                                    <option
-                                        value="{{ $choice['url'] ?? '' }}"
-                                        data-claim-url="{{ $choice['claim_url'] ?? '' }}"
-                                        @selected($choice['selected'])
-                                        @disabled(! $choice['selectable'])
-                                    >
-                                        {{ $choice['agent']->agent_code }} · {{ $choice['agent']->agent_name }} — {{ $choice['status'] }}
+                @if($saleMode === '2d')
+                    @php $agentState = $agentSession === null ? '' : ($agentOptions->firstWhere('agent.id', $agentSession->agent_id)['state'] ?? ''); @endphp
+                    <form class="sale-agent-row" method="POST" action="{{ route('operator.sales.select') }}">
+                        @csrf
+                        <input type="hidden" name="round_id" value="{{ $round->id }}">
+                        @if($agentStatement)<input type="hidden" name="view" value="agent">@endif
+                        <div>
+                            <label for="sale-agent">{{ __('app.sale.agent_choose') }}</label>
+                            <select id="sale-agent" name="agent_id" onchange="this.form.requestSubmit()">
+                                @if($agentSession === null)
+                                    <option value="" selected disabled>{{ __('app.sale.agent_placeholder') }}</option>
+                                @endif
+                                @foreach($agentOptions as $option)
+                                    <option value="{{ $option['agent']->id }}" @selected($option['session']?->id === $agentSession?->id) @disabled(! $option['selectable'])>
+                                        {{ $option['agent']->agent_code }} · {{ $option['agent']->agent_name }}@if(! $option['selectable']) — {{ $option['state'] }}@endif
                                     </option>
                                 @endforeach
-                            @else
+                            </select>
+                        </div>
+                        <button class="button secondary" type="submit">{{ __('app.sale.select') }}</button>
+                    </form>
+                    <div class="sale-agent-row sale-limit-readout">
+                        <span class="sale-stat-label">{{ __('app.sale.amount_limit') }}</span>
+                        <strong>{{ $amountLimit === null ? __('app.sale.not_set') : number_format((float) $amountLimit, 2) }}</strong>
+                        <span class="muted">{{ $agentState ?: ($selectableCount === 0 ? __('app.sale.all_agents_in_use') : __('app.sale.no_agent_chosen')) }}</span>
+                    </div>
+                @else
+                    <div class="sale-agent-row">
+                        <div>
+                            <label for="sale-agent">{{ __('app.sale.agent') }}</label>
+                            <select id="sale-agent">
                                 @foreach($availableSessions as $availableSession)
-                                    <option value="{{ route('operator.sales.show', [$availableSession, 'mode' => $saleMode, 'view' => $agentStatement ? 'agent' : null]) }}" @selected($availableSession->id === $agentSession->id)>
+                                    <option value="{{ $availableSession->id }}" data-url="{{ route('operator.sales.show', [$availableSession, 'mode' => $saleMode, 'view' => $agentStatement ? 'agent' : null]) }}" @selected($availableSession->id === $agentSession->id)>
                                         {{ $availableSession->agent->agent_code }} · {{ $availableSession->agent->agent_name }}
                                     </option>
                                 @endforeach
-                            @endif
-                        </select>
+                            </select>
+                        </div>
+                        <button class="button secondary" type="button" data-focus-agent title="{{ __('app.sale.focus_agent_title') }}">F2</button>
                     </div>
-                    <button class="button secondary" type="button" data-focus-agent title="Select Agent (F2)">F2</button>
-                </div>
-                @if(auth()->user()->isAdmin() && $saleMode === '2d')
-                    <form method="POST" action="" data-agent-claim-form hidden>
-                        @csrf
-                        @if($agentStatement)<input type="hidden" name="view" value="agent">@endif
-                    </form>
                 @endif
                 <form class="sale-entry-form" data-draft-form>
                     <div>
-                        <label for="sale-input">{{ strtoupper($saleMode) }} input</label>
+                        <label for="sale-input">{{ __('app.sale.mode_input', ['mode' => strtoupper($saleMode)]) }}</label>
                         <input id="sale-input" type="text" maxlength="255" autocomplete="off" autocapitalize="characters" spellcheck="false" @disabled(! $canEnterSales) autofocus>
                     </div>
-                    <button class="button secondary" type="submit" @disabled(! $canEnterSales)>Add</button>
+                    <button class="button secondary" type="submit" @disabled(! $canEnterSales)>{{ __('app.sale.add') }}</button>
                 </form>
-                <div class="sale-shortcuts"><span><kbd>Enter</kbd> Add to Recent Sales</span><span><kbd>F3</kbd> Input</span><span><kbd>F1</kbd> Save all</span></div>
+                <div class="sale-shortcuts"><span><kbd>Enter</kbd> {{ __('app.sale.shortcut_add') }}</span><span><kbd>F3</kbd> {{ __('app.sale.shortcut_input') }}</span><span><kbd>F1</kbd> {{ __('app.sale.shortcut_save') }}</span></div>
                 @if($saleMode === '2d')
-                    <div class="muted">2D codes auto-uppercase; typing * enters R. Paste a list (one entry per line) to stage many at once.</div>
+                    <div class="muted">{{ __('app.sale.hint_2d') }}</div>
                 @endif
             </div>
-            <div class="sale-panel-title"><span>Recent Sales</span><span data-draft-count>0</span></div>
+            <div class="sale-panel-title"><span>{{ __('app.sale.recent_sales') }}</span><span data-draft-count>0</span></div>
             <div class="draft-list" data-draft-list>
-                <div class="draft-empty">Enter a sale input to stage it here. Nothing is sent to the server until Save (F1).</div>
+                <div class="draft-empty">{{ __('app.sale.draft_empty') }}</div>
             </div>
-            <button class="button sale-save" type="button" data-save-sales @disabled(! $canEnterSales)>Save · F1</button>
+            <button class="button sale-save" type="button" data-save-sales @disabled(! $canEnterSales)>{{ __('app.sale.save_button') }}</button>
         </section>
 
         <section class="sale-panel sale-ledger">
             <div class="sale-panel-title">
                 <span>
                     @if($saleMode === '2d' && $roundWide)
-                        Live of items sold · all Agents
+                        {{ __('app.sale.live_all') }}
                     @elseif($agentStatement)
-                        Agent Statement · {{ $agentSession->agent->agent_code }}
+                        {{ __('app.sale.statement_for', ['code' => $agentSession->agent->agent_code]) }}
                     @else
-                        Live of items sold · {{ $agentSession->agent->agent_code }}
+                        {{ __('app.sale.live_for', ['code' => $agentSession->agent->agent_code]) }}
                     @endif
                 </span>
                 <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:10px">
-                    Highest to lowest amount
-                    <input class="sale-search" type="search" placeholder="Search · F8" aria-label="Search sold items" data-sold-search>
+                    {{ __('app.sale.high_to_low') }}
+                    <input class="sale-search" type="search" placeholder="{{ __('app.sale.search_placeholder') }}" aria-label="{{ __('app.sale.search_aria') }}" data-sold-search>
                 </label>
             </div>
             @if($saleMode === '2d')
-                <div class="ledger-wrap">
+                <div class="ledger-wrap ledger-wrap-full">
                     <table class="ledger-grid">
+                        <colgroup>@for($band = 0; $band < 4; $band++)<col class="ledger-num-col"><col class="ledger-amt-col">@endfor</colgroup>
                         <thead><tr><th colspan="2">00–24</th><th colspan="2">25–49</th><th colspan="2">50–74</th><th colspan="2">75–99</th></tr></thead>
                         <tbody data-sold-grid>
                         @for($row = 0; $row < 25; $row++)
@@ -212,103 +259,52 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             @else
                 <div class="ledger-wrap">
                     <table class="sold-rank-table">
-                        <thead><tr><th>3D number</th><th>Accepted amount</th></tr></thead>
+                        <thead><tr><th>{{ __('app.sale.number_3d') }}</th><th>{{ __('app.sale.accepted_amount') }}</th></tr></thead>
                         <tbody data-sold-rank></tbody>
                     </table>
                 </div>
             @endif
         </section>
 
-        <aside class="sale-panel sale-stats" aria-label="Accepted and rejected sales totals">
+        <aside class="sale-panel sale-stats" aria-label="{{ __('app.sale.stats_aria') }}">
             @if($saleMode === '3d')
                 <div class="sale-stat">
-                    <span class="sale-stat-label">3D number count limit</span>
-                    <span class="sale-stat-value" style="font-size:15px">{{ $agentSession->round->number_limit_3d ? number_format($agentSession->round->number_limit_3d) : 'Not set' }}</span>
+                    <span class="sale-stat-label">{{ __('app.sale.limit_3d') }}</span>
+                    <span class="sale-stat-value" style="font-size:15px">{{ $round->number_limit_3d ? number_format($round->number_limit_3d) : __('app.sale.not_set') }}</span>
+                </div>
+            @endif
+            @if($saleMode === '2d')
+                <div class="sale-stat">
+                    <span class="sale-stat-label">{{ __('app.sale.above_limit', ['who' => $overLimitAllAgents ? __('app.sale.all_agents') : $agentSession->agent->agent_code]) }}</span>
+                    <p class="muted" style="margin:5px 0 0">{{ $overLimitAllAgents
+                        ? __('app.sale.above_limit_all_desc')
+                        : __('app.sale.above_limit_agent_desc', ['limit' => $amountLimit === null ? __('app.sale.no_limit_set') : number_format((float) $amountLimit, 2)]) }}</p>
+                    <div class="rank-wrap">
+                        <table class="sold-rank-table sale-rank">
+                            <thead><tr><th>{{ __('app.sale.number') }}</th>@if($overLimitAllAgents)<th>{{ __('app.sale.agent') }}</th>@endif<th>{{ __('app.sale.excess') }}</th></tr></thead>
+                            <tbody data-over-limit></tbody>
+                        </table>
+                    </div>
                 </div>
             @endif
             <div class="sale-stat">
-                <span class="sale-stat-label">Top sales · high → low</span>
-                <table class="sold-rank-table" style="margin-top:6px">
-                    <thead><tr><th>No.</th><th>Amount</th></tr></thead>
-                    <tbody data-top-sales></tbody>
-                </table>
-            </div>
-            @if($saleMode === '2d')
-                <div class="sale-stat">
-                    <span class="sale-stat-label">Above Amount Limit · {{ $agentSession->agent->agent_code }}</span>
-                    <p class="muted" style="margin:5px 0 0">This Agent's per-number accepted amount above {{ $amountLimit === null ? 'no limit set' : number_format((float) $amountLimit, 2) }}; sorted by excess.</p>
-                    <table class="sold-rank-table" style="margin-top:6px">
-                        <thead><tr><th>No.</th><th>Excess</th></tr></thead>
-                        <tbody data-over-limit>
-                        @php
-                            $overLimitRows = collect($agentSoldItems)
-                                ->filter(fn (array $item): bool => $amountLimit !== null && $item['amount'] > (float) $amountLimit)
-                                ->map(fn (array $item): array => ['number' => $item['number'], 'excess' => $item['amount'] - $amountLimit])
-                                ->sortByDesc('excess')
-                                ->values();
-                        @endphp
-                        @forelse($overLimitRows as $item)
-                            <tr><td>{{ $item['number'] }}</td><td>{{ number_format($item['excess'], 2) }}</td></tr>
-                        @empty
-                            <tr><td colspan="2" class="muted">No number exceeds this Agent's Amount Limit.</td></tr>
-                        @endforelse
-                        </tbody>
+                <span class="sale-stat-label">{{ __('app.sale.top_sales') }}</span>
+                <div class="rank-wrap">
+                    <table class="sold-rank-table sale-rank">
+                        <thead><tr><th>{{ __('app.sale.number') }}</th><th>{{ __('app.sale.amount') }}</th></tr></thead>
+                        <tbody data-top-sales></tbody>
                     </table>
                 </div>
-            @endif
+            </div>
         </aside>
     </div>
 
-    @if(auth()->user()->isAdmin() && $saleMode === '2d')
-        <section class="sale-panel sale-admin-controls" aria-label="Round controls">
-            <h2 style="margin:0;font-size:15px">Round controls · {{ $agentSession->round->round_date->format('Y-m-d') }} · Round {{ $agentSession->round->round_no }}</h2>
-            <form method="POST" action="{{ route('admin.settings.rounds.agents.amount-limit', [$agentSession->round, $agentSession->agent]) }}">
-                @csrf
-                @method('PATCH')
-                <label for="sale-amount-limit">Amount Limit · {{ $agentSession->agent->agent_code }} (per Agent)</label>
-                <input id="sale-amount-limit" type="number" name="amount_limit" min="0" step="0.01" value="{{ $amountLimit ?? '' }}" placeholder="Not set">
-                <button class="button secondary" type="submit" style="margin-top:7px">Save Amount Limit</button>
-            </form>
-            <form method="POST" action="{{ route('admin.settings.rounds.number-limits', $agentSession->round) }}">
-                @csrf
-                @method('PATCH')
-                <label for="sale-number-limits">Number Limit · blocked values (00–99)</label>
-                <p class="muted">Only the listed values are blocked; this does not cap total sales.</p>
-                <textarea id="sale-number-limits" name="numbers" placeholder="00, 17, 28">{{ implode(', ', $numberLimits) }}</textarea>
-                <button class="button secondary" type="submit" style="margin-top:7px">Save Number Limit</button>
-            </form>
-            <div>
-                <h3>Hot Numbers</h3>
-                <form method="POST" action="{{ route('admin.settings.hot-numbers.store', $agentSession->round) }}">
-                    @csrf
-                    <label class="sr-only" for="sale-hot-numbers">Add 2D Hot Numbers</label>
-                    <input id="sale-hot-numbers" type="text" name="numbers" placeholder="Add values: 00, 17, 28" required>
-                    <button class="button secondary" type="submit" style="margin-top:7px">Add Hot Numbers</button>
-                </form>
-                <div class="hot-number-list" aria-label="Current Hot Numbers">
-                    @forelse($hotNumbers as $hotNumber)
-                        <span class="hot-number-item">
-                            {{ $hotNumber->number }}
-                            <form method="POST" action="{{ route('admin.settings.hot-numbers.destroy', [$agentSession->round, $hotNumber]) }}">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" aria-label="Remove Hot Number {{ $hotNumber->number }}">×</button>
-                            </form>
-                        </span>
-                    @empty
-                        <span class="muted">No Hot Numbers configured.</span>
-                    @endforelse
-                </div>
-            </div>
-        </section>
-    @endif
-
-    @if($saleMode === '2d' && ! $canEnterSales && $agentSession->round->result?->result_2d !== null && $ownSettlement)
-        <section class="sale-panel sale-history" aria-label="2D settlement">
-            <div class="sale-panel-title"><span>Your 2D settlement for this Round</span><span>{{ $agentSession->round->result->result_2d }}</span></div>
+    @if($saleMode === '2d' && ! $canEnterSales && $round->result?->result_2d !== null && $ownSettlement)
+        <section class="sale-panel sale-history" aria-label="{{ __('app.sale.settlement_aria') }}">
+            <div class="sale-panel-title"><span>{{ __('app.sale.settlement_title') }}</span><span>{{ $round->result->result_2d }}</span></div>
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Accepted stake</th><th>Winning stake</th><th>Winnings</th><th>Commission</th><th>Business net</th></tr></thead>
+                    <thead><tr><th>{{ __('app.sale.accepted_stake') }}</th><th>{{ __('app.sale.winning_stake') }}</th><th>{{ __('app.sale.winnings') }}</th><th>{{ __('app.sale.commission') }}</th><th>{{ __('app.sale.business_net') }}</th></tr></thead>
                     <tbody><tr>
                         <td>{{ number_format($ownSettlement['total_stake'], 2) }}</td>
                         <td>{{ number_format($ownSettlement['winning_stake'], 2) }}</td>
@@ -321,35 +317,74 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         </section>
     @endif
 
+    @if($agentSession !== null)
     <section class="sale-panel sale-history">
         <div class="sale-panel-title">
-            <span>Saved {{ strtoupper($saleMode) }} sales</span>
-            <span>Latest 50 for this Agent and Round</span>
+            <span>{{ __('app.sale.saved_sales', ['mode' => strtoupper($saleMode)]) }}</span>
+            <span>{{ __('app.sale.latest_50') }}</span>
         </div>
         <div class="table-wrap">
+            @php
+                $actor = auth()->user();
+                $mayVoid = $actor->isAdmin()
+                    || ((int) $agentSession->operator_id === (int) $actor->id && $round->status === 'open');
+                $voidRoute = $saleMode === '2d' ? 'operator.sales.void' : 'operator.three-digit-sales.void';
+                $restoreRoute = $saleMode === '2d' ? 'operator.sales.restore' : 'operator.three-digit-sales.restore';
+            @endphp
             <table>
-                <thead><tr><th>Time</th><th>Input</th><th>Status</th><th>Accepted amount</th><th>Numbers</th></tr></thead>
+                <thead><tr><th>{{ __('app.sale.time') }}</th><th>{{ __('app.sale.input') }}</th><th>{{ __('app.sale.status') }}</th><th>{{ __('app.sale.accepted_amount') }}</th><th>{{ __('app.sale.numbers') }}</th><th>{{ __('app.sale.correct') }}</th></tr></thead>
                 <tbody>
                 @php $history = $saleMode === '2d' ? $saleInputs : $threeDigitSaleInputs; @endphp
                 @forelse($history as $saleInput)
                     <tr>
                         <td>{{ $saleInput->created_at->timezone('Asia/Yangon')->format('H:i:s') }}</td>
                         <td><strong>{{ $saleInput->original_input }}</strong></td>
-                        <td><span class="pill {{ $saleInput->status === 'accepted' ? '' : 'off' }}">{{ ucfirst($saleInput->status) }}</span></td>
+                        <td>
+                            <span class="pill {{ $saleInput->status === 'accepted' ? '' : ($saleInput->status === 'voided' ? 'voided' : 'off') }}">{{ __('app.sale.status_'.$saleInput->status) }}</span>
+                            @if($saleInput->status === 'voided')
+                                <div class="muted sale-void-meta">{{ $saleInput->voidedBy?->name ?? __('app.sale.admin') }} · {{ $saleInput->voided_at?->timezone('Asia/Yangon')->format('M j, H:i') }} · {{ $saleInput->void_reason }}</div>
+                            @endif
+                        </td>
                         <td>{{ number_format((float) ($saleMode === '2d' ? $saleInput->details->where('status', 'accepted')->where('is_excluded', false)->sum('amount') : $saleInput->details->where('status', 'accepted')->sum('amount')), 2) }}</td>
                         <td><div class="sale-number-chips">
                             @foreach($saleInput->details as $detail)
-                                <span class="sale-number-chip {{ isset($detail->is_excluded) && $detail->is_excluded ? 'excluded' : ($detail->status === 'accepted' ? '' : 'rejected') }}">{{ $detail->number }}@if(isset($detail->is_excluded) && $detail->is_excluded) · excluded@elseif($detail->status !== 'accepted') · {{ str_replace('_', ' ', $detail->reject_reason ?? $detail->status) }}@endif</span>
+                                @php
+                                    $voided = $detail->status === 'voided';
+                                    $excluded = isset($detail->is_excluded) && $detail->is_excluded;
+                                    $reasonKey = 'app.sale.reason_'.strtolower((string) ($detail->reject_reason ?? $detail->status));
+                                @endphp
+                                <span class="sale-number-chip {{ $voided ? 'voided' : ($excluded ? 'excluded' : ($detail->status === 'accepted' ? '' : 'rejected')) }}">{{ $detail->number }}@if($voided) · {{ __('app.sale.status_voided') }}@elseif($excluded) · {{ __('app.sale.status_excluded') }}@elseif($detail->status !== 'accepted') · {{ Illuminate\Support\Facades\Lang::has($reasonKey) ? __($reasonKey) : str_replace('_', ' ', (string) ($detail->reject_reason ?? $detail->status)) }}@endif</span>
                             @endforeach
                         </div></td>
+                        <td>
+                            @if($saleInput->status === 'voided')
+                                @if($actor->isAdmin() || ((int) $saleInput->voided_by === (int) $actor->id && $mayVoid))
+                                    <form method="POST" action="{{ route($restoreRoute, [$agentSession, $saleInput]) }}">
+                                        @csrf
+                                        <button class="button secondary" type="submit">{{ __('app.sale.restore') }}</button>
+                                    </form>
+                                @endif
+                            @elseif($mayVoid)
+                                <details class="sale-void">
+                                    <summary>{{ __('app.sale.void') }}</summary>
+                                    <form method="POST" action="{{ route($voidRoute, [$agentSession, $saleInput]) }}">
+                                        @csrf
+                                        <label class="sr-only" for="void-reason-{{ $saleInput->id }}">{{ __('app.sale.reason') }}</label>
+                                        <input id="void-reason-{{ $saleInput->id }}" name="reason" required minlength="3" maxlength="255" placeholder="{{ __('app.sale.reason') }}">
+                                        <button class="button danger" type="submit">{{ __('app.sale.confirm') }}</button>
+                                    </form>
+                                </details>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="muted">No saved sales for this Agent and Round yet.</td></tr>
+                    <tr><td colspan="6" class="muted">{{ __('app.sale.no_saved_sales') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
     </section>
+    @endif
 </main>
 @if($saleMode === '2d')
     <script src="{{ asset('js/sale-entry-keyboard.js') }}"></script>
@@ -366,10 +401,14 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         const saveButton = document.querySelector('[data-save-sales]');
         const storageKey = workspace.dataset.storageKey;
         const mode = workspace.dataset.saleMode;
+        const t = @json(__('app.sale.js'));
+        const fmt = (text, vars = {}) => text.replace(/:(\w+)/g, (token, key) =>
+            Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : token);
         const amountLimitValue = @json($amountLimit);
         const amountLimit = Number(amountLimitValue);
         const draftId = () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        if (mode === '2d' && window.Thai2D3DSaleEntryKeyboard) {
+        const typingNormalization = @json(auth()->user()->prefers('sale_typing_normalization', 'on'));
+        if (mode === '2d' && typingNormalization && window.Thai2D3DSaleEntryKeyboard) {
             input.addEventListener('keydown', event => {
                 if (event.code !== 'NumpadDecimal' || event.repeat) return;
                 event.preventDefault();
@@ -393,6 +432,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         let drafts = [];
         let sold = new Map(@json($soldItems).map(item => [item.number, Number(item.amount)]));
         let agentSold = new Map(@json($agentSoldItems).map(item => [item.number, Number(item.amount)]));
+        const overLimitRows = @json($overLimitRows);
         let acceptedCount = Number(document.querySelector('[data-accepted-count]').textContent.replaceAll(',', ''));
         let acceptedAmount = Number(document.querySelector('[data-accepted-amount]').textContent.replaceAll(',', ''));
         let rejectedCount = Number(document.querySelector('[data-rejected-count]').textContent.replaceAll(',', ''));
@@ -410,7 +450,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             if (!drafts.length) {
                 const empty = document.createElement('div');
                 empty.className = 'draft-empty';
-                empty.textContent = 'No unsaved inputs. Enter a sale input to stage it here.';
+                empty.textContent = t.draft_empty;
                 draftList.append(empty);
                 return;
             }
@@ -421,13 +461,13 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 const strong = document.createElement('strong');
                 strong.textContent = draft.input;
                 const detail = document.createElement('small');
-                detail.textContent = `${new Date(draft.createdAt).toLocaleTimeString()}${draft.error ? ` · ${draft.error}` : ' · Not saved'}`;
+                detail.textContent = `${new Date(draft.createdAt).toLocaleTimeString()}${draft.error ? ` · ${draft.error}` : ` · ${t.not_saved}`}`;
                 label.append(strong, detail);
                 const remove = document.createElement('button');
                 remove.type = 'button';
                 remove.className = 'button secondary';
-                remove.textContent = 'Remove';
-                remove.setAttribute('aria-label', `Remove draft ${draft.input}`);
+                remove.textContent = t.remove;
+                remove.setAttribute('aria-label', fmt(t.remove_aria, {input: draft.input}));
                 remove.addEventListener('click', () => {
                     drafts = drafts.filter(item => item.id !== draft.id);
                     persist();
@@ -456,7 +496,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 const cell = row.insertCell();
                 cell.colSpan = 2;
                 cell.className = 'muted';
-                cell.textContent = 'No matching accepted numbers yet.';
+                cell.textContent = t.no_matching;
                 return;
             }
             rows.forEach(([number, amount]) => {
@@ -475,7 +515,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 const cell = row.insertCell();
                 cell.colSpan = 2;
                 cell.className = 'muted';
-                cell.textContent = 'No accepted sales yet.';
+                cell.textContent = t.no_accepted;
                 return;
             }
             rows.forEach(([number, amount]) => {
@@ -484,26 +524,34 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 row.insertCell().textContent = amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             });
         };
+        const overLimitEntries = () => {
+            const agentCode = workspace.dataset.agentCode;
+            const otherRows = overLimitRows.filter(row => row.agent_code !== agentCode);
+            const liveRows = amountLimitValue === null ? [] : [...agentSold.entries()]
+                .filter(([, amount]) => amount > amountLimit)
+                .map(([number, amount]) => ({agent_code: agentCode, number, excess: amount - amountLimit}));
+            return [...otherRows, ...liveRows]
+                .sort((a, b) => b.excess - a.excess || a.agent_code.localeCompare(b.agent_code) || a.number.localeCompare(b.number));
+        };
         const renderOverLimit = () => {
             const body = document.querySelector('[data-over-limit]');
             if (!body) return;
-            const rows = [...agentSold.entries()]
-                .filter(([, amount]) => amountLimitValue !== null && amount > amountLimit)
-                .map(([number, amount]) => [number, amount - amountLimit])
-                .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+            const allAgents = workspace.dataset.overLimitAll === '1';
+            const rows = overLimitEntries();
             body.replaceChildren();
             if (!rows.length) {
                 const row = body.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 2;
+                cell.colSpan = allAgents ? 3 : 2;
                 cell.className = 'muted';
-                cell.textContent = 'No number exceeds this Agent\'s Amount Limit.';
+                cell.textContent = allAgents ? t.no_over_limit_all : t.no_over_limit_agent;
                 return;
             }
-            rows.forEach(([number, excess]) => {
-                const row = body.insertRow();
-                row.insertCell().textContent = number;
-                row.insertCell().textContent = excess.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            rows.forEach(row => {
+                const tr = body.insertRow();
+                tr.insertCell().textContent = row.number;
+                if (allAgents) tr.insertCell().textContent = row.agent_code;
+                tr.insertCell().textContent = row.excess.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             });
         };
         const addAcceptedDetails = details => {
@@ -530,12 +578,12 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             if (storedDrafts) {
                 const parsed = JSON.parse(storedDrafts);
                 if (!Array.isArray(parsed) || parsed.some(draft => typeof draft.input !== 'string' || typeof draft.id !== 'string')) {
-                    throw new Error('Saved drafts have an invalid format.');
+                    throw new Error(t.drafts_invalid);
                 }
                 drafts = parsed;
             }
         } catch (error) {
-            showStatus(`${error.message} Keep this page open and copy the drafts before clearing browser storage.`, true);
+            showStatus(`${error.message} ${t.drafts_invalid_hint}`, true);
         }
         renderDrafts();
         renderSold();
@@ -555,13 +603,13 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 persist();
                 renderDrafts();
                 showStatus(staged.length === 1
-                    ? `${staged[0].input} added to Recent Sales. Press Save (F1) to send it to the server.`
-                    : `${staged.length} inputs added to Recent Sales. Press Save (F1) to send them to the server.`);
+                    ? fmt(t.staged_one, {input: staged[0].input})
+                    : fmt(t.staged_many, {count: staged.length}));
                 input.focus();
                 return true;
             } catch (error) {
                 drafts = drafts.filter(draft => !staged.includes(draft));
-                showStatus(`Could not save this on the device: ${error.message}. Copy the input before retrying.`, true);
+                showStatus(fmt(t.storage_failed, {error: error.message}), true);
                 return false;
             }
         };
@@ -578,7 +626,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         });
         saveButton.addEventListener('click', async () => {
             if (!drafts.length) {
-                showStatus('Recent Sales is empty. Add one or more inputs first.');
+                showStatus(t.empty_queue);
                 input.focus();
                 return;
             }
@@ -606,7 +654,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                     });
                     const result = await response.json().catch(() => ({}));
                     if (!response.ok) {
-                        const message = result.message || `Server returned ${response.status}.`;
+                        const message = result.message || fmt(t.server_status, {status: response.status});
                         for (const draft of chunk) {
                             draft.error = message;
                             failed++;
@@ -619,14 +667,14 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                     for (const draft of chunk) {
                         const item = (result.results || []).find(entry => entry.client_uuid === draft.id);
                         if (!item) {
-                            draft.error = 'No server response for this input.';
+                            draft.error = t.no_response;
                             failed++;
                         } else if (item.status === 'saved') {
                             addAcceptedDetails(item.details || []);
                             drafts = drafts.filter(row => row.id !== draft.id);
                             saved++;
                         } else {
-                            draft.error = item.message || 'Server rejected this input.';
+                            draft.error = item.message || t.server_rejected;
                             failed++;
                         }
                     }
@@ -634,11 +682,11 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                     renderDrafts();
                 } catch (error) {
                     for (const draft of chunk) {
-                        draft.error = 'Connection failed. This input is still saved on this device.';
+                        draft.error = t.connection_failed;
                         failed++;
                     }
                     try { persist(); } catch (storageError) {
-                        showStatus(`Connection failed and the local draft could not be updated: ${storageError.message}. Do not close this page.`, true);
+                        showStatus(fmt(t.connection_storage_failed, {error: storageError.message}), true);
                         fatal = true;
                         break;
                     }
@@ -648,24 +696,47 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             }
             saveButton.disabled = false;
             if (!fatal) {
-                showStatus(`${saved} input${saved === 1 ? '' : 's'} saved${failed ? `; ${failed} remain in Recent Sales with errors` : ''}.`, failed > 0);
+                showStatus(fmt(saved === 1 ? t.saved_single : t.saved_plural, {
+                    count: saved,
+                    extra: failed ? fmt(t.saved_failed, {count: failed}) : '',
+                }), failed > 0);
             }
         });
-        document.querySelector('[data-focus-agent]').addEventListener('click', () => agent.focus());
-        agent.addEventListener('change', () => {
-            const selected = agent.selectedOptions[0];
-            const claimUrl = selected?.dataset.claimUrl;
-            if (claimUrl) {
-                const claimForm = document.querySelector('[data-agent-claim-form]');
-                if (!claimForm) {
-                    showStatus('This Agent is not currently assigned to your account.', true);
-                    return;
-                }
-                claimForm.action = claimUrl;
-                claimForm.requestSubmit();
+        const focusAgent = document.querySelector('[data-focus-agent]');
+        if (agent && focusAgent) focusAgent.addEventListener('click', () => agent.focus());
+        if (agent) {
+            agent.addEventListener('change', () => {
+                const url = agent.selectedOptions[0]?.dataset?.url;
+                if (url) window.location.assign(url);
+            });
+        }
+        const plainAmount = value => value.toFixed(2).replace(/\.?0+$/, '');
+        const copyButton = document.querySelector('[data-copy-over-limit]');
+        copyButton?.addEventListener('click', async () => {
+            const rows = overLimitEntries();
+            if (!rows.length) {
+                showStatus(t.copy_empty, true);
                 return;
             }
-            if (selected?.value) window.location.assign(selected.value);
+            const text = rows.map(row => `${row.number}=${plainAmount(row.excess)}`).join('\n');
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const holder = document.createElement('textarea');
+                    holder.value = text;
+                    holder.setAttribute('readonly', '');
+                    holder.style.cssText = 'position:fixed;top:-1000px';
+                    document.body.append(holder);
+                    holder.select();
+                    const copied = document.execCommand('copy');
+                    holder.remove();
+                    if (!copied) throw new Error(t.copy_refused);
+                }
+                showStatus(fmt(t.copied, {count: rows.length}));
+            } catch (error) {
+                showStatus(fmt(t.copy_failed, {error: error.message}), true);
+            }
         });
         document.querySelector('[data-sold-search]').addEventListener('input', renderSold);
         window.addEventListener('keydown', event => {
@@ -674,7 +745,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 saveButton.click();
             } else if (event.key === 'F2') {
                 event.preventDefault();
-                agent.focus();
+                (agent ?? focusAgent).focus();
             } else if (event.key === 'F3') {
                 event.preventDefault();
                 input.focus();

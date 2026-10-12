@@ -1,27 +1,30 @@
-@extends('layouts.app', ['title' => 'Choose sales mode'])
+@extends('layouts.app', ['title' => __('app.mode.title')])
 
 @section('content')
 <main class="main narrow mode-picker">
-    <h1 class="page-title">Choose a sales mode</h1>
-    <p class="subtitle">2D runs three Rounds each day. 3D Draws are held on the 1st and 16th of each month.</p>
+    <h1 class="page-title">{{ __('app.mode.heading') }}</h1>
+    <p class="subtitle">{{ __('app.mode.subtitle') }}</p>
     <form method="POST" action="{{ route('draw-mode.store') }}" id="draw-mode-form">
         @csrf
         <input type="hidden" name="mode" id="draw-mode-value" value="2d">
-        <div class="mode-options" role="radiogroup" aria-label="Sales mode">
+        <div class="mode-options" role="radiogroup" aria-label="{{ __('app.mode.aria') }}">
             <button class="mode-option is-selected" type="button" role="radio" aria-checked="true" data-mode-choice="2d" autofocus>
                 <span class="mode-option-title">2D</span>
-                <span class="mode-option-copy">Daily · Three Rounds</span>
+                <span class="mode-option-copy">{{ __('app.mode.copy_2d') }}</span>
             </button>
             <button class="mode-option" type="button" role="radio" aria-checked="false" data-mode-choice="3d">
                 <span class="mode-option-title">3D</span>
-                <span class="mode-option-copy">Monthly · 1st and 16th</span>
+                <span class="mode-option-copy">{{ __('app.mode.copy_3d') }}</span>
             </button>
         </div>
-        <button class="button full" type="submit">Enter 2D</button>
+        <button class="button full" type="submit">{{ __('app.mode.enter', ['mode' => '2D']) }}</button>
     </form>
 </main>
 <script>
     (() => {
+        const t = @json(__('app.mode'));
+        const fmt = (text, vars = {}) => text.replace(/:(\w+)/g,
+            (token, key) => Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : token);
         const form = document.getElementById('draw-mode-form');
         const input = document.getElementById('draw-mode-value');
         const submit = form.querySelector('[type="submit"]');
@@ -33,7 +36,7 @@
                 choice.classList.toggle('is-selected', active);
                 choice.setAttribute('aria-checked', String(active));
             });
-            submit.textContent = `Enter ${mode.toUpperCase()}`;
+            submit.textContent = fmt(t.enter, { mode: mode.toUpperCase() });
         };
         choices.forEach((choice, index) => {
             choice.addEventListener('click', () => select(choice.dataset.modeChoice));

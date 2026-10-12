@@ -1,18 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ request()->user()?->locale() ?? config('app.locale', 'en') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Thai2D3D' }} · Thai2D3D</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/wya-logo.png') }}">
+    <title>{{ $title ?? 'Winning Yields Always (WYA)' }} · Winning Yields Always (WYA)</title>
     <style>
         :root{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-synthesis:none;color-scheme:light;--page:#f4f7f5;--surface:#fff;--surface-soft:#edf4f0;--text:#14211c;--muted:#5e7168;--border:#d9e3dd;--gridline:#e4ebe6;--accent:#087b59;--accent-hover:#066c4e;--accent-soft:#e3f2eb;--accent-text:#285343;--danger-bg:#fff0ed;--danger-text:#923723;--notice-bg:#eaf7ef;--notice-text:#17633d;--clock-yellow:#765300;--clock-orange:#96390e;--clock-red:#b4232c;--font-scale:1}
         html[data-theme=dark]{color-scheme:dark;--page:#111916;--surface:#19231e;--surface-soft:#26342d;--text:#e7eee9;--muted:#aabbb0;--border:#37483e;--gridline:#344239;--accent:#54c59a;--accent-hover:#73d6ad;--accent-soft:#244b3a;--accent-text:#d5eee1;--danger-bg:#4b2923;--danger-text:#ffd0c2;--notice-bg:#204333;--notice-text:#c3f0d2;--clock-yellow:#f4ce67;--clock-orange:#ffad7a;--clock-red:#ff8585}
         @media(prefers-color-scheme:dark){html[data-theme=system]{color-scheme:dark;--page:#111916;--surface:#19231e;--surface-soft:#26342d;--text:#e7eee9;--muted:#aabbb0;--border:#37483e;--gridline:#344239;--accent:#54c59a;--accent-hover:#73d6ad;--accent-soft:#244b3a;--accent-text:#d5eee1;--danger-bg:#4b2923;--danger-text:#ffd0c2;--notice-bg:#204333;--notice-text:#c3f0d2;--clock-yellow:#f4ce67;--clock-orange:#ffad7a;--clock-red:#ff8585}}
         *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--page);color:var(--text);font-size:calc(1rem * var(--font-scale))}a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
         .shell{min-height:100vh}.topbar{min-height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:7px max(20px,calc((100vw - 1480px)/2));-webkit-app-region:drag}.topbar a,.topbar button,.topbar input,.topbar select,.topbar summary,.topbar form,.topbar .top-actions,.topbar .primary-nav,.topbar .window-controls{-webkit-app-region:no-drag}
-        .primary-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.primary-nav>a,.nav-menu>summary{display:inline-flex;align-items:center;min-height:38px;padding:7px 10px;border-radius:5px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;list-style:none}.primary-nav>a:hover,.nav-menu>summary:hover,.primary-nav>a[aria-current=page]{background:var(--accent-soft);color:var(--accent-text);text-decoration:none}.nav-menu{position:relative}.nav-menu>summary::-webkit-details-marker{display:none}.nav-popover{position:absolute;top:calc(100% + 7px);left:0;z-index:20;min-width:190px;padding:6px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 24px #0002;border-radius:7px}.nav-popover>a{display:block;padding:9px 10px;border-radius:4px;color:var(--text);font-size:13px}.nav-popover>a:hover{background:var(--surface-soft);text-decoration:none}.nav-popover .display-settings{padding:8px 10px}.nav-popover .display-settings summary{color:var(--text);font-size:13px}.nav-popover .display-popover{position:static;width:auto;margin-top:8px;box-shadow:none;padding:8px}.header-tools{display:flex;align-items:center;justify-content:flex-end;gap:14px}.top-actions{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;flex-wrap:wrap}
-        .brand{font-weight:800;font-size:18px;letter-spacing:-.04em;color:var(--text);white-space:nowrap}
+        .primary-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.primary-nav>a,.nav-menu>summary{display:inline-flex;align-items:center;min-height:38px;padding:7px 10px;border-radius:5px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;list-style:none}.primary-nav>a:hover,.nav-menu>summary:hover,.primary-nav>a[aria-current=page]{background:var(--accent-soft);color:var(--accent-text);text-decoration:none}.nav-menu{position:relative}.nav-menu>summary::-webkit-details-marker{display:none}.nav-popover{position:absolute;top:calc(100% + 7px);left:0;z-index:20;min-width:190px;padding:6px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 24px #0002;border-radius:7px}.nav-popover>a{display:block;padding:9px 10px;border-radius:4px;color:var(--text);font-size:13px}.nav-popover>a:hover{background:var(--surface-soft);text-decoration:none}.nav-popover{max-height:min(72vh,520px);overflow-y:auto}.nav-popover .nav-sep{display:block;height:1px;margin:6px 4px;background:var(--border)}.nav-popover form{margin:0}.nav-popover .language-form .button{width:100%;justify-content:space-between;gap:8px;margin-top:6px}.display-form{margin-top:12px}.display-form label{margin:8px 0 4px;font-size:12px}.display-form select,.display-form input{padding:8px}.display-form .button{width:100%;margin-top:10px}.nav-popover .display-settings{padding:8px 10px}.nav-popover .display-settings summary{color:var(--text);font-size:13px}.nav-popover .display-popover{position:static;width:auto;margin-top:8px;box-shadow:none;padding:8px}.header-tools{display:flex;align-items:center;justify-content:flex-end;gap:14px}.top-actions{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;flex-wrap:wrap}
+        .brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:18px;letter-spacing:-.04em;color:var(--text);white-space:nowrap}.brand-logo{width:34px;height:34px;border-radius:8px;object-fit:cover;flex:none}.brand-nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-width:0}
         .window-controls{display:flex;align-items:center;gap:4px;-webkit-app-region:no-drag}.window-controls button{width:34px;height:30px;border:0;border-radius:4px;background:transparent;color:var(--text);font:inherit;font-size:14px;cursor:pointer}.window-controls button:hover{background:var(--surface-soft)}.window-controls button:last-child:hover{background:#c42b1c;color:#fff}
         .round-clock{min-width:112px;text-align:center;color:var(--accent);font-variant-numeric:tabular-nums}.clock-time{display:block;font-size:18px;font-weight:800;line-height:1.1}.clock-date{display:block;margin-top:3px;font-size:11px;color:var(--muted)}.round-clock[data-state=yellow]{color:var(--clock-yellow)}.round-clock[data-state=orange]{color:var(--clock-orange)}.round-clock[data-state=red]{color:var(--clock-red)}
         .main{max-width:1280px;margin:32px auto;padding:0 24px}.page-title{margin:0;font-size:28px;letter-spacing:-.04em}.subtitle{margin:8px 0 24px;color:var(--muted)}
@@ -39,11 +40,22 @@
 @php
     $layoutNow = \Carbon\Carbon::now('Asia/Yangon');
     $layoutCloseAt = null;
+    $layoutUser = request()->user();
     $layoutMode = request()->query('mode', session('draw_mode', '2d'));
     if (request()->routeIs('three-digit.sales.*', 'admin.three-digit.*') || $layoutMode === '3d') {
         $layoutMode = '3d';
     }
-    $layoutCloseLabel = $layoutMode === '3d' ? 'Draw' : 'Round';
+    $layoutCloseLabel = $layoutMode === '3d' ? __('app.clock.draw') : __('app.clock.round');
+    $layoutClosedText = __('app.clock.closed', ['label' => $layoutCloseLabel]);
+    $layoutClosesIn = __('app.clock.closes_in');
+    $layoutClockFormat = $layoutUser?->clockFormat() ?? '24';
+    $layoutPendingReviews = 0;
+    if ($layoutUser && $layoutUser->isAdmin()) {
+        $layoutPendingReviews = \App\Models\OfflineSyncReview::query()
+            ->where('status', 'pending')
+            ->whereHas('round', fn ($query) => $query->where('admin_id', $layoutUser->id))
+            ->count();
+    }
     $layoutStatementUrl = route('operator.sales.workspace', ['view' => 'agent']);
     if (isset($agentSession)) {
         $layoutStatementUrl = route('operator.sales.show', [$agentSession, 'mode' => $layoutMode, 'view' => 'agent']);
@@ -83,81 +95,102 @@
 <div class="shell">
     @auth
         <header class="topbar">
-            <nav class="primary-nav" aria-label="Primary navigation">
-                <a href="{{ route('dashboard') }}" @if(request()->routeIs('dashboard')) aria-current="page" @endif>Dashboard</a>
+            <div class="brand-nav">
+                <a class="brand" href="{{ route('dashboard') }}"><img class="brand-logo" src="{{ asset('images/wya-logo.png') }}" alt="" width="34" height="34">Winning Yields Always</a>
+            <nav class="primary-nav" aria-label="{{ __('app.nav.primary') }}">
+                <a href="{{ route('dashboard') }}" @if(request()->routeIs('dashboard')) aria-current="page" @endif>{{ __('app.nav.dashboard') }}</a>
                 @if(auth()->user()->isAdmin() || auth()->user()->isOperator())
                     <details class="nav-menu">
-                        <summary>Sale Entry</summary>
+                        <summary>{{ __('app.nav.sale_entry') }}</summary>
                         <div class="nav-popover">
-                            <a href="{{ route('operator.sales.workspace') }}">2D Sale Entry</a>
-                            <a href="{{ route('three-digit.sales.workspace') }}">3D Sale Entry</a>
+                            <a href="{{ route('operator.sales.workspace') }}">{{ __('app.nav.sale_2d') }}</a>
+                            <a href="{{ route('three-digit.sales.workspace') }}">{{ __('app.nav.sale_3d') }}</a>
                         </div>
                     </details>
-                    <a href="{{ route('reports.summary', ['mode' => $layoutMode]) }}" @if(request()->routeIs('reports.*')) aria-current="page" @endif>Report</a>
+                    <a href="{{ route('reports.summary', ['mode' => $layoutMode]) }}" @if(request()->routeIs('reports.*')) aria-current="page" @endif>{{ __('app.nav.report') }}</a>
                 @endif
-                @if(auth()->user()->isAdmin())
-                    <a href="{{ $layoutMode === '3d' ? route('admin.three-digit.index') : route('admin.settings.index') }}" @if(request()->routeIs('admin.settings.*', 'admin.three-digit.*')) aria-current="page" @endif>Setting</a>
+                @if(auth()->user()->isAdmin() || auth()->user()->isOwner())
+                    <details class="nav-menu">
+                        <summary>{{ __('app.nav.setting') }}</summary>
+                        <div class="nav-popover">
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.settings.index') }}#payout-settings" @if(request()->routeIs('admin.settings.*')) aria-current="page" @endif>{{ __('app.nav.application_settings') }}</a>
+                                <a href="{{ route('admin.settings.index') }}#agents">{{ __('app.nav.add_agent') }}</a>
+                            @endif
+                            <a href="{{ route('admin.users.index') }}" @if(request()->routeIs('admin.users.*')) aria-current="page" @endif>{{ __('app.nav.add_operator') }}</a>
+                            <span class="nav-sep"></span>
+                            @include('partials.nav-appearance')
+                            @include('partials.nav-language')
+                            @if(auth()->user()->isAdmin())
+                                <span class="nav-sep"></span>
+                                <a href="{{ route('admin.settings.index') }}#sale-entry-preferences">{{ __('app.nav.sale_entry_prefs') }}</a>
+                                <a href="{{ route('admin.settings.index') }}#notifications">{{ __('app.nav.notifications') }}</a>
+                                <a href="{{ route('admin.settings.index') }}#security">{{ __('app.nav.security') }}</a>
+                            @endif
+                            <a href="{{ route('admin.data-backup.index') }}" @if(request()->routeIs('admin.data-backup.*')) aria-current="page" @endif>{{ __('app.nav.data_backup') }}</a>
+                            <a href="{{ route('admin.activity-log.index') }}" @if(request()->routeIs('admin.activity-log.*')) aria-current="page" @endif>{{ __('app.nav.activity_log') }}</a>
+                        </div>
+                    </details>
                 @endif
                 <details class="nav-menu">
-                    <summary>Menu</summary>
+                    <summary>{{ __('app.nav.menu') }}</summary>
                     <div class="nav-popover">
-                        <a href="{{ route('manual') }}" @if(request()->routeIs('manual')) aria-current="page" @endif>Manual</a>
                         @if(auth()->user()->isAdmin())
-                            <a href="{{ route('admin.settings.index') }}#agents">Add Agent</a>
-                            <a href="{{ route('admin.users.index') }}">Add Operator</a>
+                            <a href="{{ route('admin.settings.index') }}#round-schedule">{{ __('app.nav.round_schedule') }}</a>
+                            <a href="{{ route('admin.settings.index') }}#agents">{{ __('app.nav.agents_limits') }}</a>
+                            <a href="{{ route('admin.settings.index') }}#rounds">{{ __('app.nav.hot_numbers') }}</a>
+                            <a href="{{ route('admin.settlements.index') }}" @if(request()->routeIs('admin.settlements.*', 'admin.rounds.*')) aria-current="page" @endif>{{ __('app.nav.results_settlements') }}</a>
+                            <a href="{{ route('admin.three-digit.index') }}" @if(request()->routeIs('admin.three-digit.*')) aria-current="page" @endif>{{ __('app.nav.draw_settings') }}</a>
+                            <a href="{{ route('reports.summary', ['mode' => $layoutMode]) }}">{{ __('app.nav.period_summaries') }}</a>
+                            <a href="{{ route('admin.offline-reviews.index') }}" id="pending-review-link" aria-live="polite">
+                                {{ __('app.nav.pending_review') }}
+                                <span class="pill {{ $layoutPendingReviews > 0 ? 'off' : '' }}" id="pending-review-count">{{ $layoutPendingReviews }}</span>
+                            </a>
                         @endif
                         @if(auth()->user()->isAdmin() || auth()->user()->isOperator())
-                            <a href="{{ $layoutStatementUrl }}">Agent Statement</a>
+                            <a href="{{ $layoutStatementUrl }}">{{ __('app.nav.agent_statement') }}</a>
                         @endif
-                        <details class="display-settings">
-                            <summary>Display</summary>
-                            <div class="display-popover">
-                                <label for="ui-theme">Theme</label>
-                                <select id="ui-theme">
-                                    <option value="system">System</option>
-                                    <option value="light">Light</option>
-                                    <option value="dark">Dark</option>
-                                </select>
-                                <label for="ui-font-size">Font size</label>
-                                <select id="ui-font-size">
-                                    <option value="0.9">Small</option>
-                                    <option value="1">Standard</option>
-                                    <option value="1.1">Large</option>
-                                    <option value="1.2">Extra large</option>
-                                </select>
-                            </div>
-                        </details>
+                        @if(! auth()->user()->isAdmin() && ! auth()->user()->isOwner())
+                            @include('partials.nav-appearance')
+                            @include('partials.nav-language')
+                        @endif
+                        <span class="nav-sep"></span>
+                        <a href="{{ route('manual') }}" @if(request()->routeIs('manual')) aria-current="page" @endif>{{ __('app.nav.manual') }}</a>
                     </div>
                 </details>
             </nav>
+            </div>
             <div class="header-tools">
                 <div class="round-clock" id="round-clock" data-state="normal"
                     data-server-now="{{ $layoutNow->getTimestampMs() }}"
+                    data-clock-format="{{ $layoutClockFormat ?? '24' }}"
                     data-close-label="{{ $layoutCloseLabel }}"
+                    data-closed-text="{{ $layoutClosedText }}"
+                    data-closes-in="{{ $layoutClosesIn }}"
                     @if($layoutCloseAt) data-close-at="{{ $layoutCloseAt->getTimestampMs() }}" @endif>
-                    <time class="clock-time" id="clock-time">{{ $layoutNow->format('H:i:s') }}</time>
+                    <time class="clock-time" id="clock-time">{{ ($layoutClockFormat ?? '24') === '12' ? $layoutNow->format('h:i:s A') : $layoutNow->format('H:i:s') }}</time>
                     <time class="clock-date" id="clock-date">{{ $layoutNow->format('F j, Y') }}</time>
                     <span class="clock-countdown" id="clock-countdown" aria-live="polite" hidden></span>
                 </div>
                 <div class="top-actions">
-                    <span>{{ auth()->user()->name }} · {{ ucfirst(auth()->user()->role) }}</span>
+                    <span>{{ auth()->user()->name }} · {{ __('app.roles.'.auth()->user()->role) }}</span>
                     <form method="POST" action="{{ route('logout') }}" class="inline-form">
                         @csrf
-                        <button type="submit" class="button secondary">Log out</button>
+                        <button type="submit" class="button secondary">{{ __('app.nav.log_out') }}</button>
                     </form>
                 </div>
                 @if(env('THAI2D3D_DESKTOP') === 'true')
-                    <div class="window-controls" aria-label="Window controls">
-                        <button type="button" data-window-action="minimize" aria-label="Minimize window" title="Minimize">−</button>
-                        <button type="button" data-window-action="toggleMaximize" aria-label="Maximize or restore window" title="Maximize or restore">□</button>
-                        <button type="button" data-window-action="close" aria-label="Close window" title="Close">×</button>
+                    <div class="window-controls" aria-label="{{ __('app.window.controls') }}">
+                        <button type="button" data-window-action="minimize" aria-label="{{ __('app.window.minimize') }}" title="{{ __('app.window.minimize') }}">−</button>
+                        <button type="button" data-window-action="toggleMaximize" aria-label="{{ __('app.window.maximize') }}" title="{{ __('app.window.maximize') }}">□</button>
+                        <button type="button" data-window-action="close" aria-label="{{ __('app.window.close') }}" title="{{ __('app.window.close') }}">×</button>
                     </div>
                 @endif
             </div>
         </header>
     @else
         <header class="topbar">
-            <a class="brand" href="{{ route('login') }}">Thai2D3D</a>
+            <a class="brand" href="{{ route('login') }}"><img class="brand-logo" src="{{ asset('images/wya-logo.png') }}" alt="" width="34" height="34">Winning Yields Always</a>
             <div class="round-clock" id="round-clock" data-state="normal"
                 data-server-now="{{ $layoutNow->getTimestampMs() }}"
                 data-close-label="{{ $layoutCloseLabel }}">
@@ -165,10 +198,10 @@
                 <time class="clock-date" id="clock-date">{{ $layoutNow->format('F j, Y') }}</time>
             </div>
             @if(env('THAI2D3D_DESKTOP') === 'true')
-                <div class="window-controls" aria-label="Window controls">
-                    <button type="button" data-window-action="minimize" aria-label="Minimize window" title="Minimize">−</button>
-                    <button type="button" data-window-action="toggleMaximize" aria-label="Maximize or restore window" title="Maximize or restore">□</button>
-                    <button type="button" data-window-action="close" aria-label="Close window" title="Close">×</button>
+                <div class="window-controls" aria-label="{{ __('app.window.controls') }}">
+                    <button type="button" data-window-action="minimize" aria-label="{{ __('app.window.minimize') }}" title="{{ __('app.window.minimize') }}">−</button>
+                    <button type="button" data-window-action="toggleMaximize" aria-label="{{ __('app.window.maximize') }}" title="{{ __('app.window.maximize') }}">□</button>
+                    <button type="button" data-window-action="close" aria-label="{{ __('app.window.close') }}" title="{{ __('app.window.close') }}">×</button>
                 </div>
             @endif
         </header>
@@ -215,10 +248,13 @@
         const serverNow = Number(clock.dataset.serverNow);
         const closeAt = Number(clock.dataset.closeAt || 0);
         const startedAt = Date.now();
-        const formatter = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Asia/Yangon', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+        const clockFormat = clock.dataset.clockFormat === '12' ? '12' : '24';
+        const uiLocale = (document.documentElement.lang === 'my' ? 'my-u-nu-latn' : 'en-GB');
+        const formatter = new Intl.DateTimeFormat(uiLocale, {
+            timeZone: 'Asia/Yangon', hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: clockFormat === '12',
         });
-        const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+        const dateFormatter = new Intl.DateTimeFormat(uiLocale, {
             timeZone: 'Asia/Yangon', year: 'numeric', month: 'long', day: 'numeric',
         });
         const tick = () => {
@@ -232,8 +268,8 @@
             clock.dataset.state = remaining === 0 ? 'red' : minutes <= 2 ? 'red' : minutes <= 5 ? 'orange' : minutes <= 10 ? 'yellow' : 'normal';
             countdown.hidden = false;
             countdown.textContent = remaining === 0
-                ? `${clock.dataset.closeLabel || 'Round'} closed`
-                : `Closes in ${String(Math.floor(remaining / 3600000)).padStart(2, '0')}:${String(Math.floor((remaining % 3600000) / 60000)).padStart(2, '0')}:${String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0')}`;
+                ? (clock.dataset.closedText || 'Round closed')
+                : `${clock.dataset.closesIn || 'Closes in'} ${String(Math.floor(remaining / 3600000)).padStart(2, '0')}:${String(Math.floor((remaining % 3600000) / 60000)).padStart(2, '0')}:${String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0')}`;
         };
         tick();
         window.setInterval(tick, 1000);

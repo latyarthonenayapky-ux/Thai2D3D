@@ -15,16 +15,33 @@ class Agent extends Model
         'admin_id',
         'agent_code',
         'agent_name',
+        'mobile_login_code',
+        'mobile_password',
         'phone',
         'commission_2d_percent',
         'commission_3d_percent',
         'status',
     ];
 
+    protected $hidden = [
+        'mobile_password',
+    ];
+
     protected $casts = [
         'commission_2d_percent' => 'decimal:2',
         'commission_3d_percent' => 'decimal:2',
+        'mobile_password' => 'hashed',
     ];
+
+    public function accessTokens(): HasMany
+    {
+        return $this->hasMany(AgentAccessToken::class, 'agent_id');
+    }
+
+    public function hasMobileAccess(): bool
+    {
+        return $this->mobile_login_code !== null && $this->mobile_password !== null;
+    }
 
     public function sessions()
     {

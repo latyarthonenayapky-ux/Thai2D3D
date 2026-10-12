@@ -204,7 +204,7 @@ class OperatorAgentClaimTest extends TestCase
 
     }
 
-    public function test_admin_sale_entry_lists_all_round_agents_and_can_claim_available_agents_in_place(): void
+    public function test_the_round_setup_carries_the_limits_and_sale_input_holds_the_agent_dropdown(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'status' => true]);
         app(InitializeAdminBusiness::class)->initialize($admin);
@@ -229,20 +229,40 @@ class OperatorAgentClaimTest extends TestCase
             'agent_name' => 'Operator Agent Four',
         ]);
         $round = $this->openRound($admin, 1);
-        $adminSession = AgentSession::openSession($agentOne, $round, $admin->id);
+        AgentSession::openSession($agentOne, $round, $admin->id);
         AgentSession::openSession($agentFour, $round, $operator->id);
+        AgentRoundSetting::query()
+            ->where('agent_id', $agentOne->id)
+            ->where('round_id', $round->id)
+            ->update(['amount_limit' => '1250.00']);
+
+        $adminSession = AgentSession::query()
+            ->where('round_id', $round->id)
+            ->where('agent_id', $agentOne->id)
+            ->firstOrFail();
 
         $this->actingAs($admin)
-            ->get(route('operator.sales.show', $adminSession))
+            ->get(route('operator.sales.workspace'))
+            ->assertRedirect(route('operator.sales.show', [$adminSession, 'mode' => '2d']));
+
+        $this->get(route('operator.sales.setup', ['round_id' => $round->id]))
+            ->assertOk()
+            ->assertSee('Round limits · all Agents')
+            ->assertSee('Amount Limit · every Agent')
+            ->assertSee('1250.00');
+
+        $this->get(route('operator.sales.show', [$adminSession, 'mode' => '2d']))
             ->assertOk()
             ->assertSee('A1 · Admin Agent One')
             ->assertSee('A2 · Available Agent Two')
             ->assertSee('A4 · Operator Agent Four')
             ->assertSee('In use by '.$operator->name)
-            ->assertSee('data-agent-claim-form', false)
-            ->assertSee('data-claim-url=', false);
+            ->assertSee('1,250.00')
+            ->assertDontSee('Round limits · all Agents')
+            ->assertViewHas('agentOptions', fn ($options): bool => $options->firstWhere('agent.id', $agentTwo->id)['selectable']
+                && ! $options->firstWhere('agent.id', $agentFour->id)['selectable']);
 
-        $this->post(route('operator.agent-sessions.claim', [$round, $agentTwo]))
+        $this->post(route('operator.sales.select'), ['round_id' => $round->id, 'agent_id' => $agentTwo->id])
             ->assertRedirect();
         $agentTwoSession = AgentSession::query()
             ->where('round_id', $round->id)
@@ -252,11 +272,10 @@ class OperatorAgentClaimTest extends TestCase
 
         $this->get(route('operator.sales.show', $agentTwoSession))
             ->assertOk()
-            ->assertSee('Available Agent Two')
-            ->assertSee('A1 · Admin Agent One')
-            ->assertSee('A4 · Operator Agent Four');
+            ->assertSee('A2 · Available Agent Two')
+            ->assertSee('id="sale-agent"', false);
 
-        $this->post(route('operator.agent-sessions.claim', [$round, $agentFour]))
+        $this->post(route('operator.sales.select'), ['round_id' => $round->id, 'agent_id' => $agentFour->id])
             ->assertSessionHasErrors('agent');
         $this->assertSame($operator->id, $agentFour->fresh()->roundSettings()->where('round_id', $round->id)->value('operator_id'));
     }
@@ -433,6 +452,7 @@ class OperatorAgentClaimTest extends TestCase
             'round_no' => $roundNo,
             'start_time' => '07:00:00',
             'close_time' => '09:30:00',
+            'manual_reopen' => true,
             'number_limit' => 500,
             'status' => 'open',
         ]);

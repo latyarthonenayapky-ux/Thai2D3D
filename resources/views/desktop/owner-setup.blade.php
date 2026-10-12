@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Set up Thai2D3D</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/wya-logo.png') }}">
+    <title>{{ __('app.owner.title') }}</title>
     <style>
         :root{font-family:ui-sans-serif,system-ui,sans-serif;color:#14211c;background:#f4f7f5}
         *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}
@@ -22,40 +23,40 @@
 </head>
 <body>
 <main>
-    <h1>Set up Thai2D3D</h1>
-    <p>This standalone copy stores its data on this computer. Create the local Owner account to begin.</p>
+    <img src="{{ asset('images/wya-logo.png') }}" alt="" width="64" height="64" style="width:64px;height:64px;border-radius:14px;object-fit:cover;margin-bottom:14px">
+    <h1>{{ __('app.owner.title') }}</h1>
+    <p>{{ __('app.owner.intro') }}</p>
     <form method="POST" action="{{ route('desktop.owner-setup.store') }}" id="setup-form">
         @csrf
         <div id="step-1">
-            <div class="step">Step 1 of 2 · Admin account</div>
+            <div class="step">{{ __('app.owner.step1') }}</div>
 
-            <label for="name">Owner name</label>
+            <label for="name">{{ __('app.owner.name_label') }}</label>
             <input id="name" name="name" value="{{ old('name') }}" required maxlength="255" autocomplete="name">
             @error('name')<div class="error">{{ $message }}</div>@enderror
 
-            <label for="email">Email</label>
+            <label for="email">{{ __('app.owner.email_label') }}</label>
             <input id="email" name="email" type="email" value="{{ old('email') }}" required maxlength="255" autocomplete="email">
             @error('email')<div class="error">{{ $message }}</div>@enderror
 
-            <label for="password">Password</label>
+            <label for="password">{{ __('app.auth.password') }}</label>
             <input id="password" name="password" type="password" required minlength="6" autocomplete="new-password">
             @error('password')<div class="error">{{ $message }}</div>@enderror
 
-            <label for="password_confirmation">Confirm password</label>
+            <label for="password_confirmation">{{ __('app.auth.confirm_password') }}</label>
             <input id="password_confirmation" name="password_confirmation" type="password" required minlength="6" autocomplete="new-password">
-            <button type="submit" id="continue-button">Continue</button>
-            <p class="hint">Use at least 6 characters. Keep this password safe; this offline database is separate from any online server.</p>
+            <button type="submit" id="continue-button">{{ __('app.owner.continue') }}</button>
+            <p class="hint">{{ __('app.owner.password_hint') }}</p>
         </div>
         <div id="step-2" class="{{ $errors->any() ? '' : 'wizard-hidden' }}">
-            <div class="step">Step 2 of 2 · Install pass key</div>
+            <div class="step">{{ __('app.owner.step2') }}</div>
 
-            <label for="install_key">Install pass key</label>
+            <label for="install_key">{{ __('app.owner.install_key_label') }}</label>
             <input id="install_key" name="install_key" value="{{ old('install_key') }}" maxlength="64" autocomplete="off" spellcheck="false">
             @error('install_key')<div class="error">{{ $message }}</div>@enderror
 
-            <p class="hint">Get this key from your Thai2D3D provider by sending them the email address you register with. The key only matches that email.</p>
-            <p class="hint">Install pass key ကို မိမိထည့်သွင်းလိုသော Email အား ပေးပို့၍ ရယူပါ။</p>
-            <button type="submit">Create Owner account</button>
+            <p class="hint">{{ __('app.owner.install_key_help') }}</p>
+            <button type="submit">{{ __('app.owner.create_owner') }}</button>
         </div>
     </form>
     <noscript><style>.wizard-hidden{display:block}</style></noscript>
@@ -63,6 +64,7 @@
         (function () {
             'use strict';
 
+            var passwordMismatch = @json(__('app.owner.password_mismatch'));
             var form = document.getElementById('setup-form');
             var stepOne = document.getElementById('step-1');
             var stepTwo = document.getElementById('step-2');
@@ -82,7 +84,7 @@
                 event.preventDefault();
 
                 if (password.value !== confirmation.value) {
-                    confirmation.setCustomValidity('Passwords do not match.');
+                    confirmation.setCustomValidity(passwordMismatch);
                     confirmation.reportValidity();
                     confirmation.setCustomValidity('');
                     return;

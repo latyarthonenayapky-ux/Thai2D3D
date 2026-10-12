@@ -1,6 +1,6 @@
-# Thai2D3D
+# Winning Yields Always (WYA)
 
-Thai2D3D သည် 2D နေ့စဉ် Round များနှင့် 3D လစဉ် Draw များအတွက် sales entry,
+Winning Yields Always (WYA) သည် 2D နေ့စဉ် Round များနှင့် 3D လစဉ် Draw များအတွက် sales entry,
 Agent စီမံခန့်ခွဲမှု၊ ရလဒ်၊ settlement နှင့် summary များကို စီမံသည့် application
 ဖြစ်သည်။
 
@@ -48,8 +48,9 @@ certificate မပါသောကြောင့် Windows SmartScreen သတ�
 
 - `release/Windows/` — Windows portable app folder (`Thai2D3D\Thai2D3D.exe` နှင့်
   `Start Thai2D3D.cmd`)။ Folder ကို ကူးယူပြီး double-click နှိပ်ရုံဖြင့်
-  အသုံးပြုနိုင်သည် — install မလိုပါ။ `_superseded/` ထဲတွင် ယခင် single-file
-  `.exe` အဟောင်းကို သိမ်းထားသည် (အသုံးမပြုရန်)။
+  အသုံးပြုနိုင်သည် — install မလိုပါ။ Password မေ့သွားလျှင်
+  `Reset Thai2D3D password.cmd` ကို run ၍ data မပျက်ဘဲ ပြင်နိုင်သည်။
+  `_superseded/` ထဲတွင် ယခင် single-file `.exe` အဟောင်းကို သိမ်းထားသည် (အသုံးမပြုရန်)။
 - `release/Linux/` — Linux AppImage (`.AppImage`)။
 - `release/VPS/` — VPS server သို့ upload လုပ်ရန် web app source (လက်ရှိ source
   code မှ တိုက်ရိုက်ကူးထားသည်)။ [VPS Setup Guide](docs/VPS_SETUP_MM.md) အတိုင်း
@@ -62,6 +63,14 @@ Node.js ရှိသော computer တွင် `cd desktop && npm run dist` �
 ထွက်လာသည့် ဖိုင်များကို `release/` folder များထဲ အစားထိုးပါ။ `release/VPS/`
 သည် snapshot ဖြစ်သဖြင့် source code ပြင်ဆင်တိုင်း ပြန်လည်ကူးယူသင့်သည်။
 
+`php scripts/sync-release.php all` (သို့မဟုတ် `VPS` / `Windows` တစ်ခုတည်း) သည်
+လက်ရှိ source မှ `app, config, database, lang, public, resources, routes, docs,
+scripts, tests` နှင့် `artisan` စသည်တို့ကို `release/VPS/` နှင့်
+`release/Windows/Thai2D3D/resources/laravel/` ထဲသို့ md5 နှိုင်းယှဉ်၍ သစ်လွင်အောင်
+ပြင်ပေးသည် (`--dry-run` ဖြင့် အရင်စစ်ကြည့်နိုင်သည်)။
+`vendor/`, `bootstrap/cache/`, `storage/`, `public/storage` တို့ကို မထိဘဲ
+`.env` နှင့် `.sqlite` ဖိုင်များကို ဘယ်တော့မှ မကူးပါ။
+
 ## စာရွက်စာတမ်း
 
 - [Burmese User Manual](docs/USER_MANUAL_MM.md) — login, role, 2D/3D sales,
@@ -69,6 +78,8 @@ Node.js ရှိသော computer တွင် `cd desktop && npm run dist` �
 - [VPS Setup Guide](docs/VPS_SETUP_MM.md) — Ubuntu, MySQL, PHP, HTTPS,
   scheduler, Owner စတင်ဖန်တီးခြင်း၊ backup နှင့် update
 - [Production Go-live Checklist](docs/production-deployment.md)
+- [Agent Mobile Sales](docs/mobile-agent-sales.md) — Agent မိုဘိုင်း login code၊
+  `/api/v1` auto-upload API၊ APK ဆောက်နည်း နှင့် GitHub Actions deploy
 - [Desktop App Guide](desktop/README.md)
 
 ## VPS နှင့် Desktop အကြား အရေးကြီးသော ကွာခြားချက်

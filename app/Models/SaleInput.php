@@ -22,12 +22,19 @@ class SaleInput extends Model
         'total_amount',
         'status',
         'reject_reason',
+        'voided_at',
+        'voided_by',
+        'void_reason',
+        'pre_void_status',
+        'pre_void_detail_statuses',
     ];
 
     protected $casts = [
         'number_count' => 'integer',
         'amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'voided_at' => 'datetime',
+        'pre_void_detail_statuses' => 'array',
     ];
 
     public function agentSession(): BelongsTo
@@ -38,6 +45,11 @@ class SaleInput extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'operator_id');
+    }
+
+    public function voidedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
     }
 
     public function details(): HasMany
@@ -53,5 +65,10 @@ class SaleInput extends Model
     public function isRejected(): bool
     {
         return $this->status === 'rejected';
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->status === 'voided';
     }
 }

@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\DataBackupController;
 use App\Http\Controllers\Admin\OfflineSyncReviewController;
 use App\Http\Controllers\Admin\PeriodReportController;
+use App\Http\Controllers\Admin\PreferenceController;
 use App\Http\Controllers\Admin\RoundResultController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ThreeDigitDrawController;
@@ -15,6 +18,7 @@ use App\Http\Controllers\Operator\AgentSessionController;
 use App\Http\Controllers\Operator\DashboardController;
 use App\Http\Controllers\Operator\OfflineSaleSyncController;
 use App\Http\Controllers\Operator\SaleEntryController;
+use App\Http\Controllers\Operator\SaleVoidController;
 use App\Http\Controllers\Operator\ThreeDigitSaleController;
 use App\Http\Middleware\RecordAdminActivity;
 use Illuminate\Support\Facades\Route;
@@ -60,7 +64,7 @@ Route::middleware('guest')->group(function (): void {
     ])->middleware('throttle:6,1')->name('password.update');
 });
 
-Route::middleware(['auth', 'active'])->group(function (): void {
+Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
     Route::post('/logout', [
         AuthenticatedSessionController::class,
         'destroy',
@@ -95,9 +99,21 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         'claim',
     ])->name('operator.agent-sessions.claim');
     Route::get('/operator/sales', [
-        AgentSessionController::class,
+        SaleEntryController::class,
         'workspace',
     ])->name('operator.sales.workspace');
+    Route::post('/operator/sales/agent', [
+        SaleEntryController::class,
+        'select',
+    ])->middleware('throttle:60,1')->name('operator.sales.select');
+    Route::get('/operator/sales/setup', [
+        SaleEntryController::class,
+        'setup',
+    ])->name('operator.sales.setup');
+    Route::get('/operator/sales/entry', [
+        SaleEntryController::class,
+        'entry',
+    ])->name('operator.sales.entry');
     Route::get('/three-digit/sales', [
         ThreeDigitSaleController::class,
         'workspace',
@@ -130,6 +146,33 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         SaleEntryController::class,
         'storeBatch',
     ])->middleware('throttle:120,1')->name('operator.sales.store-batch');
+    Route::post('/operator/sessions/{agentSession}/sales/{saleInput}/void', [
+        SaleVoidController::class,
+        'void',
+    ])->middleware('throttle:60,1')->name('operator.sales.void');
+    Route::post('/operator/sessions/{agentSession}/sales/{saleInput}/restore', [
+        SaleVoidController::class,
+        'restore',
+    ])->middleware('throttle:60,1')->name('operator.sales.restore');
+    Route::post('/operator/sessions/{agentSession}/three-digit-sales/{saleInput}/void', [
+        SaleVoidController::class,
+        'voidThreeDigit',
+    ])->middleware('throttle:60,1')->name('operator.three-digit-sales.void');
+    Route::post('/operator/sessions/{agentSession}/three-digit-sales/{saleInput}/restore', [
+        SaleVoidController::class,
+        'restoreThreeDigit',
+    ])->middleware('throttle:60,1')->name('operator.three-digit-sales.restore');
+
+    Route::post('/preferences/locale', [PreferenceController::class, 'locale'])
+        ->middleware('throttle:60,1')->name('preferences.locale');
+    Route::patch('/preferences/display', [PreferenceController::class, 'display'])
+        ->middleware('throttle:60,1')->name('preferences.display');
+    Route::patch('/preferences/sale-entry', [PreferenceController::class, 'saleEntry'])
+        ->middleware('throttle:60,1')->name('preferences.sale-entry');
+    Route::patch('/preferences/notifications', [PreferenceController::class, 'notifications'])
+        ->middleware('throttle:60,1')->name('preferences.notifications');
+    Route::patch('/preferences/security', [PreferenceController::class, 'security'])
+        ->middleware('throttle:60,1')->name('preferences.security');
 
     Route::middleware(['admin', RecordAdminActivity::class])->prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/settings', [
@@ -182,6 +225,18 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             SettingsController::class,
             'updateAgentThreeDigitCommission',
         ])->middleware('throttle:120,1')->name('settings.agents.three-digit-commission');
+        Route::patch('/settings/agents/{agent}/mobile-access', [
+            SettingsController::class,
+            'updateAgentMobileAccess',
+        ])->middleware('throttle:30,1')->name('settings.agents.mobile-access');
+        Route::delete('/settings/agents/{agent}/mobile-access/devices', [
+            SettingsController::class,
+            'revokeAgentMobileTokens',
+        ])->middleware('throttle:30,1')->name('settings.agents.mobile-access.devices');
+        Route::delete('/settings/agents/{agent}/mobile-access', [
+            SettingsController::class,
+            'disableAgentMobileAccess',
+        ])->middleware('throttle:30,1')->name('settings.agents.mobile-access.disable');
         Route::patch('/settings/rounds/{round}/agents/{agent}/amount-limit', [
             SettingsController::class,
             'updateAgentRoundAmountLimit',
@@ -254,5 +309,21 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             UserController::class,
             'toggleStatus',
         ])->middleware('throttle:120,1')->name('users.status');
+        Route::get('/data-backup', [DataBackupController::class, 'index'])
+            ->name('data-backup.index');
+        Route::post('/data-backup', [DataBackupController::class, 'store'])
+            ->middleware('throttle:6,1')->name('data-backup.store');
+        Route::get('/data-backup/{file}/download', [DataBackupController::class, 'download'])
+            ->where('file', 'wya-backup-[0-9]{8}-[0-9]{6}-[a-f0-9]{6}\.sql')
+            ->middleware('throttle:30,1')->name('data-backup.download');
+        Route::delete('/data-backup/{file}', [DataBackupController::class, 'destroy'])
+            ->where('file', 'wya-backup-[0-9]{8}-[0-9]{6}-[a-f0-9]{6}\.sql')
+            ->middleware('throttle:30,1')->name('data-backup.destroy');
+        Route::post('/data-backup/restore', [DataBackupController::class, 'restore'])
+            ->middleware('throttle:2,1')->name('data-backup.restore');
+        Route::get('/activity-log', [ActivityLogController::class, 'index'])
+            ->name('activity-log.index');
+        Route::get('/activity-log/export', [ActivityLogController::class, 'export'])
+            ->name('activity-log.export');
     });
 });

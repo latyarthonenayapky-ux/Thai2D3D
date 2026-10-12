@@ -38,6 +38,7 @@ for (const directory of [
     'bootstrap',
     'config',
     'database',
+    'lang',
     'public',
     'resources',
     'routes',
@@ -49,7 +50,7 @@ for (const directory of [
     );
 }
 
-for (const file of ['artisan', 'composer.json', 'composer.lock']) {
+for (const file of ['artisan', 'composer.json', 'composer.lock', 'server-router.php']) {
     fs.copyFileSync(path.join(projectRoot, file), path.join(appStage, file));
 }
 

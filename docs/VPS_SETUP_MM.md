@@ -1,4 +1,4 @@
-# Thai2D3D ကို VPS ပေါ်တွင် တင်သွင်းအသုံးပြုရန်
+# Winning Yields Always (WYA) ကို VPS ပေါ်တွင် တင်သွင်းအသုံးပြုရန်
 
 ဤလမ်းညွှန်သည် Ubuntu Server 24.04 LTS၊ Nginx၊ PHP 8.3၊ MySQL နှင့် HTTPS
 သုံးသည့် single-server စနစ်အတွက်ဖြစ်သည်။ VPS account, registered domain နှင့်
@@ -146,7 +146,7 @@ nano .env
 ထုတ်မည်ဖြစ်သောကြောင့် အစပိုင်းတွင် ဗလာထားနိုင်သည်။
 
 ```dotenv
-APP_NAME=Thai2D3D
+APP_NAME="Winning Yields Always (WYA)"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://YOUR_DOMAIN
@@ -176,7 +176,7 @@ MAIL_PORT=587
 MAIL_USERNAME=YOUR_SMTP_USERNAME
 MAIL_PASSWORD=YOUR_SMTP_PASSWORD
 MAIL_FROM_ADDRESS=YOUR_VERIFIED_SENDER_ADDRESS
-MAIL_FROM_NAME="Thai2D3D"
+MAIL_FROM_NAME="Winning Yields Always (WYA)"
 ```
 
 `SESSION_SECURE_COOKIE=true` သည် HTTPS-only cookie ဖြစ်ပြီး public deployment
@@ -346,6 +346,13 @@ Browser မှ `https://YOUR_DOMAIN/up` ကိုဖွင့်ပြီး hea
 လုပ်ပါ။ Backup ဖိုင်များကို web root ထဲ မထားပါနှင့်၊ permission ကို user-only
 ထားပါ။ Restore procedure ကို စမ်းမထားသော backup ကို အာမခံချက်ရှိသော backup
 ဟု မယူဆပါနှင့်။
+
+App အတွင်းမှ **Setting → Data Backup (ဒေတာ အရန်သိမ်း)** သည် `mysqldump` binary
+မလိုဘဲ database အားလုံးကို `WYA_BACKUP_V1` text dump (`storage/app/private/backups/`)
+အဖြစ် ထုတ်ပေးပြီး ထိုဖိုင်မှတစ်ဆင့် ပြန်သွင်းနိုင်သည် (Restore မတိုင်မီ အစိုးရံ backup
+အလိုအလျောက် သိမ်းထားသည်)။ Admin နှင့် Owner account သာ အသုံးပြုနိုင်ပြီး shell access
+မလိုသဖြင့် ဖောက်သည်ကိုယ်တိုင် ဒေါင်းလုဒ်ဆွဲထားနိုင်သည်။ သို့သော် server အပြင်ဘက်သို့
+အချိန်မှန် ကူးယူသိမ်းထားသော cron `mysqldump` မှာတော့ ဆက်လက်အသုံးပြုပါ။
 
 ဥပမာ dump (password prompt ကိုသုံးသည်၊ terminal command ထဲ password မထည့်ပါ):
 

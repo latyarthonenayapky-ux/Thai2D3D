@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => '3D settings'])
+@extends('layouts.app', ['title' => __('app.threeAdmin.title')])
 
 @section('content')
 <style>
@@ -26,37 +26,37 @@
 </style>
 <main class="three-admin">
     <header class="three-admin-heading">
-        <div><h1>3D Settings</h1><p>Independent 3D Draws · the 1st and 16th · Asia/Yangon · sales open 00:00–15:30 on Draw day.</p></div>
-        <nav class="three-admin-actions" aria-label="3D administration">
-            <a class="button secondary" href="{{ route('admin.settings.index') }}">2D settings</a>
-            <a class="button secondary" href="{{ route('admin.three-digit.results') }}">3D results and settlements</a>
-            <a class="button secondary" href="{{ route('operator.sales.workspace') }}">2D sales</a>
-            <a class="button" href="{{ route('three-digit.sales.workspace') }}">3D sales</a>
+        <div><h1>{{ __('app.threeAdmin.heading') }}</h1><p>{{ __('app.threeAdmin.subtitle') }}</p></div>
+        <nav class="three-admin-actions" aria-label="{{ __('app.threeAdmin.nav_aria') }}">
+            <a class="button secondary" href="{{ route('admin.settings.index') }}">{{ __('app.threeAdmin.link_2d_settings') }}</a>
+            <a class="button secondary" href="{{ route('admin.three-digit.results') }}">{{ __('app.reports.results_3d') }}</a>
+            <a class="button secondary" href="{{ route('operator.sales.workspace') }}">{{ __('app.threeAdmin.link_2d_sales') }}</a>
+            <a class="button" href="{{ route('three-digit.sales.workspace') }}">{{ __('app.threeAdmin.link_3d_sales') }}</a>
         </nav>
     </header>
     @if(session('status'))<div class="notice" role="status">{{ session('status') }}</div>@endif
     @if($errors->any())
         <div class="error" role="alert">
-            <strong>Please review the following:</strong>
+            <strong>{{ __('app.threeAdmin.errors_heading') }}</strong>
             <ul style="margin:8px 0 0;padding-left:20px">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
         </div>
     @endif
     <section class="card three-admin-section">
-        <h2>Winning payout multiplier · 3D</h2>
-        <p>Saved once for this business and reused for every 3D Draw until changed here.</p>
+        <h2>{{ __('app.threeAdmin.payout_title') }}</h2>
+        <p>{{ __('app.threeAdmin.payout_help') }}</p>
         <form method="POST" action="{{ route('admin.settings.payouts') }}" class="three-admin-inline">
             @csrf
             @method('PUT')
-            <div><label for="payout-3d">3D payout multiplier</label><input id="payout-3d" name="payout_3d_multiplier" type="number" min="0" step="0.01" value="{{ old('payout_3d_multiplier', auth()->user()->businessSettings?->payout_3d_multiplier) }}" required></div>
-            <button class="button" type="submit">Save multiplier</button>
+            <div><label for="payout-3d">{{ __('app.threeAdmin.payout_label') }}</label><input id="payout-3d" name="payout_3d_multiplier" type="number" min="0" step="0.01" value="{{ old('payout_3d_multiplier', auth()->user()->businessSettings?->payout_3d_multiplier) }}" required></div>
+            <button class="button" type="submit">{{ __('app.threeAdmin.payout_save') }}</button>
         </form>
     </section>
     <section class="card three-admin-section">
-        <h2>3D commission rates</h2>
-        <p>Set each Agent’s 3D commission separately from its 2D rate. The settlement uses the saved percentage.</p>
+        <h2>{{ __('app.threeAdmin.commission_title') }}</h2>
+        <p>{{ __('app.threeAdmin.commission_help') }}</p>
         <div class="table-wrap">
             <table class="three-admin-table">
-                <thead><tr><th>Agent code</th><th>Agent name</th><th>Phone</th><th>3D commission (%)</th><th>Save</th></tr></thead>
+                <thead><tr><th>{{ __('app.settings.col_agent_code') }}</th><th>{{ __('app.settings.col_agent_name') }}</th><th>{{ __('app.settings.col_phone') }}</th><th>{{ __('app.threeAdmin.col_commission_3d') }}</th><th>{{ __('app.common.save') }}</th></tr></thead>
                 <tbody>
                 @forelse($agents as $agent)
                     <tr>
@@ -64,40 +64,40 @@
                         <td>
                             <form id="three-agent-commission-{{ $agent->id }}" method="POST" action="{{ route('admin.settings.agents.three-digit-commission', $agent) }}">
                                 @csrf @method('PATCH')
-                                <input aria-label="3D commission for {{ $agent->agent_code }}" name="commission_3d_percent" type="number" min="0" max="100" step="0.01" value="{{ $agent->commission_3d_percent }}" required>
+                                <input aria-label="{{ __('app.threeAdmin.commission_aria', ['code' => $agent->agent_code]) }}" name="commission_3d_percent" type="number" min="0" max="100" step="0.01" value="{{ $agent->commission_3d_percent }}" required>
                             </form>
                         </td>
-                        <td><button class="button secondary" type="submit" form="three-agent-commission-{{ $agent->id }}">Save</button></td>
+                        <td><button class="button secondary" type="submit" form="three-agent-commission-{{ $agent->id }}">{{ __('app.common.save') }}</button></td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="muted">No Agents created yet.</td></tr>
+                    <tr><td colspan="5" class="muted">{{ __('app.threeAdmin.no_agents') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
     </section>
     <section class="card three-admin-section">
-        <h2>Draw number limits and Hot Numbers</h2>
-        <p>Configure future Draws before Draw day. Hot Numbers must be three digits; limits count accepted 3D numbers across the business.</p>
+        <h2>{{ __('app.threeAdmin.draw_limits_title') }}</h2>
+        <p>{{ __('app.threeAdmin.draw_limits_help') }}</p>
         <div class="table-wrap">
             <table class="three-admin-table">
-                <thead><tr><th>Draw date</th><th>Sales state</th><th>Number limit</th><th>Accepted numbers / amount</th><th>Hot Numbers · 000–999</th></tr></thead>
+                <thead><tr><th>{{ __('app.reports.col_draw_date') }}</th><th>{{ __('app.threeAdmin.col_sales_state') }}</th><th>{{ __('app.threeAdmin.col_number_limit') }}</th><th>{{ __('app.threeAdmin.col_accepted_amount') }}</th><th>{{ __('app.threeAdmin.col_hot_3d') }}</th></tr></thead>
                 <tbody>
                 @forelse($draws as $draw)
                     @php $canEditDraw = $draw->draw_date->toDateString() > \Carbon\Carbon::today('Asia/Yangon')->toDateString(); @endphp
                     <tr>
-                        <td><strong>{{ $draw->draw_date->format('Y-m-d') }}</strong><span class="three-admin-input-note">Draw at 15:30</span></td>
-                        <td><span class="pill {{ $draw->status === 'open' ? '' : 'off' }}">{{ $draw->status === 'open' ? 'Open' : ($draw->draw_date->toDateString() > \Carbon\Carbon::today('Asia/Yangon')->toDateString() ? 'Scheduled' : 'Closed') }}</span></td>
+                        <td><strong>{{ $draw->draw_date->format('Y-m-d') }}</strong><span class="three-admin-input-note">{{ __('app.threeAdmin.draw_at') }}</span></td>
+                        <td><span class="pill {{ $draw->status === 'open' ? '' : 'off' }}">{{ $draw->status === 'open' ? __('app.common.status_open') : ($draw->draw_date->toDateString() > \Carbon\Carbon::today('Asia/Yangon')->toDateString() ? __('app.threeAdmin.status_scheduled') : __('app.common.status_closed')) }}</span></td>
                         <td>
                             @if($canEditDraw)
                                 <form class="three-admin-inline" method="POST" action="{{ route('admin.three-digit.draws.settings', $draw) }}">
                                     @csrf @method('PUT')
-                                    <input aria-label="3D Number Limit for {{ $draw->draw_date->format('Y-m-d') }}" name="number_limit" type="number" min="1" step="1" value="{{ $draw->number_limit }}" placeholder="Not set">
-                                    <button class="button secondary" type="submit">Save</button>
+                                    <input aria-label="{{ __('app.threeAdmin.limit_aria', ['date' => $draw->draw_date->format('Y-m-d')]) }}" name="number_limit" type="number" min="1" step="1" value="{{ $draw->number_limit }}" placeholder="{{ __('app.common.not_set') }}">
+                                    <button class="button secondary" type="submit">{{ __('app.common.save') }}</button>
                                 </form>
                             @else
-                                {{ $draw->number_limit ? number_format($draw->number_limit) : 'Not set' }}
-                                <span class="three-admin-input-note">Locked after Draw day begins</span>
+                                {{ $draw->number_limit ? number_format($draw->number_limit) : __('app.common.not_set') }}
+                                <span class="three-admin-input-note">{{ __('app.threeAdmin.locked_note') }}</span>
                             @endif
                         </td>
                         <td>{{ number_format($draw->accepted_count) }} / {{ number_format($draw->accepted_amount, 2) }}</td>
@@ -108,26 +108,26 @@
                                         @if($canEditDraw)
                                             <form method="POST" action="{{ route('admin.three-digit.draws.hot-numbers.destroy', [$draw, $hotNumber]) }}">
                                                 @csrf @method('DELETE')
-                                                <button class="button danger" type="submit" aria-label="Remove {{ $hotNumber->number }}">×</button>
+                                                <button class="button danger" type="submit" aria-label="{{ __('app.threeAdmin.remove_aria', ['number' => $hotNumber->number]) }}">×</button>
                                             </form>
                                         @endif
                                     </span>
                                 @empty
-                                    <span class="muted">None</span>
+                                    <span class="muted">{{ __('app.common.none') }}</span>
                                 @endforelse
                             </div>
                             @if($canEditDraw)
                                 <form method="POST" action="{{ route('admin.three-digit.draws.hot-numbers.store', $draw) }}">
                                     @csrf
-                                    <label class="sr-only" for="three-hot-{{ $draw->id }}">3D Hot Numbers for {{ $draw->draw_date->format('Y-m-d') }}</label>
-                                    <textarea id="three-hot-{{ $draw->id }}" name="numbers" rows="2" placeholder="123, 456, 789" required></textarea>
-                                    <button class="button secondary" type="submit" style="margin-top:6px">Add Hot Numbers</button>
+                                    <label class="sr-only" for="three-hot-{{ $draw->id }}">{{ __('app.threeAdmin.hot_label', ['date' => $draw->draw_date->format('Y-m-d')]) }}</label>
+                                    <textarea id="three-hot-{{ $draw->id }}" name="numbers" rows="2" placeholder="{{ __('app.threeAdmin.hot_placeholder') }}" required></textarea>
+                                    <button class="button secondary" type="submit" style="margin-top:6px">{{ __('app.setup.add_hot') }}</button>
                                 </form>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="muted">No 3D Draws are available. Saving a schedule sync will create the 1st and 16th of each month.</td></tr>
+                    <tr><td colspan="5" class="muted">{{ __('app.threeAdmin.no_draws') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>

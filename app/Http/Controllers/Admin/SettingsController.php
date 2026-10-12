@@ -10,12 +10,14 @@ use App\Models\HotNumber;
 use App\Models\Round;
 use App\Models\RoundSchedule;
 use App\Models\ThreeDigitHotNumber;
+use App\Services\AgentAccessTokenGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -55,6 +57,9 @@ class SettingsController extends Controller
                 ),
             'agents' => Agent::query()
                 ->where('admin_id', $request->user()->id)
+                ->withCount(['accessTokens as active_devices_count' => function ($query): void {
+                    $query->whereNull('revoked_at')->where('expires_at', '>', now());
+                }])
                 ->orderBy('agent_code')
                 ->get(),
             'agentRoundSettings' => $selectedRound
@@ -234,6 +239,71 @@ class SettingsController extends Controller
         $agent->update($validated);
 
         return back()->with('status', 'Agent settings saved.');
+    }
+
+    public function updateAgentMobileAccess(Request $request, Agent $agent, AgentAccessTokenGuard $tokens): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+        abort_unless((int) $agent->admin_id === (int) $request->user()->id, 404);
+
+        // Codes are matched case-insensitively by the Agent, so normalize before
+        // the uniqueness rule runs; MySQL and SQLite would otherwise disagree.
+        if ($request->filled('mobile_login_code')) {
+            $request->merge([
+                'mobile_login_code' => strtoupper(trim((string) $request->input('mobile_login_code'))),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'mobile_login_code' => [
+                'required',
+                'string',
+                'min:4',
+                'max:32',
+                'regex:/^[A-Z0-9._-]+$/',
+                Rule::unique('agents', 'mobile_login_code')->ignore($agent->id),
+            ],
+            'mobile_password' => ['nullable', 'string', 'min:6', 'max:64'],
+        ]);
+
+        if (! $agent->mobile_password && empty($validated['mobile_password'])) {
+            throw ValidationException::withMessages([
+                'mobile_password' => 'Set a password the Agent will sign in with on their phone.',
+            ]);
+        }
+
+        $agent->mobile_login_code = $validated['mobile_login_code'];
+
+        if (! empty($validated['mobile_password'])) {
+            $agent->mobile_password = $validated['mobile_password'];
+            // A new password invalidates every phone that already signed in.
+            $tokens->revokeAllForAgent($agent->id);
+        }
+
+        $agent->save();
+
+        return back()->with('status', "Mobile access saved for {$agent->agent_code}. Give the login code and password to the Agent.");
+    }
+
+    public function revokeAgentMobileTokens(Request $request, Agent $agent, AgentAccessTokenGuard $tokens): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+        abort_unless((int) $agent->admin_id === (int) $request->user()->id, 404);
+
+        $revoked = $tokens->revokeAllForAgent($agent->id);
+
+        return back()->with('status', "Signed out {$revoked} mobile device(s) for {$agent->agent_code}.");
+    }
+
+    public function disableAgentMobileAccess(Request $request, Agent $agent, AgentAccessTokenGuard $tokens): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+        abort_unless((int) $agent->admin_id === (int) $request->user()->id, 404);
+
+        $agent->forceFill(['mobile_login_code' => null, 'mobile_password' => null])->save();
+        $tokens->revokeAllForAgent($agent->id);
+
+        return back()->with('status', "Mobile access disabled for {$agent->agent_code}.");
     }
 
     public function updateAgentRoundAmountLimit(Request $request, Round $round, Agent $agent): RedirectResponse

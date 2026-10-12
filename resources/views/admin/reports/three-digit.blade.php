@@ -1,7 +1,7 @@
-@extends('layouts.app', ['title' => '3D summaries'])
+@extends('layouts.app', ['title' => __('app.reports.title_3d')])
 
 @section('content')
-@php $currency = config('app.currency', 'MMK'); @endphp
+@php $currency = auth()->user()->currencyLabel(); @endphp
 <style>
     .three-report{max-width:1440px;margin:24px auto;padding:0 20px}
     .three-report-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:18px}
@@ -19,92 +19,92 @@
 </style>
 <main class="three-report">
     <header class="three-report-heading">
-        <div><h1>{{ $isAdmin ? '3D business summaries' : 'Your 3D summaries' }}</h1><p>Completed 3D Draws · Draw dates on the 1st and 16th · Asia/Yangon. Amounts in {{ $currency }}.</p></div>
-        <nav class="three-report-actions" aria-label="Report navigation">
-            <a class="button secondary" href="{{ route('reports.summary', ['mode' => '2d']) }}">2D summaries</a>
-            @if($isAdmin)<a class="button secondary" href="{{ route('admin.three-digit.results') }}">3D results</a>@endif
-            <a class="button secondary" href="{{ route('three-digit.sales.workspace') }}">3D Sale Entry</a>
+        <div><h1>{{ $isAdmin ? __('app.reports.business_3d') : __('app.reports.your_3d') }}</h1><p>{{ __('app.reports.subtitle_3d', ['currency' => $currency]) }}</p></div>
+        <nav class="three-report-actions" aria-label="{{ __('app.reports.nav_aria') }}">
+            <a class="button secondary" href="{{ route('reports.summary', ['mode' => '2d']) }}">{{ __('app.rounds.summaries_2d') }}</a>
+            @if($isAdmin)<a class="button secondary" href="{{ route('admin.three-digit.results') }}">{{ __('app.reports.results_3d_short') }}</a>@endif
+            <a class="button secondary" href="{{ route('three-digit.sales.workspace') }}">{{ __('app.sale.entry_3d') }}</a>
         </nav>
     </header>
-    @if($errors->any())<div class="error" role="alert"><strong>Check the report selection:</strong> {{ $errors->first() }}</div>@endif
+    @if($errors->any())<div class="error" role="alert"><strong>{{ __('app.reports.errors_3d') }}</strong> {{ $errors->first() }}</div>@endif
     <section class="card" style="margin-bottom:18px">
         <form method="GET" action="{{ route('reports.summary') }}" class="grid" style="align-items:end">
             <input type="hidden" name="mode" value="3d">
             <div>
-                <label for="period">Summary period</label>
+                <label for="period">{{ __('app.reports.period') }}</label>
                 <select id="period" name="period">
-                    @foreach(['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $key => $label)
-                        <option value="{{ $key }}" @selected($report['period'] === $key)>{{ $label }}</option>
+                    @foreach(['daily', 'weekly', 'monthly', 'yearly'] as $key)
+                        <option value="{{ $key }}" @selected($report['period'] === $key)>{{ __('app.reports.period_'.$key) }}</option>
                     @endforeach
                 </select>
             </div>
-            <div><label for="date">Date within period</label><input id="date" name="date" type="date" value="{{ $report['selected_date']->toDateString() }}" required></div>
+            <div><label for="date">{{ __('app.reports.date') }}</label><input id="date" name="date" type="date" value="{{ $report['selected_date']->toDateString() }}" required></div>
             <div>
-                <label for="agent_id">Agent</label>
+                <label for="agent_id">{{ __('app.common.agent') }}</label>
                 <select id="agent_id" name="agent_id">
-                    <option value="">All Agents</option>
+                    <option value="">{{ __('app.reports.all_agents') }}</option>
                     @foreach($agents as $agent)
                         <option value="{{ $agent->id }}" @selected($selectedAgentId === $agent->id)>{{ $agent->agent_code }} · {{ $agent->agent_name }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="row" style="gap:8px;grid-column:1/-1"><button class="button" type="submit">Show 3D summary</button><a class="button secondary" href="{{ route('reports.summary.export', request()->query()) }}">Download CSV</a></div>
+            <div class="row" style="gap:8px;grid-column:1/-1"><button class="button" type="submit">{{ __('app.reports.show_3d') }}</button><a class="button secondary" href="{{ route('reports.summary.export', request()->query()) }}">{{ __('app.reports.export_csv') }}</a></div>
         </form>
-        <p style="margin-bottom:0">Showing {{ ucfirst($report['period']) }} · {{ $report['start_date']->toDateString() }} to {{ $report['end_date']->toDateString() }} · {{ $report['draw_count'] }} completed Draw(s)</p>
+        <p style="margin-bottom:0">{{ __('app.reports.showing_draws', ['period' => __('app.reports.period_'.$report['period']), 'start' => $report['start_date']->toDateString(), 'end' => $report['end_date']->toDateString(), 'count' => $report['draw_count']]) }}</p>
     </section>
     @if($report['draw_rows']->contains(fn ($draw) => $draw['result'] === null))
-        <div class="notice" role="status">At least one completed Draw is missing its official result. Winnings and business net for that Draw remain provisional until the result is entered.</div>
+        <div class="notice" role="status">{{ __('app.reports.missing_result') }}</div>
     @endif
-    <section class="three-report-totals" aria-label="3D financial totals">
-        <div><span>Accepted stakes ({{ $currency }})</span><strong>{{ number_format($report['totals']['total_stake'], 2) }}</strong></div>
-        <div><span>Winning stakes ({{ $currency }})</span><strong>{{ number_format($report['totals']['winning_stake'], 2) }}</strong></div>
-        <div><span>Winnings ({{ $currency }})</span><strong>{{ number_format($report['totals']['winnings'], 2) }}</strong></div>
-        <div><span>Agent commissions ({{ $currency }})</span><strong>{{ number_format($report['totals']['commission'], 2) }}</strong></div>
-        <div><span>Business net ({{ $currency }})</span><strong>{{ number_format($report['totals']['business_net'], 2) }}</strong></div>
+    <section class="three-report-totals" aria-label="{{ __('app.reports.totals_aria') }}">
+        <div><span>{{ __('app.reports.stat_accepted', ['currency' => $currency]) }}</span><strong>{{ number_format($report['totals']['total_stake'], 2) }}</strong></div>
+        <div><span>{{ __('app.reports.stat_winning', ['currency' => $currency]) }}</span><strong>{{ number_format($report['totals']['winning_stake'], 2) }}</strong></div>
+        <div><span>{{ __('app.reports.stat_winnings', ['currency' => $currency]) }}</span><strong>{{ number_format($report['totals']['winnings'], 2) }}</strong></div>
+        <div><span>{{ __('app.reports.stat_commission', ['currency' => $currency]) }}</span><strong>{{ number_format($report['totals']['commission'], 2) }}</strong></div>
+        <div><span>{{ __('app.reports.stat_business_net', ['currency' => $currency]) }}</span><strong>{{ number_format($report['totals']['business_net'], 2) }}</strong></div>
     </section>
     @if(! $report['payout_configured'])
-        <div class="error" role="alert">The business 3D payout multiplier is not configured. Set it in 3D Settings before relying on winnings.</div>
+        <div class="error" role="alert">{{ __('app.reports.payout_missing') }}</div>
     @endif
     <section class="card" style="margin-bottom:18px">
-        <h2>3D Agent totals · {{ ucfirst($report['period']) }}</h2>
+        <h2>{{ __('app.reports.agent_totals_3d', ['period' => __('app.reports.period_'.$report['period'])]) }}</h2>
         <div class="table-wrap">
             <table class="three-report-table">
-                <thead><tr><th>Agent</th><th>Draws</th><th>Accepted stakes</th><th>Winning stakes</th><th>Winnings</th><th>Commission</th><th>Business net</th></tr></thead>
+                <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.reports.col_draws') }}</th><th>{{ __('app.reports.col_accepted_stakes') }}</th><th>{{ __('app.reports.col_winning_stakes') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th></tr></thead>
                 <tbody>
                 @forelse($report['agent_totals'] as $agent)
                     <tr><td>{{ $agent['agent_code'] }} · {{ $agent['agent_name'] }}</td><td>{{ $agent['draw_count'] }}</td><td>{{ number_format($agent['total_stake'], 2) }}</td><td>{{ number_format($agent['winning_stake'], 2) }}</td><td>{{ number_format($agent['winnings'], 2) }}</td><td>{{ number_format($agent['commission'], 2) }}</td><td>{{ number_format($agent['business_net'], 2) }}</td></tr>
                 @empty
-                    <tr><td colspan="7" class="muted">No assigned Agent sales in this period.</td></tr>
+                    <tr><td colspan="7" class="muted">{{ __('app.reports.no_agent_sales_3d') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
     </section>
     <section class="card" style="margin-bottom:18px">
-        <h2>Draw-date breakdown</h2>
+        <h2>{{ __('app.reports.draw_breakdown') }}</h2>
         <div class="table-wrap">
             <table class="three-report-table">
-                <thead><tr><th>Draw date</th><th>Draws</th><th>Accepted stakes</th><th>Winning stakes</th><th>Winnings</th><th>Commission</th><th>Business net</th></tr></thead>
+                <thead><tr><th>{{ __('app.reports.col_draw_date') }}</th><th>{{ __('app.reports.col_draws') }}</th><th>{{ __('app.reports.col_accepted_stakes') }}</th><th>{{ __('app.reports.col_winning_stakes') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th></tr></thead>
                 <tbody>
                 @forelse($report['daily_rows'] as $day)
                     <tr><td>{{ $day['date'] }}</td><td>{{ $day['draw_count'] }}</td><td>{{ number_format($day['total_stake'], 2) }}</td><td>{{ number_format($day['winning_stake'], 2) }}</td><td>{{ number_format($day['winnings'], 2) }}</td><td>{{ number_format($day['commission'], 2) }}</td><td>{{ number_format($day['business_net'], 2) }}</td></tr>
                 @empty
-                    <tr><td colspan="7" class="muted">No completed 3D Draws in this period.</td></tr>
+                    <tr><td colspan="7" class="muted">{{ __('app.reports.no_completed_draws') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
     </section>
     <section class="card">
-        <h2>Agent · Draw details</h2>
+        <h2>{{ __('app.reports.detail_3d') }}</h2>
         <div class="table-wrap">
             <table class="three-report-table">
-                <thead><tr><th>Agent</th><th>Draw date</th><th>Winning number</th><th>Draw handler</th><th>Accepted stakes</th><th>Winning stake</th><th>Winnings</th><th>Commission</th><th>Business net</th><th></th></tr></thead>
+                <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.reports.col_draw_date') }}</th><th>{{ __('app.reports.col_winning_number') }}</th><th>{{ __('app.reports.col_draw_handler') }}</th><th>{{ __('app.reports.col_accepted_stakes') }}</th><th>{{ __('app.reports.col_winning_stake') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th><th></th></tr></thead>
                 <tbody>
                 @forelse($detailRows as $row)
-                    <tr><td>{{ $row['agent_code'] }} · {{ $row['agent_name'] }}</td><td>{{ $row['draw_date'] }}</td><td>{{ $row['result'] ?? 'Not entered' }}</td><td>{{ $row['handler_name'] ?? '—' }}</td><td>{{ number_format($row['total_stake'], 2) }}</td><td>{{ number_format($row['winning_stake'], 2) }}</td><td>{{ number_format($row['winnings'], 2) }}</td><td>{{ number_format($row['commission'], 2) }}</td><td>{{ number_format($row['business_net'], 2) }}</td><td>@if($isAdmin)<a href="{{ route('admin.three-digit.results.show', $row['draw_id']) }}">Settlement</a>@else—@endif</td></tr>
+                    <tr><td>{{ $row['agent_code'] }} · {{ $row['agent_name'] }}</td><td>{{ $row['draw_date'] }}</td><td>{{ $row['result'] ?? __('app.rounds.not_entered') }}</td><td>{{ $row['handler_name'] ?? '—' }}</td><td>{{ number_format($row['total_stake'], 2) }}</td><td>{{ number_format($row['winning_stake'], 2) }}</td><td>{{ number_format($row['winnings'], 2) }}</td><td>{{ number_format($row['commission'], 2) }}</td><td>{{ number_format($row['business_net'], 2) }}</td><td>@if($isAdmin)<a href="{{ route('admin.three-digit.results.show', $row['draw_id']) }}">{{ __('app.rounds.col_settlement') }}</a>@else—@endif</td></tr>
                 @empty
-                    <tr><td colspan="10" class="muted">No Agent sales in this period.</td></tr>
+                    <tr><td colspan="10" class="muted">{{ __('app.reports.no_agent_sales') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>

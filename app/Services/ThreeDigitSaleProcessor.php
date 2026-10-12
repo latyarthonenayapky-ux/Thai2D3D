@@ -39,6 +39,11 @@ class ThreeDigitSaleProcessor
             if (! $round || $round->status !== 'open') {
                 throw new RuntimeException('Round is not open.');
             }
+            if ($round->isPastScheduledClose()) {
+                throw new RuntimeException(
+                    'This Round closed at '.$round->close_time.'. Sales are locked until the next Round opens.'
+                );
+            }
 
             $lockedSession = AgentSession::query()->lockForUpdate()->find($session->id);
             if (! $lockedSession || $lockedSession->status !== 'open') {

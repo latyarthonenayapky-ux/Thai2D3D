@@ -69,7 +69,7 @@ class PeriodReportController extends Controller
         $reportData = $this->buildReport($report, $threeDigitReport, $user, $adminId, $mode, $period, $date, $agentId, $roundNo);
         $rows = $reportData['agent_rows'];
         $totals = $reportData['totals'];
-        $currency = (string) config('app.currency', 'MMK');
+        $currency = $user->currencyLabel();
 
         $filename = sprintf(
             'thai2d3d-%s-%s-%s-%s.csv',

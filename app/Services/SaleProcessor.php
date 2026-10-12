@@ -53,6 +53,12 @@ class SaleProcessor
                 );
             }
 
+            if ($round->isPastScheduledClose()) {
+                throw new \RuntimeException(
+                    'This Round closed at '.$round->close_time.'. Sales are locked until the next Round opens.'
+                );
+            }
+
             $session = AgentSession::query()
                 ->lockForUpdate()
                 ->find($session->id);

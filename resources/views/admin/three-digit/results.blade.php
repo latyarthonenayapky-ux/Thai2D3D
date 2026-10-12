@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => $draw ? '3D settlement' : '3D results'])
+@extends('layouts.app', ['title' => $draw ? __('app.threeResults.title_settlement') : __('app.threeResults.title_list')])
 
 @section('content')
 <style>
@@ -19,13 +19,13 @@
 <main class="three-results">
     <header class="three-results-heading">
         <div>
-            <h1>{{ $draw ? '3D Draw settlement' : '3D results and settlements' }}</h1>
-            <p>Only accepted stakes are included. Results are independently recorded for each 3D Draw.</p>
+            <h1>{{ $draw ? __('app.threeResults.heading_settlement') : __('app.reports.results_3d') }}</h1>
+            <p>{{ __('app.threeResults.subtitle') }}</p>
         </div>
-        <nav class="three-results-actions" aria-label="3D navigation">
-            <a class="button secondary" href="{{ route('admin.three-digit.index') }}">3D settings</a>
-            <a class="button secondary" href="{{ route('admin.settings.index') }}">2D settings</a>
-            @if($draw)<a class="button" href="{{ route('admin.three-digit.results') }}">All 3D results</a>@endif
+        <nav class="three-results-actions" aria-label="{{ __('app.threeResults.nav_aria') }}">
+            <a class="button secondary" href="{{ route('admin.three-digit.index') }}">{{ __('app.threeAdmin.title') }}</a>
+            <a class="button secondary" href="{{ route('admin.settings.index') }}">{{ __('app.threeAdmin.link_2d_settings') }}</a>
+            @if($draw)<a class="button" href="{{ route('admin.three-digit.results') }}">{{ __('app.threeResults.all_results') }}</a>@endif
         </nav>
     </header>
     @if(session('status'))<div class="notice" role="status">{{ session('status') }}</div>@endif
@@ -33,22 +33,22 @@
     @if($draw)
         <section class="card">
             <div class="between">
-                <div><h2>{{ $draw->draw_date->format('Y-m-d') }} · 3D Draw</h2><p class="muted">Closed at {{ $draw->result_time }} · Asia/Yangon</p></div>
-                <span class="pill">{{ $draw->result?->result ?? 'Result not entered' }}</span>
+                <div><h2>{{ __('app.threeResults.draw_heading', ['date' => $draw->draw_date->format('Y-m-d')]) }}</h2><p class="muted">{{ __('app.threeResults.closed_at', ['time' => $draw->result_time]) }}</p></div>
+                <span class="pill">{{ $draw->result?->result ?? __('app.threeResults.result_not_entered') }}</span>
             </div>
             <form method="POST" action="{{ route('admin.three-digit.results.update', $draw) }}" class="row" style="align-items:end;margin-top:14px">
                 @csrf @method('PATCH')
-                <div><label for="three-result">Winning 3D result</label><input id="three-result" name="result" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3" value="{{ old('result', $draw->result?->result) }}" placeholder="000"></div>
-                <button class="button" type="submit">Save result</button>
+                <div><label for="three-result">{{ __('app.threeResults.result_label') }}</label><input id="three-result" name="result" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3" value="{{ old('result', $draw->result?->result) }}" placeholder="000"></div>
+                <button class="button" type="submit">{{ __('app.threeResults.save_result') }}</button>
             </form>
             @if($draw->result?->changes?->isNotEmpty())
-                <h3 style="margin-top:22px">Result change history</h3>
+                <h3 style="margin-top:22px">{{ __('app.threeResults.history_title') }}</h3>
                 <div class="table-wrap">
                     <table class="three-results-table">
-                        <thead><tr><th>Changed at</th><th>Previous</th><th>New</th><th>Changed by</th></tr></thead>
+                        <thead><tr><th>{{ __('app.threeResults.col_changed_at') }}</th><th>{{ __('app.threeResults.col_previous') }}</th><th>{{ __('app.threeResults.col_new') }}</th><th>{{ __('app.threeResults.col_changed_by') }}</th></tr></thead>
                         <tbody>
                         @foreach($draw->result->changes as $change)
-                            <tr><td>{{ $change->created_at->timezone('Asia/Yangon')->format('Y-m-d H:i:s') }}</td><td>{{ $change->old_value ?? '—' }}</td><td>{{ $change->new_value ?? '—' }}</td><td>{{ $change->changedBy?->name ?? 'Unknown' }}</td></tr>
+                            <tr><td>{{ $change->created_at->timezone('Asia/Yangon')->format('Y-m-d H:i:s') }}</td><td>{{ $change->old_value ?? '—' }}</td><td>{{ $change->new_value ?? '—' }}</td><td>{{ $change->changedBy?->name ?? __('app.threeResults.unknown') }}</td></tr>
                         @endforeach
                         </tbody>
                     </table>
@@ -56,25 +56,25 @@
             @endif
         </section>
         @if($draw->result?->result !== null && ! $settlement['payout_configured'])
-            <div class="error" style="margin-top:14px">The result is saved, but the 3D payout multiplier is not configured. Set it in 3D Settings before relying on winnings.</div>
+            <div class="error" style="margin-top:14px">{{ __('app.threeResults.payout_missing') }}</div>
         @endif
-        <section class="three-results-summary" aria-label="3D settlement totals">
-            <div><span>Accepted stakes</span><strong>{{ number_format($settlement['totals']['total_stake'], 2) }}</strong></div>
-            <div><span>Winning stake</span><strong>{{ number_format($settlement['totals']['winning_stake'], 2) }}</strong></div>
-            <div><span>Winnings</span><strong>{{ number_format($settlement['totals']['winnings'], 2) }}</strong></div>
-            <div><span>Commissions</span><strong>{{ number_format($settlement['totals']['commission'], 2) }}</strong></div>
-            <div><span>Business net</span><strong>{{ number_format($settlement['totals']['business_net'], 2) }}</strong></div>
+        <section class="three-results-summary" aria-label="{{ __('app.threeResults.totals_aria') }}">
+            <div><span>{{ __('app.threeResults.stat_accepted_stakes') }}</span><strong>{{ number_format($settlement['totals']['total_stake'], 2) }}</strong></div>
+            <div><span>{{ __('app.threeResults.stat_winning_stake') }}</span><strong>{{ number_format($settlement['totals']['winning_stake'], 2) }}</strong></div>
+            <div><span>{{ __('app.threeResults.stat_winnings') }}</span><strong>{{ number_format($settlement['totals']['winnings'], 2) }}</strong></div>
+            <div><span>{{ __('app.threeResults.stat_commissions') }}</span><strong>{{ number_format($settlement['totals']['commission'], 2) }}</strong></div>
+            <div><span>{{ __('app.threeResults.stat_business_net') }}</span><strong>{{ number_format($settlement['totals']['business_net'], 2) }}</strong></div>
         </section>
         <section class="card">
-            <h2>Agent settlement · 3D</h2>
+            <h2>{{ __('app.threeResults.agent_settlement') }}</h2>
             <div class="table-wrap">
                 <table class="three-results-table">
-                    <thead><tr><th>Agent</th><th>Draw handler</th><th>Accepted stake</th><th>Winning stake</th><th>Winnings</th><th>Commission</th><th>Business net</th></tr></thead>
+                    <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.reports.col_draw_handler') }}</th><th>{{ __('app.threeResults.col_accepted_stake') }}</th><th>{{ __('app.reports.col_winning_stake') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th></tr></thead>
                     <tbody>
                     @forelse($settlement['agents'] as $row)
-                        <tr><td>{{ $row['agent']->agent_code }} · {{ $row['agent']->agent_name }}</td><td>{{ $row['handler']?->name ?? 'Unassigned' }}</td><td>{{ number_format($row['total_stake'], 2) }}</td><td>{{ number_format($row['winning_stake'], 2) }}</td><td>{{ number_format($row['winnings'], 2) }}</td><td>{{ number_format($row['commission'], 2) }}</td><td>{{ number_format($row['business_net'], 2) }}</td></tr>
+                        <tr><td>{{ $row['agent']->agent_code }} · {{ $row['agent']->agent_name }}</td><td>{{ $row['handler']?->name ?? __('app.threeResults.unassigned') }}</td><td>{{ number_format($row['total_stake'], 2) }}</td><td>{{ number_format($row['winning_stake'], 2) }}</td><td>{{ number_format($row['winnings'], 2) }}</td><td>{{ number_format($row['commission'], 2) }}</td><td>{{ number_format($row['business_net'], 2) }}</td></tr>
                     @empty
-                        <tr><td colspan="7" class="muted">No Agents or accepted sales are recorded for this Draw.</td></tr>
+                        <tr><td colspan="7" class="muted">{{ __('app.threeResults.no_agents_draw') }}</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -84,12 +84,12 @@
         <section class="card">
             <div class="table-wrap">
                 <table class="three-results-table">
-                    <thead><tr><th>Draw date</th><th>Official result</th><th>Settlement</th><th>Action</th></tr></thead>
+                    <thead><tr><th>{{ __('app.reports.col_draw_date') }}</th><th>{{ __('app.threeResults.col_official_result') }}</th><th>{{ __('app.rounds.col_settlement') }}</th><th>{{ __('app.common.action') }}</th></tr></thead>
                     <tbody>
                     @forelse($draws as $pastDraw)
-                        <tr><td>{{ $pastDraw->draw_date->format('Y-m-d') }}</td><td>{{ $pastDraw->result?->result ?? 'Not entered' }}</td><td>{{ $pastDraw->result?->result ? 'Calculated' : 'Awaiting result' }}</td><td><a class="button secondary" href="{{ route('admin.three-digit.results.show', $pastDraw) }}">Open settlement</a></td></tr>
+                        <tr><td>{{ $pastDraw->draw_date->format('Y-m-d') }}</td><td>{{ $pastDraw->result?->result ?? __('app.rounds.not_entered') }}</td><td>{{ $pastDraw->result?->result ? __('app.threeResults.calculated') : __('app.threeResults.awaiting_result') }}</td><td><a class="button secondary" href="{{ route('admin.three-digit.results.show', $pastDraw) }}">{{ __('app.threeResults.open_settlement') }}</a></td></tr>
                     @empty
-                        <tr><td colspan="4" class="muted">No 3D Draws have closed yet.</td></tr>
+                        <tr><td colspan="4" class="muted">{{ __('app.threeResults.no_draws_closed') }}</td></tr>
                     @endforelse
                     </tbody>
                 </table>

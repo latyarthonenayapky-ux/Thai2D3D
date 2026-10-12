@@ -1,0 +1,73 @@
+name: Deploy to VPS
+
+# Publishes the Laravel app (webapp + the /api/v1 mobile endpoints) to the
+# production VPS. Runs automatically after Laravel CI passes on master, and can
+# always be started by hand from the Actions tab.
+on:
+  workflow_run:
+    workflows: ['Laravel CI']
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to deploy
+        required: true
+        default: master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: rsync and migrate
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SSH_USER: ${{ secrets.VPS_USER }}
+      SSH_HOST: ${{ secrets.VPS_HOST }}
+      SSH_PORT: ${{ secrets.VPS_SSH_PORT || '22' }}
+      APP_PATH: ${{ secrets.VPS_PATH }}
+      HEALTH_URL: ${{ vars.VPS_HEALTH_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'master' }}
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_PRIVATE_KEY }}" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync application files
+        run: >
+          rsync -az --human-readable
+          --e "ssh -i ~/.ssh/vps_key -p $SSH_PORT"
+          --exclude .git --exclude .github --exclude vendor --exclude node_modules
+          --exclude storage --exclude 'bootstrap/cache/*' --exclude .env --exclude .env.*
+          --exclude desktop --exclude release --exclude mobile --exclude tests
+          --exclude '*.sqlite' --exclude '*.log' --exclude phpunit.xml
+          ./ "$SSH_USER@$SSH_HOST:$APP_PATH/"
+
+      - name: Build and migrate on the server
+        run: |
+          ssh -i ~/.ssh/vps_key -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "set -e
+            cd '$APP_PATH'
+            php artisan down --retry=60 || true
+            composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+            php artisan migrate --force
+            php artisan db:seed --force
+            php artisan optimize
+            php artisan up || true"
+
+      - name: Health check
+        if: ${{ env.HEALTH_URL != '' }}
+        run: curl --fail --silent --show-error "$HEALTH_URL"

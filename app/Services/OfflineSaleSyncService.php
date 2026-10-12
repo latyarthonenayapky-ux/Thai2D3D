@@ -35,7 +35,7 @@ class OfflineSaleSyncService
                 ->first();
 
             if (
-                ! $operator->isOperator()
+                ! $operator->isHandler()
                 || ! $operator->status
                 || ! $session
                 || (int) $operator->admin_id !== (int) $session->round->admin_id

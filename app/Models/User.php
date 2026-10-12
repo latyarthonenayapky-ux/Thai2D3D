@@ -66,6 +66,55 @@ class User extends Authenticatable
         return $this->hasOne(AdminBusinessSetting::class, 'admin_id');
     }
 
+    public function preferences(): HasMany
+    {
+        return $this->hasMany(UserPreference::class);
+    }
+
+    /** @var array<string, string>|null */
+    private ?array $preferenceCache = null;
+
+    public function preference(string $key, ?string $default = null): ?string
+    {
+        $this->preferenceCache ??= $this->preferences()->get()->pluck('value', 'key')->all();
+
+        return $this->preferenceCache[$key] ?? $default;
+    }
+
+    public function rememberPreference(string $key, string $value): void
+    {
+        UserPreference::query()->updateOrCreate(
+            ['user_id' => $this->id, 'key' => $key],
+            ['value' => $value],
+        );
+
+        $this->preferenceCache[$key] = $value;
+    }
+
+    public function locale(): string
+    {
+        $locale = $this->preference('locale', config('app.locale', UserPreference::LOCALE_ENGLISH));
+
+        return $locale === UserPreference::LOCALE_BURMESE
+            ? UserPreference::LOCALE_BURMESE
+            : UserPreference::LOCALE_ENGLISH;
+    }
+
+    public function clockFormat(): string
+    {
+        return $this->preference('clock_format', '24') === '12' ? '12' : '24';
+    }
+
+    public function currencyLabel(): string
+    {
+        return strtoupper($this->preference('currency_label', (string) config('app.currency', 'MMK')));
+    }
+
+    public function prefers(string $key, string $default = 'off'): bool
+    {
+        return $this->preference($key, $default) === 'on';
+    }
+
     public function admin(): BelongsTo
     {
         return $this->belongsTo(self::class, 'admin_id');
@@ -99,5 +148,13 @@ class User extends Authenticatable
     public function isOperator(): bool
     {
         return $this->role === 'operator';
+    }
+
+    /**
+     * Anyone allowed to hold Agent sessions and record sales for a business.
+     */
+    public function isHandler(): bool
+    {
+        return $this->isAdmin() || $this->isOperator();
     }
 }

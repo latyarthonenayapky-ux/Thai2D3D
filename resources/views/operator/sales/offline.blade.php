@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ request()->user()?->locale() ?? 'en' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="offline-sync-url" content="{{ route('operator.offline-sync.store') }}">
     <meta name="offline-session-id" content="{{ $agentSession->id }}">
-    <title>Offline sales · {{ $agentSession->agent->agent_code }}</title>
+    <title>{{ __('app.offline.title', ['code' => $agentSession->agent->agent_code]) }}</title>
     <style>
         :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#14211c;background:#f4f7f5}
         *{box-sizing:border-box}body{margin:0;min-height:100vh}.main{max-width:680px;margin:24px auto;padding:0 16px}
@@ -23,32 +23,33 @@
 </head>
 <body>
 <main class="main">
-    <a href="{{ route('operator.sales.show', $agentSession) }}">← Online sales page</a>
-    <h1>Offline sales entry</h1>
-    <p>{{ $agentSession->agent->agent_code }} · {{ $agentSession->agent->agent_name }} · {{ $agentSession->round->round_date->format('Y-m-d') }} · Round {{ $agentSession->round->round_no }}</p>
-    <div class="status" role="status">This phone stores unsent entries on this device. Reconnect and press Sync. Server rules are checked at sync time; conflicts are sent to your Admin for review.</div>
+    <a href="{{ route('operator.sales.show', $agentSession) }}">{{ __('app.offline.back_online') }}</a>
+    <h1>{{ __('app.offline.heading') }}</h1>
+    <p>{{ __('app.offline.meta', ['code' => $agentSession->agent->agent_code, 'name' => $agentSession->agent->agent_name, 'date' => $agentSession->round->round_date->format('Y-m-d'), 'no' => $agentSession->round->round_no]) }}</p>
+    <div class="status" role="status">{{ __('app.offline.notice') }}</div>
     <div class="card">
         <form data-offline-queue-form>
-            <label for="queued-type">Sale type</label>
+            <label for="queued-type">{{ __('app.offline.sale_type') }}</label>
             <select id="queued-type" name="sale_type">
                 <option value="2d">2D</option>
                 <option value="3d">3D</option>
             </select>
-            <label for="queued-input">Sale input</label>
+            <label for="queued-input">{{ __('app.offline.sale_input') }}</label>
             <input id="queued-input" name="input" maxlength="255" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
             <div class="row">
-                <button class="button" type="submit">Save on this phone</button>
-                <button class="button secondary" type="button" data-sync-queue>Sync saved sales</button>
+                <button class="button" type="submit">{{ __('app.offline.save_phone') }}</button>
+                <button class="button secondary" type="button" data-sync-queue>{{ __('app.offline.sync') }}</button>
             </div>
         </form>
     </div>
-    <div id="offline-status" class="status" role="status" aria-live="polite">Checking local queue…</div>
+    <div id="offline-status" class="status" role="status" aria-live="polite">{{ __('app.offline.checking') }}</div>
     <section class="card">
-        <h2>Saved on this phone</h2>
-        <p class="muted">Queued data survives closing this page, but not clearing browser storage or using another phone. Keep this phone secure.</p>
+        <h2>{{ __('app.offline.saved_heading') }}</h2>
+        <p class="muted">{{ __('app.offline.saved_help') }}</p>
         <div id="offline-queue-list"></div>
     </section>
 </main>
+<script>window.offlineLabels = @json(__('app.offline.js'));</script>
 <script src="{{ asset('offline-sales.js') }}" defer></script>
 <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').catch(() => {});

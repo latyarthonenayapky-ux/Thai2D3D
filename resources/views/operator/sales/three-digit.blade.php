@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Sale Entry · 3D'])
+@extends('layouts.app', ['title' => __('app.sale.entry').' · 3D'])
 
 @section('content')
 <style>
@@ -46,20 +46,20 @@
       data-storage-key="thai2d3d-3d-drafts-{{ auth()->id() }}-{{ $draw?->id ?? 'next' }}-{{ $selectedAgent?->id ?? 'none' }}">
     <header class="three-sale-heading">
         <div>
-            <h1>Sale Entry · 3D</h1>
+            <h1>{{ __('app.sale.entry') }} · 3D</h1>
             <div class="three-sale-meta">
                 @if($draw)
-                    <span>{{ $draw->draw_date->format('Y-m-d') }} · Draw closes 15:30</span>
-                    <span>{{ ucfirst($draw->status) }}</span>
+                    <span>{{ __('app.three.draw_closes', ['date' => $draw->draw_date->format('Y-m-d'), 'time' => '15:30']) }}</span>
+                    <span>{{ __('app.common.status_'.$draw->status) }}</span>
                 @elseif($nextDraw)
-                    <span>Next Draw: {{ $nextDraw->draw_date->format('Y-m-d') }} · 15:30</span>
+                    <span>{{ __('app.three.next_draw_link', ['date' => $nextDraw->draw_date->format('Y-m-d'), 'time' => '15:30']) }}</span>
                 @endif
                 @if($roundWide)
-                    <a href="{{ route('three-digit.sales.workspace', ['agent_id' => $selectedAgent?->id, 'view' => 'agent']) }}">Agent Statement</a>
+                    <a href="{{ route('three-digit.sales.workspace', ['agent_id' => $selectedAgent?->id, 'view' => 'agent']) }}">{{ __('app.sale.statement') }}</a>
                 @elseif($agentStatement)
-                    <a href="{{ route('three-digit.sales.workspace') }}">Live of items sold · all Agents</a>
+                    <a href="{{ route('three-digit.sales.workspace') }}">{{ __('app.sale.live_all') }}</a>
                 @endif
-                <a href="{{ route('operator.sales.workspace') }}">2D Sale Entry</a>
+                <a href="{{ route('operator.sales.workspace') }}">2D {{ __('app.sale.entry') }}</a>
             </div>
         </div>
     </header>
@@ -69,77 +69,77 @@
 
     @if(! $draw || $draw->status !== 'open')
         <section class="three-sale-panel">
-            <div class="three-sale-title">3D sales are currently closed</div>
+            <div class="three-sale-title">{{ __('app.three.closed_title') }}</div>
             <div class="three-sale-controls">
-                <p>3D Draws are scheduled for the 1st and 16th of each month. Sales open at 00:00 and close at 15:30 on Draw day.</p>
-                @if($nextDraw)<p>Next Draw: <strong>{{ $nextDraw->draw_date->format('Y-m-d') }}</strong> · Opens 00:00 · Result 15:30 (Asia/Yangon)</p>@endif
+                <p>{{ __('app.three.closed_help') }}</p>
+                @if($nextDraw)<p>{{ __('app.three.next_draw_prefix') }} <strong>{{ $nextDraw->draw_date->format('Y-m-d') }}</strong> {{ __('app.three.next_draw_suffix') }}</p>@endif
             </div>
         </section>
     @else
         <div class="three-sale-grid">
             <section class="three-sale-panel">
-                <div class="three-sale-title">Agent and input</div>
+                <div class="three-sale-title">{{ __('app.three.agent_and_input') }}</div>
                 <div class="three-sale-controls">
-                    <label for="three-sale-agent">Agent</label>
+                    <label for="three-sale-agent">{{ __('app.sale.agent') }}</label>
                     <select id="three-sale-agent">
-                        <option value="">Choose an Agent</option>
+                        <option value="">{{ __('app.three.choose_agent') }}</option>
                         @foreach($agents as $agent)
                             @php $agentAssignment = $assignments->get($agent->id); @endphp
                             <option value="{{ route('three-digit.sales.workspace', ['agent_id' => $agent->id, 'view' => $agentStatement ? 'agent' : null]) }}"
                                 @selected($selectedAgent?->id === $agent->id)
                                 @disabled($agentAssignment && (int) $agentAssignment->handler_id !== (int) auth()->id())>
-                                {{ $agent->agent_code }} · {{ $agent->agent_name }}@if($agentAssignment && (int) $agentAssignment->handler_id !== (int) auth()->id()) · Assigned to {{ $agentAssignment->handler?->name ?? 'another user' }}@endif
+                                {{ $agent->agent_code }} · {{ $agent->agent_name }}@if($agentAssignment && (int) $agentAssignment->handler_id !== (int) auth()->id()) {{ __('app.three.assigned_to', ['name' => $agentAssignment->handler?->name ?? __('app.three.another_user')]) }}@endif
                             </option>
                         @endforeach
                     </select>
                     @if($selectedAgent && ! $assignment)
                         <form method="POST" action="{{ route('three-digit.sales.claim', [$draw, $selectedAgent]) }}">
                             @csrf
-                            <button class="button" type="submit">Claim Agent for this Draw</button>
+                            <button class="button" type="submit">{{ __('app.three.claim_agent') }}</button>
                         </form>
                     @elseif($assignment && (int) $assignment->handler_id !== (int) auth()->id())
-                        <p class="error">This Agent is already claimed for this Draw by {{ $assignment->handler?->name }}.</p>
+                        <p class="error">{{ __('app.three.claimed_by', ['name' => $assignment->handler?->name]) }}</p>
                     @elseif($selectedAgent)
-                        <p class="muted">Assigned to you for this Draw.</p>
+                        <p class="muted">{{ __('app.three.assigned_to_you') }}</p>
                     @endif
                     @if($canEnterSales)
                         <form class="three-sale-entry" data-three-draft-form>
                             <div>
-                                <label for="three-sale-input">3D input</label>
-                                <input id="three-sale-input" maxlength="255" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="123500 · A1000" required>
+                                <label for="three-sale-input">{{ __('app.three.input_label') }}</label>
+                                <input id="three-sale-input" maxlength="255" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="{{ __('app.three.input_placeholder') }}" required>
                             </div>
-                            <button class="button secondary" type="submit">Add</button>
+                            <button class="button secondary" type="submit">{{ __('app.sale.add') }}</button>
                         </form>
-                        <div class="three-sale-shortcuts">Enter · Add to Recent Sales &nbsp; F3 · Input &nbsp; F1 · Save</div>
+                        <div class="three-sale-shortcuts">Enter · {{ __('app.sale.shortcut_add') }} &nbsp; F3 · {{ __('app.sale.shortcut_input') }} &nbsp; F1 · {{ __('app.three.shortcut_save') }}</div>
                     @else
-                        <p class="muted">Choose an Agent. The first account to claim an Agent owns it for this Draw only.</p>
+                        <p class="muted">{{ __('app.three.claim_help') }}</p>
                     @endif
                 </div>
                 @if($canEnterSales)
-                    <div class="three-sale-title">Recent Sales · <span data-three-draft-count>0</span></div>
-                    <div class="three-draft-list" data-three-draft-list><div class="three-empty">Nothing is sent to the server until Save (F1).</div></div>
-                    <button class="button three-save" type="button" data-three-save>Save · F1</button>
+                    <div class="three-sale-title">{{ __('app.sale.recent_sales') }} · <span data-three-draft-count>0</span></div>
+                    <div class="three-draft-list" data-three-draft-list><div class="three-empty">{{ __('app.three.draft_empty') }}</div></div>
+                    <button class="button three-save" type="button" data-three-save>{{ __('app.sale.save_button') }}</button>
                 @endif
             </section>
 
             <section class="three-sale-panel three-sale-ledger-panel">
                 <div class="three-sale-title">
                     @if($roundWide)
-                        Live of items sold · all Agents
+                        {{ __('app.sale.live_all') }}
                     @elseif($agentStatement && $selectedAgent)
-                        Agent Statement · {{ $selectedAgent->agent_code }}
+                        {{ __('app.sale.statement_for', ['code' => $selectedAgent->agent_code]) }}
                     @else
-                        Live of items sold · Highest to lowest amount
+                        {{ __('app.three.live_highest') }}
                     @endif
                 </div>
                 <div class="three-sale-ledger">
                     <table class="three-sold-table">
-                        <thead><tr><th>3D number</th><th>Accepted amount</th></tr></thead>
+                        <thead><tr><th>{{ __('app.sale.number_3d') }}</th><th>{{ __('app.sale.accepted_amount') }}</th></tr></thead>
                         <tbody data-three-sold-list>
                         @forelse($soldItems as $item)
                             <tr><td>{{ $item['number'] }}</td><td>{{ number_format($item['amount'], 2) }}</td></tr>
                         @empty
-                            <tr><td colspan="2" class="muted">No accepted numbers for this Draw yet.</td></tr>
+                            <tr><td colspan="2" class="muted">{{ __('app.three.no_accepted_draw') }}</td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -147,34 +147,35 @@
             </section>
 
             <aside class="three-sale-panel three-sale-stats">
-                <div class="three-stat"><span class="three-stat-label">Accepted numbers</span><span class="three-stat-value" data-three-accepted-count>{{ number_format($acceptedCount) }}</span></div>
-                <div class="three-stat"><span class="three-stat-label">Accepted amount</span><span class="three-stat-value" data-three-accepted-amount>{{ number_format($acceptedAmount, 2) }}</span></div>
-                <div class="three-stat"><span class="three-stat-label">Rejected numbers</span><span class="three-stat-value" data-three-rejected-count>{{ number_format($rejectedCount) }}</span></div>
-                <div class="three-stat"><span class="three-stat-label">3D number count limit</span><span class="three-stat-value">{{ $draw->number_limit ? number_format($draw->number_limit) : 'Not set' }}</span></div>
+                <div class="three-stat"><span class="three-stat-label">{{ __('app.sale.accepted_numbers') }}</span><span class="three-stat-value" data-three-accepted-count>{{ number_format($acceptedCount) }}</span></div>
+                <div class="three-stat"><span class="three-stat-label">{{ __('app.sale.accepted_amount') }}</span><span class="three-stat-value" data-three-accepted-amount>{{ number_format($acceptedAmount, 2) }}</span></div>
+                <div class="three-stat"><span class="three-stat-label">{{ __('app.sale.rejected_numbers') }}</span><span class="three-stat-value" data-three-rejected-count>{{ number_format($rejectedCount) }}</span></div>
+                <div class="three-stat"><span class="three-stat-label">{{ __('app.sale.limit_3d') }}</span><span class="three-stat-value">{{ $draw->number_limit ? number_format($draw->number_limit) : __('app.sale.not_set') }}</span></div>
             </aside>
         </div>
 
         @if($canEnterSales)
             <section class="three-sale-panel three-history">
-                <div class="three-sale-title">Saved sales · {{ $selectedAgent->agent_code }} · latest 50</div>
+                <div class="three-sale-title">{{ __('app.three.saved_sales', ['code' => $selectedAgent->agent_code]) }}</div>
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th>Time</th><th>Input</th><th>Status</th><th>Accepted amount</th><th>Numbers</th></tr></thead>
+                        <thead><tr><th>{{ __('app.sale.time') }}</th><th>{{ __('app.sale.input') }}</th><th>{{ __('app.sale.status') }}</th><th>{{ __('app.sale.accepted_amount') }}</th><th>{{ __('app.sale.numbers') }}</th></tr></thead>
                         <tbody>
                         @forelse($saleInputs as $saleInput)
                             <tr>
                                 <td>{{ $saleInput->created_at->timezone('Asia/Yangon')->format('H:i:s') }}</td>
                                 <td>{{ $saleInput->original_input }}</td>
-                                <td>{{ ucfirst($saleInput->status) }}</td>
+                                <td>{{ __('app.sale.status_'.$saleInput->status) }}</td>
                                 <td>{{ number_format((float) $saleInput->details->where('status', 'accepted')->sum('amount'), 2) }}</td>
                                 <td>
                                     @foreach($saleInput->details as $detail)
-                                        <span class="three-chip {{ $detail->status === 'accepted' ? '' : 'rejected' }}">{{ $detail->number }}@if($detail->status !== 'accepted') · {{ str_replace('_', ' ', $detail->reject_reason ?? 'rejected') }}@endif</span>
+                                        @php $reasonKey = 'app.sale.reason_'.strtolower((string) ($detail->reject_reason ?? 'rejected')); @endphp
+                                        <span class="three-chip {{ $detail->status === 'accepted' ? '' : 'rejected' }}">{{ $detail->number }}@if($detail->status !== 'accepted') · {{ Illuminate\Support\Facades\Lang::has($reasonKey) ? __($reasonKey) : str_replace('_', ' ', (string) ($detail->reject_reason ?? 'rejected')) }}@endif</span>
                                     @endforeach
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="muted">No saved sales yet.</td></tr>
+                            <tr><td colspan="5" class="muted">{{ __('app.three.no_saved_sales') }}</td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -195,6 +196,9 @@
         const status = document.querySelector('[data-three-sale-status]');
         const saveButton = document.querySelector('[data-three-save]');
         const storageKey = workspace.dataset.storageKey;
+        const t = @json(__('app.three.js'));
+        const fmt = (text, vars = {}) => text.replace(/:(\w+)/g, (token, key) =>
+            Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : token);
         let drafts = [];
         let sold = new Map(@json($soldItems).map(item => [item.number, Number(item.amount)]));
         let acceptedCount = Number(document.querySelector('[data-three-accepted-count]').textContent.replaceAll(',', ''));
@@ -208,13 +212,13 @@
             count.textContent = String(drafts.length);
             list.replaceChildren();
             if (!drafts.length) {
-                const empty = document.createElement('div'); empty.className = 'three-empty'; empty.textContent = 'No unsaved inputs. Add an input and press Save (F1).'; list.append(empty); return;
+                const empty = document.createElement('div'); empty.className = 'three-empty'; empty.textContent = t.draft_empty; list.append(empty); return;
             }
             drafts.forEach(draft => {
                 const row = document.createElement('div'); row.className = 'three-draft';
                 const content = document.createElement('span'); const strong = document.createElement('strong'); strong.textContent = draft.input;
-                const note = document.createElement('small'); note.textContent = draft.error || 'Not saved'; content.append(strong, note);
-                const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'button secondary'; remove.textContent = 'Remove';
+                const note = document.createElement('small'); note.textContent = draft.error || t.not_saved; content.append(strong, note);
+                const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'button secondary'; remove.textContent = t.remove;
                 remove.addEventListener('click', () => { drafts = drafts.filter(item => item.id !== draft.id); persist(); render(); });
                 row.append(content, remove); list.append(row);
             });
@@ -222,11 +226,11 @@
         const renderSold = () => {
             const body = document.querySelector('[data-three-sold-list]'); body.replaceChildren();
             const rows = [...sold.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-            if (!rows.length) { const row = body.insertRow(); const cell = row.insertCell(); cell.colSpan = 2; cell.textContent = 'No accepted numbers for this Draw yet.'; return; }
+            if (!rows.length) { const row = body.insertRow(); const cell = row.insertCell(); cell.colSpan = 2; cell.textContent = t.no_accepted; return; }
             rows.forEach(([number, amount]) => { const row = body.insertRow(); row.insertCell().textContent = number; row.insertCell().textContent = amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); });
         };
         try { const stored = localStorage.getItem(storageKey); if (stored) drafts = JSON.parse(stored); }
-        catch (error) { displayStatus(`Could not read saved drafts: ${error.message}. Keep this page open and copy the inputs.`, true); }
+        catch (error) { displayStatus(fmt(t.drafts_unreadable, {error: error.message}), true); }
         render();
         const stageInputs = values => {
             const staged = [];
@@ -240,7 +244,7 @@
             try { persist(); render(); input.focus(); return true; }
             catch (error) {
                 drafts = drafts.filter(draft => !staged.includes(draft));
-                displayStatus(`Could not save this draft locally: ${error.message}. Copy it before retrying.`, true);
+                displayStatus(fmt(t.draft_save_failed, {error: error.message}), true);
                 return false;
             }
         };
@@ -257,7 +261,7 @@
         });
         select?.addEventListener('change', () => { if (select.value) window.location.assign(select.value); });
         saveButton.addEventListener('click', async () => {
-            if (!drafts.length) { displayStatus('Recent Sales is empty. Add an input first.'); input.focus(); return; }
+            if (!drafts.length) { displayStatus(t.empty_queue); input.focus(); return; }
             saveButton.disabled = true; let saved = 0; let failed = 0; let fatal = false;
             const pending = [...drafts];
             const batchSize = 50;
@@ -272,7 +276,7 @@
                     });
                     const result = await response.json().catch(() => ({}));
                     if (!response.ok) {
-                        const message = result.message || `Server returned ${response.status}.`;
+                        const message = result.message || fmt(t.server_status, {status: response.status});
                         for (const draft of chunk) { draft.error = message; failed++; }
                         persist(); render();
                         if ([401, 419, 500, 502, 503, 504].includes(response.status)) break;
@@ -280,7 +284,7 @@
                     }
                     for (const draft of chunk) {
                         const item = (result.results || []).find(entry => entry.client_uuid === draft.id);
-                        if (!item) { draft.error = 'No server response for this input.'; failed++; continue; }
+                        if (!item) { draft.error = t.no_response; failed++; continue; }
                         if (item.status === 'saved') {
                             for (const detail of item.details || []) {
                                 if (detail.status === 'accepted') { sold.set(detail.number, (sold.get(detail.number) || 0) + Number(detail.amount)); acceptedCount++; acceptedAmount += Number(detail.amount); }
@@ -288,13 +292,13 @@
                             }
                             drafts = drafts.filter(row => row.id !== draft.id); saved++;
                         } else {
-                            draft.error = item.message || 'Server rejected this input.'; failed++;
+                            draft.error = item.message || t.server_rejected; failed++;
                         }
                     }
                     persist(); render();
                 } catch (error) {
-                    for (const draft of chunk) { draft.error = 'Connection failed; this input is still saved on this device.'; failed++; }
-                    try { persist(); } catch (storageError) { displayStatus(`Connection failed and the local draft could not be updated: ${storageError.message}. Do not close this page.`, true); fatal = true; break; }
+                    for (const draft of chunk) { draft.error = t.connection_failed; failed++; }
+                    try { persist(); } catch (storageError) { displayStatus(fmt(t.connection_storage_failed, {error: storageError.message}), true); fatal = true; break; }
                     render(); break;
                 }
             }
@@ -302,7 +306,10 @@
             document.querySelector('[data-three-accepted-amount]').textContent = acceptedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             document.querySelector('[data-three-rejected-count]').textContent = rejectedCount.toLocaleString();
             renderSold(); saveButton.disabled = false;
-            if (!fatal) displayStatus(`${saved} input${saved === 1 ? '' : 's'} saved${failed ? `; ${failed} remain in Recent Sales with errors` : ''}.`, failed > 0);
+            if (!fatal) displayStatus(fmt(saved === 1 ? t.saved_single : t.saved_plural, {
+                count: saved,
+                extra: failed ? fmt(t.saved_failed, {count: failed}) : '',
+            }), failed > 0);
         });
         window.addEventListener('keydown', event => {
             if (event.key === 'F1') { event.preventDefault(); saveButton.click(); }

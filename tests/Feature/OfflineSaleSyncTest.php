@@ -148,6 +148,7 @@ class OfflineSaleSyncTest extends TestCase
             'round_no' => 1,
             'start_time' => '07:00:00',
             'close_time' => '09:30:00',
+            'manual_reopen' => true,
             'number_limit' => 100,
             'number_limit_3d' => 100,
             'status' => 'open',

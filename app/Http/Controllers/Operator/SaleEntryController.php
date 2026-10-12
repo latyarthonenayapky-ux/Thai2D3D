@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
+use App\Models\Round;
 use App\Models\SaleDetail;
 use App\Models\ThreeDigitSaleDetail;
 use App\Services\RoundSettlementCalculator;
@@ -14,35 +15,314 @@ use App\Services\ThreeDigitSaleProcessor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use RuntimeException;
 
 class SaleEntryController extends Controller
 {
+    public function workspace(Request $request): RedirectResponse|View
+    {
+        $adminId = $this->authorizeWorkspace($request);
+
+        $rounds = $this->openRounds($adminId);
+        if ($rounds->isEmpty()) {
+            return $this->unavailable(
+                __('app.sale.no_round_title'),
+                __('app.sale.no_round_message')
+            );
+        }
+
+        $round = $this->pickRound($rounds, $request);
+        $session = $this->readySession($round, $request->user()->id)
+            ?? $this->firstReadySession($rounds, $request->user()->id);
+
+        if ($session !== null) {
+            return redirect()->route('operator.sales.show', [
+                $session,
+                'mode' => '2d',
+                'view' => $request->query('view') === 'agent' ? 'agent' : null,
+            ]);
+        }
+
+        return redirect()->route('operator.sales.setup', ['round_id' => $round->id]);
+    }
+
+    public function setup(Request $request): View
+    {
+        $adminId = $this->authorizeWorkspace($request);
+        $rounds = $this->openRounds($adminId);
+        if ($rounds->isEmpty()) {
+            return $this->unavailable(
+                __('app.sale.no_round_title'),
+                __('app.sale.no_round_message')
+            );
+        }
+
+        $round = $this->pickRound($rounds, $request);
+        $options = $this->agentOptions($round, $request->user()->id, $adminId);
+
+        return view('operator.sales.round-setup', [
+            'rounds' => $rounds,
+            'round' => $round,
+            'agentOptions' => $options,
+            'numberLimits' => $round->number_limits ?? [],
+            'hotNumbers' => $round->hotNumbers()->orderBy('number')->get(),
+            'activeSession' => $this->readySession($round, $request->user()->id),
+            'selectableCount' => $options->where('selectable', true)->count(),
+        ]);
+    }
+
+    public function entry(Request $request, RoundSettlementCalculator $calculator): RedirectResponse|View
+    {
+        $adminId = $this->authorizeWorkspace($request);
+        $rounds = $this->openRounds($adminId);
+        if ($rounds->isEmpty()) {
+            return $this->unavailable(
+                __('app.sale.no_round_title'),
+                __('app.sale.no_round_message')
+            );
+        }
+
+        $round = $this->pickRound($rounds, $request);
+        if (($session = $this->readySession($round, $request->user()->id)) !== null) {
+            return redirect()->route('operator.sales.show', [$session, 'mode' => '2d']);
+        }
+
+        return $this->saleView($request, null, $round, '2d', false, $calculator);
+    }
+
+    private function authorizeWorkspace(Request $request): int
+    {
+        $user = $request->user();
+        abort_unless($user->isAdmin() || $user->isOperator(), 403);
+        $adminId = $user->isAdmin() ? $user->id : $user->admin_id;
+        abort_if($adminId === null, 403);
+        $request->session()->put('draw_mode', '2d');
+
+        return (int) $adminId;
+    }
+
+    private function openRounds(int $adminId): Collection
+    {
+        return Round::query()
+            ->where('admin_id', $adminId)
+            ->where('status', 'open')
+            ->orderBy('round_date')
+            ->orderBy('round_no')
+            ->get();
+    }
+
+    private function pickRound(Collection $rounds, Request $request): Round
+    {
+        return $rounds->firstWhere('id', (int) $request->query('round_id')) ?? $rounds->first();
+    }
+
+    private function firstReadySession(Collection $rounds, int $userId): ?AgentSession
+    {
+        return AgentSession::query()
+            ->where('operator_id', $userId)
+            ->whereIn('round_id', $rounds->pluck('id'))
+            ->where('status', 'open')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function unavailable(string $title, string $message): View
+    {
+        return view('operator.sales.unavailable', ['title' => $title, 'message' => $message]);
+    }
+
+    public function select(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->isAdmin() || $user->isOperator(), 403);
+        $adminId = $user->isAdmin() ? $user->id : $user->admin_id;
+        abort_if($adminId === null, 403);
+
+        $validated = $request->validate([
+            'round_id' => ['required', 'integer'],
+            'agent_id' => ['required', 'integer'],
+            'view' => ['nullable', 'in:agent'],
+        ]);
+
+        $round = Round::query()->where('admin_id', $adminId)->findOrFail((int) $validated['round_id']);
+        $agent = Agent::query()
+            ->where('admin_id', $adminId)
+            ->where('status', 'active')
+            ->findOrFail((int) $validated['agent_id']);
+
+        $session = $this->readySession($round, $user->id, $agent->id);
+
+        if ($session === null) {
+            try {
+                $session = AgentSession::openSession($agent, $round, $user->id);
+            } catch (RuntimeException $exception) {
+                return back()->withErrors(['agent' => $exception->getMessage()]);
+            }
+        }
+
+        return redirect()->route('operator.sales.show', [
+            $session,
+            'mode' => '2d',
+            'view' => ($validated['view'] ?? null) === 'agent' ? 'agent' : null,
+        ])->with('status', "{$agent->agent_code} · Round {$round->round_no} is ready for sale input.");
+    }
+
+    private function readySession(Round $round, int $userId, ?int $agentId = null): ?AgentSession
+    {
+        return AgentSession::query()
+            ->where('round_id', $round->id)
+            ->where('operator_id', $userId)
+            ->when($agentId !== null, fn ($query) => $query->where('agent_id', $agentId))
+            ->where('status', 'open')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function agentOptions(Round $round, int $userId, int $adminId): Collection
+    {
+        $settings = AgentRoundSetting::query()
+            ->where('round_id', $round->id)
+            ->with('operator')
+            ->get()
+            ->keyBy('agent_id');
+        $sessions = AgentSession::query()
+            ->where('round_id', $round->id)
+            ->with('operator')
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('agent_id')
+            ->map(fn ($group) => $group->firstWhere('status', 'open') ?? $group->first());
+
+        return Agent::query()
+            ->where('admin_id', $adminId)
+            ->where('status', 'active')
+            ->orderBy('agent_code')
+            ->get()
+            ->map(function (Agent $agent) use ($userId, $settings, $sessions): array {
+                $setting = $settings->get($agent->id);
+                $session = $sessions->get($agent->id);
+                $ownerId = $setting?->operator_id ?? $session?->operator_id;
+                $isMine = $ownerId !== null && (int) $ownerId === $userId;
+                $isOpenForMe = $isMine && $session?->status === 'open';
+                $isHeld = ! $isOpenForMe && $session?->status === 'open' && (int) $session->operator_id !== $userId;
+                $isForeign = $ownerId !== null && ! $isMine;
+                $holderName = $session?->operator?->name ?? $setting?->operator?->name;
+
+                return [
+                    'agent' => $agent,
+                    'amount_limit' => $setting?->amount_limit,
+                    'session' => $isOpenForMe ? $session : null,
+                    'selectable' => ! $isForeign && ! $isHeld,
+                    'state' => match (true) {
+                        $isOpenForMe => 'Assigned to you · ready to sell',
+                        $isForeign, $isHeld => 'In use by '.($holderName ?? 'another account'),
+                        $isMine && $session?->status === 'closed' => 'Your session is closed · selecting it reopens',
+                        $isMine => 'Assigned to you · selecting it opens',
+                        default => 'Unclaimed · selecting it claims it for you',
+                    },
+                ];
+            });
+    }
+
+    /**
+     * Per-Agent, per-number accepted amounts that exceed that Agent's own Amount Limit.
+     *
+     * @return array<int, array{agent_code: string, number: string, limit: float, excess: float}>
+     */
+    private function aboveLimitRows(Round $round, ?int $agentId = null): array
+    {
+        $limits = AgentRoundSetting::query()
+            ->where('round_id', $round->id)
+            ->get(['agent_id', 'amount_limit'])
+            ->keyBy('agent_id');
+        $agents = Agent::query()
+            ->where('admin_id', $round->admin_id)
+            ->get(['id', 'agent_code'])
+            ->keyBy('id');
+
+        $totals = SaleDetail::query()
+            ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
+            ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
+            ->where('agent_sessions.round_id', $round->id)
+            ->where('sale_details.status', 'accepted')
+            ->where('sale_details.is_excluded', false)
+            ->select('agent_sessions.agent_id as agent_id', 'sale_details.number as number')
+            ->selectRaw('SUM(sale_details.amount) as total_amount')
+            ->groupBy('agent_sessions.agent_id', 'sale_details.number')
+            ->get();
+
+        return $totals
+            ->filter(fn ($row): bool => $agentId === null || (int) $row->agent_id === $agentId)
+            ->map(function ($row) use ($limits, $agents): ?array {
+                $limit = $limits->get($row->agent_id)?->amount_limit;
+                if ($limit === null || (float) $row->total_amount <= (float) $limit) {
+                    return null;
+                }
+
+                return [
+                    'agent_code' => $agents->get($row->agent_id)?->agent_code ?? '—',
+                    'number' => (string) $row->number,
+                    'limit' => (float) $limit,
+                    'excess' => round((float) $row->total_amount - (float) $limit, 2),
+                ];
+            })
+            ->filter()
+            // stable chained sorts: excess high→low, then Agent code, then number
+            ->sortBy('number')
+            ->sortBy('agent_code')
+            ->sortByDesc('excess')
+            ->values()
+            ->all();
+    }
+
     public function show(Request $request, AgentSession $agentSession, RoundSettlementCalculator $calculator): View
     {
         $this->authorizeSession($request, $agentSession);
 
         $saleMode = $request->query('mode', $request->session()->get('draw_mode', '2d'));
         abort_unless(in_array($saleMode, ['2d', '3d'], true), 404);
-        $agentStatement = $request->query('view') === 'agent';
-        $roundWide = $request->user()->isAdmin() && ! $agentStatement;
-        $saleInputs = $agentSession->saleInputs()
-            ->with('details')
+
+        return $this->saleView(
+            $request,
+            $agentSession->load(['agent', 'round']),
+            $agentSession->round,
+            $saleMode,
+            $request->query('view') === 'agent',
+            $calculator
+        );
+    }
+
+    private function saleView(
+        Request $request,
+        ?AgentSession $agentSession,
+        Round $round,
+        string $saleMode,
+        bool $agentStatement,
+        RoundSettlementCalculator $calculator
+    ): View {
+        $user = $request->user();
+        $adminId = (int) ($user->isAdmin() ? $user->id : $user->admin_id);
+        $awaitingAgent = $agentSession === null;
+        $roundWide = $awaitingAgent || ($user->isAdmin() && ! $agentStatement);
+        $saleInputs = $awaitingAgent ? collect() : $agentSession->saleInputs()
+            ->with(['details', 'voidedBy'])
             ->latest()
             ->limit(50)
             ->get();
-        $threeDigitSaleInputs = $agentSession->threeDigitSaleInputs()
-            ->with('details')
+        $threeDigitSaleInputs = $awaitingAgent ? collect() : $agentSession->threeDigitSaleInputs()
+            ->with(['details', 'voidedBy'])
             ->latest()
             ->limit(50)
             ->get();
+        $agentOptions = $this->agentOptions($round, $user->id, $adminId);
 
         $totalsQuery = SaleDetail::query()
-            ->whereHas('saleInput', function ($query) use ($agentSession, $roundWide): void {
+            ->whereHas('saleInput', function ($query) use ($agentSession, $round, $roundWide): void {
                 if ($roundWide) {
-                    $query->whereHas('agentSession', fn ($session) => $session->where('round_id', $agentSession->round_id));
+                    $query->whereHas('agentSession', fn ($session) => $session->where('round_id', $round->id));
                 } else {
                     $query->where('agent_session_id', $agentSession->id);
                 }
@@ -55,9 +335,9 @@ class SaleEntryController extends Controller
             )
             ->first();
         $threeDigitTotals = ThreeDigitSaleDetail::query()
-            ->whereHas('saleInput', function ($query) use ($agentSession, $roundWide): void {
+            ->whereHas('saleInput', function ($query) use ($agentSession, $round, $roundWide): void {
                 if ($roundWide) {
-                    $query->whereHas('agentSession', fn ($session) => $session->where('round_id', $agentSession->round_id));
+                    $query->whereHas('agentSession', fn ($session) => $session->where('round_id', $round->id));
                 } else {
                     $query->where('agent_session_id', $agentSession->id);
                 }
@@ -68,58 +348,10 @@ class SaleEntryController extends Controller
                  SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_count"
             )
             ->first();
-        $agentChoices = collect();
-        if ($request->user()->isAdmin() && $saleMode === '2d') {
-            $adminId = (int) $request->user()->id;
-            $agentChoices = Agent::query()
-                ->where('admin_id', $adminId)
-                ->where('status', 'active')
-                ->with([
-                    'roundSettings' => fn ($query) => $query
-                        ->where('round_id', $agentSession->round_id)
-                        ->with('operator'),
-                    'sessions' => fn ($query) => $query
-                        ->where('round_id', $agentSession->round_id)
-                        ->orderByDesc('id')
-                        ->with('operator'),
-                ])
-                ->orderBy('agent_code')
-                ->get()
-                ->map(function (Agent $agent) use ($agentSession, $adminId, $agentStatement): array {
-                    $assignment = $agent->roundSettings->first();
-                    $session = $agent->sessions->firstWhere('status', 'open')
-                        ?? $agent->sessions->first();
-                    $ownerId = $assignment?->operator_id ?? $session?->operator_id;
-                    $isOwnedByAdmin = $ownerId !== null && (int) $ownerId === $adminId;
-                    $isUnassigned = $ownerId === null;
-                    $selectable = $isOwnedByAdmin || $isUnassigned;
-                    $openForAdmin = $isOwnedByAdmin && $session?->status === 'open';
-
-                    return [
-                        'agent' => $agent,
-                        'selected' => (int) $agent->id === (int) $agentSession->agent_id,
-                        'selectable' => $selectable,
-                        'url' => $openForAdmin
-                            ? route('operator.sales.show', [
-                                $session,
-                                'mode' => '2d',
-                                'view' => $agentStatement ? 'agent' : null,
-                            ])
-                            : null,
-                        'claim_url' => $selectable && ! $openForAdmin
-                            ? route('operator.agent-sessions.claim', [$agentSession->round_id, $agent])
-                            : null,
-                        'status' => ! $selectable
-                            ? 'In use by '.($assignment?->operator?->name ?? $session?->operator?->name ?? 'another account')
-                            : ($openForAdmin
-                                ? 'Assigned to you'
-                                : ($isOwnedByAdmin ? 'Reopen your assignment' : 'Available · claim to start')),
-                    ];
-                });
-        }
 
         return view('operator.sales.show', [
-            'agentSession' => $agentSession->load(['agent', 'round']),
+            'agentSession' => $agentSession,
+            'round' => $round,
             'saleInputs' => $saleInputs,
             'threeDigitSaleInputs' => $threeDigitSaleInputs,
             'roundWide' => $roundWide,
@@ -131,30 +363,39 @@ class SaleEntryController extends Controller
             'threeDigitAcceptedAmount' => (float) ($threeDigitTotals?->accepted_amount ?? 0),
             'threeDigitRejectedCount' => (int) ($threeDigitTotals?->rejected_count ?? 0),
             'saleMode' => $saleMode,
-            'availableSessions' => AgentSession::query()
+            'availableSessions' => $awaitingAgent ? collect() : AgentSession::query()
                 ->with(['agent', 'round'])
-                ->where('operator_id', $request->user()->id)
-                ->where('round_id', $agentSession->round_id)
+                ->where('operator_id', $user->id)
+                ->where('round_id', $round->id)
                 ->where('status', 'open')
                 ->orderBy('agent_id')
                 ->get(),
-            'agentChoices' => $agentChoices,
             'soldItems' => $roundWide
-                ? $this->soldItemsForRound($agentSession->round_id, $saleMode)
+                ? $this->soldItemsForRound($round->id, $saleMode)
                 : $this->soldItemsForSession($agentSession->id, $saleMode),
-            'agentSoldItems' => $this->soldItemsForSession($agentSession->id, $saleMode),
-            'amountLimit' => AgentRoundSetting::query()
+            'agentSoldItems' => $awaitingAgent ? [] : $this->soldItemsForSession($agentSession->id, $saleMode),
+            'agentOptions' => $agentOptions,
+            'selectableCount' => $agentOptions->where('selectable', true)->count(),
+            'numberLimits' => $round->number_limits ?? [],
+            'hotNumbers' => $round->hotNumbers()->orderBy('number')->get(),
+            'overLimitRows' => $saleMode === '2d'
+                ? $this->aboveLimitRows($round, $agentStatement ? $agentSession->agent_id : null)
+                : [],
+            'overLimitAllAgents' => $saleMode === '2d' && ! $agentStatement,
+            'amountLimit' => $awaitingAgent ? null : AgentRoundSetting::query()
                 ->where('agent_id', $agentSession->agent_id)
-                ->where('round_id', $agentSession->round_id)
+                ->where('round_id', $round->id)
                 ->value($saleMode === '3d' ? 'amount_limit_3d' : 'amount_limit'),
-            'numberLimits' => $agentSession->round->number_limits ?? [],
-            'hotNumbers' => $agentSession->round->hotNumbers()->orderBy('number')->get(),
-            'threeDigitAmountLimit' => (float) (AgentRoundSetting::query()
+            'threeDigitAmountLimit' => $awaitingAgent ? 0.0 : (float) (AgentRoundSetting::query()
                 ->where('agent_id', $agentSession->agent_id)
-                ->where('round_id', $agentSession->round_id)
+                ->where('round_id', $round->id)
                 ->value('amount_limit_3d') ?? 0),
-            'canEnterSales' => $agentSession->status === 'open' && $agentSession->round->status === 'open',
-            'ownSettlement' => $calculator->calculate($agentSession->round, (int) $request->user()->id)['agents']
+            'canEnterSales' => ! $awaitingAgent
+                && $agentSession->status === 'open'
+                && $round->status === 'open'
+                && ! $round->isPastScheduledClose(),
+            'roundPastCloseTime' => $round->isPastScheduledClose(),
+            'ownSettlement' => $awaitingAgent ? null : $calculator->calculate($round, (int) $user->id)['agents']
                 ->first(fn (array $row): bool => $row['agent']->id === $agentSession->agent_id),
         ]);
     }

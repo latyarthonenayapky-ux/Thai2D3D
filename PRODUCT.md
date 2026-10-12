@@ -15,7 +15,7 @@ web
 
 ## Product Purpose
 
-Thai2D3D is a web application for recording and managing 2D/3D sales across daily Rounds, Agents, and Operators. Its goal is to give Admins a current view of accepted sales and settlement amounts while allowing Operators to enter sales for their assigned Agent.
+Winning Yields Always (WYA) is a web application for recording and managing 2D/3D sales across daily Rounds, Agents, and Operators. Its goal is to give Admins a current view of accepted sales and settlement amounts while allowing Operators to enter sales for their assigned Agent.
 
 ## Operating Context
 
@@ -41,7 +41,7 @@ The application is intended to run on an Internet-accessible server and be used 
 
 ## Brand Commitments
 
-The product name is Thai2D3D. Users currently communicate in Burmese. The application interface language has not yet been explicitly selected.
+The product name is Winning Yields Always (WYA). Users currently communicate in Burmese. The application interface language has not yet been explicitly selected.
 
 ## Evidence on Hand
 

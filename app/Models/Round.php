@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -63,5 +64,23 @@ class Round extends Model
     public function admin(): BelongsTo
     {
         return $this->belongsTo(User::class, 'admin_id');
+    }
+
+    /**
+     * The scheduler is what normally flips the status, but a wager must never be
+     * recorded after the published close time, even when that command has not
+     * run yet. An Admin reopen is an explicit exception.
+     */
+    public function isPastScheduledClose(?Carbon $now = null): bool
+    {
+        if ($this->manual_reopen || $this->close_time === null || $this->round_date === null) {
+            return false;
+        }
+
+        $now ??= Carbon::now('Asia/Yangon');
+
+        return $now->greaterThanOrEqualTo(
+            Carbon::parse($this->round_date->toDateString().' '.$this->close_time, 'Asia/Yangon')
+        );
     }
 }

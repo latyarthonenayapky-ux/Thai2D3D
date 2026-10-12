@@ -35,41 +35,41 @@ class DashboardController extends Controller
 
             $setupChecklist = [
                 [
-                    'label' => 'Save the daily Round schedule',
+                    'label' => __('app.dashboard.checklist_schedule'),
                     'done' => RoundSchedule::query()
                         ->where('admin_id', $operator->id)
                         ->whereNotNull('close_time')
                         ->exists(),
                     'href' => route('admin.settings.index').'#round-schedule',
-                    'action' => 'Open Round schedule',
+                    'action' => __('app.dashboard.checklist_schedule_action'),
                 ],
                 [
-                    'label' => 'Set the 2D payout multiplier',
+                    'label' => __('app.dashboard.checklist_payout'),
                     'done' => AdminBusinessSetting::query()
                         ->where('admin_id', $operator->id)
                         ->whereNotNull('payout_2d_multiplier')
                         ->exists(),
                     'href' => route('admin.settings.index').'#payout-settings',
-                    'action' => 'Open payout settings',
+                    'action' => __('app.dashboard.checklist_payout_action'),
                 ],
                 [
-                    'label' => 'Create and activate Agents',
+                    'label' => __('app.dashboard.checklist_agents'),
                     'done' => Agent::query()
                         ->where('admin_id', $operator->id)
                         ->where('status', 'active')
                         ->exists(),
                     'href' => route('admin.settings.index').'#agents',
-                    'action' => 'Open Agents',
+                    'action' => __('app.dashboard.checklist_agents_action'),
                 ],
                 [
-                    'label' => 'Create Operator accounts',
+                    'label' => __('app.dashboard.checklist_operators'),
                     'done' => User::query()
                         ->where('admin_id', $operator->id)
                         ->where('role', 'operator')
                         ->where('status', true)
                         ->exists(),
                     'href' => route('admin.users.index'),
-                    'action' => 'Open User access',
+                    'action' => __('app.dashboard.checklist_operators_action'),
                 ],
             ];
 

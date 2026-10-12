@@ -22,7 +22,7 @@
     @media(max-width:600px){.manual{margin:22px auto;padding:0 16px 36px}.manual h1{font-size:25px}.manual-nav{gap:6px}.manual-nav a{padding:7px 9px}}
 </style>
 <main class="manual" lang="my">
-    <h1 id="manual-title">Thai2D3D အသုံးပြုနည်း လမ်းညွှန်</h1>
+    <h1 id="manual-title">Winning Yields Always (WYA) အသုံးပြုနည်း လမ်းညွှန်</h1>
     <p class="manual-intro">Sale Entry စာရိုက်ပုံ၊ 2D/3D နှင့် Admin Setting များ၊ report နှင့် အခြားလုပ်ဆောင်ချက်များကို အပိုင်းလိုက် ရှင်းပြထားပါသည်။ လိုသည့်ခေါင်းစဉ်ကို ရွေးပြီး သွားနိုင်သည်။</p>
 
     <nav aria-label="လမ်းညွှန်အပိုင်းများ">
@@ -42,9 +42,11 @@
         <h2>Sale Entry စတင်အသုံးပြုခြင်း</h2>
         <ol>
             <li>Navigation မှ <strong>Sale Entry → 2D Sale Entry</strong> သို့မဟုတ် <strong>3D Sale Entry</strong> ကို ရွေးပါ။ 2D နှင့် 3D စာရင်းများ၊ သတ်မှတ်ချက်များ သီးခြားဖြစ်သည်။</li>
-            <li>သက်ဆိုင်ရာ ဖွင့်ထားသော Round သို့မဟုတ် Draw ကိုရွေးပြီး Agent ကိုရွေးပါ။ Agent ကို မတိုင်မီ မည်သူမျှ claim မလုပ်ထားလျှင် <strong>Claim</strong> ကို တစ်ကြိမ်လုပ်ပါ။</li>
+            <li><strong>2D Sale Entry</strong> ကိုနှိပ်လျှင် အရင်ဆုံး <strong>Sale Entry · 2D Round setup</strong> စာမျက်နှာသို့ ရောက်သည်။ ထိုနေရာတွင် <strong>Round</strong> ကိုရွေးပြီး <strong>Round limits · all Agents</strong> အပိုင်းမှ ပိတ်ထားသော <strong>00–99 value</strong>၊ <strong>Hot Numbers</strong> နှင့် Agent အားလုံး၏ <strong>Amount Limit</strong> ကို Admin က သတ်မှတ်ကာ <strong>Continue to Sale Input</strong> နှိပ်ပါ။ မိမိဖွင့်ထားသော session ရှိပြီးသားဆိုလျှင် Sale Input စာမျက်နှာသို့ တိုက်ရိုက်ရောက်ပြီး <strong>Round setup · limits</strong> link မှ ပြန်ဝင်နိုင်သည်။ Sale Input စာမျက်နှာအတွင်း <strong>Round</strong> dropdown မရှိတော့ပါ။ 3D တွင် လက်ရှိ Draw ကိုရွေးပြီး Agent ကို ဆက်ရွေးပါ။</li>
+            <li>Sale Input တွင် <strong>Agent</strong> dropdown ကိုပဲသုံးပြီး Agent ရွေးပါ။ Agent မရွေးခင် input box သည် မြင်နေရသော်လည်း သော့ခတ်ထားသည်။ <strong>Select</strong> နှိပ်သည်နှင့် ချက်ချင်း claim/reopen ဖြစ်ကာ input box ပေါ်ပြီး sale ရိုက်နိုင်သည်။ မည်သူမျှ claim မလုပ်ထားသော (သို့) မိမိ session ပိတ်နေသော Agent ကို ရွေး၍ရပြီး၊ အခြားအကောင့်က ကိုင်ထားသော Agent များမှာ <strong>In use by …</strong> ဟုပြပြီး ရွေး၍မရပါ။ Agent ပြောင်းလိုလျှင် <kbd>F2</kbd> ဖြင့် Agent dropdown သို့သွားပြီး ထိုနေရာမှာပဲ ပြောင်းရွေးနိုင်သည်။</li>
             <li>Input box ထဲတွင် sale တစ်ကြောင်းစီရိုက်ပြီး <kbd>Enter</kbd> နှိပ်ပါ။ ထိုအဆင့်သည် Recent Sales draft ထဲထည့်ခြင်းသာဖြစ်ပြီး မသိမ်းရသေးပါ။</li>
             <li>Draft နှင့် ပမာဏကို ပြန်စစ်ပြီး <kbd>F1</kbd> သို့မဟုတ် <strong>Save</strong> ကိုနှိပ်မှသာ server ထဲသို့ သိမ်းမည်။</li>
+            <li>Sale Input စာမျက်နှာအပေါ်ဘက် (Rejected numbers နှင့် Log out ကြား ညာဘက်ဒေါင့်) ရှိ <strong>Copy · No=Excess</strong> ခလုတ်ကို နှိပ်လျှင် <strong>Above Amount Limit</strong> စာရင်းတစ်ခုလုံး clipboard ထဲသို့ copy လုပ်ပြီး <code>No=Excess</code> format (တစ်ကြောင်းလျှင် တစ် number, ဥပမာ <code>17=35000</code>) ဖြင့် သက်ရောက်ရာနေရာတွင် paste လုပ်နိုင်သည်။ Save ပြီးတိုင်း ယမာန်တန်ဖိုးများပါ ထည့်တွက်ပြသည်။</li>
         </ol>
         <p>Admin ၏ Live of items sold သည် ရွေးထားသော Round/Draw အတွင်း Agent အားလုံး၏ လက်ခံထားသော sale များကို စုပေါင်းပြသည်။ <strong>Menu → Agent Statement</strong> သည် Agent တစ်ဦးချင်းစာရင်းဖြစ်သည်။</p>
         <p class="manual-note">Desktop 2D Sale Entry တွင် ရိုက်ထည့်သော အင်္ဂလိပ်စာလုံးများကို အကြီးစာလုံးပြောင်းပြီး <code>*</code> ကို <code>R</code> အဖြစ်ပြောင်းပေးသည်။ ဤပြောင်းလဲမှုသည် ရိုက်သည့်စာသားအတွက်သာဖြစ်သည်။ Clipboard မှ paste လုပ်သည့်စာသားကို မပြောင်းပါ။</p>
@@ -101,7 +103,7 @@
             <li><strong>Upcoming Rounds / Number Limit</strong> — Round ရွေးပြီး <code>00</code> မှ <code>99</code> အတွင်း ပိတ်မည့် value များကို comma, space သို့မဟုတ် line break ခြား၍ထည့်ပါ။ Number Limit သည် ရောင်းအရေအတွက်မဟုတ်ဘဲ ရွေးထားသော 2D value များကိုသာ ပိတ်သည်။</li>
             <li><strong>Hot Numbers</strong> — ရွေးထားသော Round အတွက် Hot Number များထည့်/ဖယ်ရှားသည်။ ကိုက်ညီသော sale သည် reject ဖြစ်နိုင်သည်။</li>
             <li><strong>Agents / Round assignments</strong> — Agent ဖန်တီး/ပြင်ဆင်၊ Agent တစ်ဦးချင်း commission နှင့် ရွေးထားသော Round ၏ Amount Limit ကို ပြင်ဆင်သည်။</li>
-            <li><strong>Amount Limit</strong> — အရောင်းပမာဏကို စောင့်ကြည့်ရန် threshold ဖြစ်သည်။ Sale Entry တွင် သတ်မှတ်ထားသည့်ပမာဏထက်ကျော်သော number များကို excess အများဆုံးမှစီကြည့်နိုင်သည်။ Sale ကို အလိုအလျောက် reject မလုပ်ပါ။</li>
+            <li><strong>Amount Limit</strong> — အရောင်းပမာဏကို စောင့်ကြည့်ရန် threshold ဖြစ်သည်။ <strong>Sale Entry · 2D Round setup</strong> စာမျက်နှာရှိ <strong>Round limits · all Agents</strong> အပိုင်းတွင် Agent အားလုံး၏ Amount Limit ကို တစ်ပြိုင်နက်မြင်နိုင်/သတ်မှတ်နိုင်ပြီး၊ Sale Input ညာဘက်ကော်လံအပေါ်တွင် Agent အားလုံး၏ သတ်မှတ်ပမာဏထက်ကျော်သော number များကို excess အများဆုံးမှစီကြည့်နိုင်သည်။ <strong>Agent Statement</strong> တွင်သာ ရွေးထားသော Agent တစ်ဦးချင်း၏ limit ကျော် number များကို ပြသည်။ Sale ကို အလိုအလျောက် reject မလုပ်ပါ။</li>
             <li><strong>Configured number rules</strong> — W/N/X စာရင်းများကို ပြင်နိုင်ပြီး custom uppercase letter ဖြင့် ကိုယ့် 2D number list ဖန်တီးနိုင်သည်။ Rule တစ်ခုကို inactive လုပ်လျှင် sale input တွင် သုံးမရပါ။</li>
             <li><strong>Round close/reopen</strong> — Round စာရင်းတွင် Reopen လုပ်ပြီးနောက် အဲဒီ Round ကို <strong>Manually reopened</strong> ဟု ပြမည်။ <strong>Reclose reopened Round</strong> ကိုနှိပ်၍ သတ်မှတ်ပိတ်ချိန်ကျော်ပြီးသည့်အခါတွင်လည်း ချက်ချင်းပြန်ပိတ်နိုင်သည်။ ပိတ်ပြီးသည့် Agent session များ read-only ဖြစ်ပြီး scheduler က ထပ်မံမဖွင့်ပါ။ တစ်ပတ်ထက်ပိုဟောင်းသော manually reopened Round များလည်း စာရင်းထဲတွင် ဆက်ပြမည်။</li>
         </ul>

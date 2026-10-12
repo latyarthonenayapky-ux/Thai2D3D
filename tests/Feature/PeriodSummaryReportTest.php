@@ -339,7 +339,7 @@ class PeriodSummaryReportTest extends TestCase
             ->firstOrFail();
         $session->update(['status' => 'open']);
 
-        $round->update(['status' => 'open']);
+        $round->update(['status' => 'open', 'manual_reopen' => true]);
         $this->actingAs($operator);
         foreach ($inputs as $input) {
             $this->post(route('operator.sales.store', $session), ['input' => $input])->assertRedirect();

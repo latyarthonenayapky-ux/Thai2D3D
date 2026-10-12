@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityLog extends Model
 {
@@ -23,6 +24,11 @@ class ActivityLog extends Model
             'meta' => 'array',
             'created_at' => 'datetime:Asia/Yangon',
         ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public static function record(string $action, ?Model $subject = null, array $meta = [], ?User $actor = null): void

@@ -1,4 +1,4 @@
-# Thai2D3D Desktop
+# Winning Yields Always (WYA) Desktop
 
 The desktop app starts the bundled Laravel application and PHP server on
 `127.0.0.1`, then opens it in an Electron window. It does not connect to a
@@ -51,7 +51,7 @@ Each computer has its own SQLite database:
 - Linux: `~/.config/Thai2D3D/data/thai2d3d.sqlite`
 - Windows: `%APPDATA%\\Thai2D3D\\data\\thai2d3d.sqlite`
 
-To back up or move an installation, close Thai2D3D and copy the entire
+To back up or move an installation, close Winning Yields Always and copy the entire
 `Thai2D3D` application-data directory. Restore it to the same OS user's
 application-data location before opening the app. Do not copy a live database
 while the app is running.

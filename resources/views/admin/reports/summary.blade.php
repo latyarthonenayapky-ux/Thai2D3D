@@ -1,21 +1,21 @@
-@extends('layouts.app', ['title' => 'Period summaries'])
+@extends('layouts.app', ['title' => __('app.reports.title_2d')])
 
 @section('content')
-@php $currency = config('app.currency', 'MMK'); @endphp
+@php $currency = auth()->user()->currencyLabel(); @endphp
 <main class="main">
     @if($isAdmin)
-        <a href="{{ route('admin.settlements.index') }}">← Round settlements</a>
+        <a href="{{ route('admin.settlements.index') }}">{{ __('app.reports.back_settlements') }}</a>
     @else
-        <a href="{{ route('dashboard') }}">← Operator dashboard</a>
+        <a href="{{ route('dashboard') }}">{{ __('app.reports.back_operator_dashboard') }}</a>
     @endif
-    <div class="eyebrow" style="margin-top:20px">Business reports</div>
-    <h1 class="page-title" style="margin-top:8px">{{ $isAdmin ? 'Business' : 'Your' }} summaries</h1>
-    <p class="subtitle">Daily, weekly, monthly, or yearly results for completed 2D Rounds. Filter by Agent and Round for a separate breakdown. All amounts in {{ $currency }}.</p>
-    <p class="row"><a class="button secondary" href="{{ route('reports.summary', ['mode' => '3d']) }}">3D Draw summaries</a>@if($isAdmin)<a class="button secondary" href="{{ route('admin.three-digit.results') }}">3D results and settlements</a>@endif</p>
+    <div class="eyebrow" style="margin-top:20px">{{ __('app.reports.eyebrow') }}</div>
+    <h1 class="page-title" style="margin-top:8px">{{ $isAdmin ? __('app.reports.business_summaries') : __('app.reports.your_summaries') }}</h1>
+    <p class="subtitle">{{ __('app.reports.subtitle_2d', ['currency' => $currency]) }}</p>
+    <p class="row"><a class="button secondary" href="{{ route('reports.summary', ['mode' => '3d']) }}">{{ __('app.reports.summaries_3d') }}</a>@if($isAdmin)<a class="button secondary" href="{{ route('admin.three-digit.results') }}">{{ __('app.reports.results_3d') }}</a>@endif</p>
 
     @if($errors->any())
         <div class="error" role="alert">
-            <strong>Please correct the report selection:</strong>
+            <strong>{{ __('app.reports.errors_2d') }}</strong>
             <ul style="margin:8px 0 0;padding-left:20px">
                 @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -28,45 +28,45 @@
         <form method="GET" action="{{ route('reports.summary') }}" class="grid" style="align-items:end">
             <input type="hidden" name="mode" value="2d">
             <div>
-                <label for="period">Summary period</label>
+                <label for="period">{{ __('app.reports.period') }}</label>
                 <select id="period" name="period">
-                    @foreach(['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $key => $label)
-                        <option value="{{ $key }}" @selected($report['period'] === $key)>{{ $label }}</option>
+                    @foreach(['daily', 'weekly', 'monthly', 'yearly'] as $key)
+                        <option value="{{ $key }}" @selected($report['period'] === $key)>{{ __('app.reports.period_'.$key) }}</option>
                     @endforeach
                 </select>
             </div>
             <div>
-                <label for="date">Date within period</label>
+                <label for="date">{{ __('app.reports.date') }}</label>
                 <input id="date" name="date" type="date" value="{{ $report['selected_date']->toDateString() }}" required>
             </div>
             <div>
-                <label for="agent_id">Agent</label>
+                <label for="agent_id">{{ __('app.common.agent') }}</label>
                 <select id="agent_id" name="agent_id">
-                    <option value="">All Agents</option>
+                    <option value="">{{ __('app.reports.all_agents') }}</option>
                     @foreach($agents as $agent)
                         <option value="{{ $agent->id }}" @selected($selectedAgentId === $agent->id)>{{ $agent->agent_code }} · {{ $agent->agent_name }}</option>
                     @endforeach
                 </select>
             </div>
             <div>
-                <label for="round_no">Round</label>
+                <label for="round_no">{{ __('app.common.round') }}</label>
                 <select id="round_no" name="round_no">
-                    <option value="">All Rounds</option>
+                    <option value="">{{ __('app.reports.all_rounds') }}</option>
                     @foreach([1, 2, 3] as $roundNo)
-                        <option value="{{ $roundNo }}" @selected($selectedRoundNo === $roundNo)>Round {{ $roundNo }}</option>
+                        <option value="{{ $roundNo }}" @selected($selectedRoundNo === $roundNo)>{{ __('app.reports.round_option', ['no' => $roundNo]) }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="row" style="gap:8px;grid-column:1/-1"><button class="button" type="submit">Show summary</button><a class="button secondary" href="{{ route('reports.summary.export', request()->query()) }}">Download CSV</a></div>
+            <div class="row" style="gap:8px;grid-column:1/-1"><button class="button" type="submit">{{ __('app.reports.show_2d') }}</button><a class="button secondary" href="{{ route('reports.summary.export', request()->query()) }}">{{ __('app.reports.export_csv') }}</a></div>
         </form>
-        <p style="margin-bottom:0">Showing {{ ucfirst($report['period']) }} · {{ $report['start_date']->toDateString() }} to {{ $report['end_date']->toDateString() }} · {{ $report['totals']['round_count'] }} completed Round(s)</p>
+        <p style="margin-bottom:0">{{ __('app.reports.showing', ['period' => __('app.reports.period_'.$report['period']), 'start' => $report['start_date']->toDateString(), 'end' => $report['end_date']->toDateString(), 'count' => $report['totals']['round_count']]) }}</p>
     </section>
 
     <section class="card" style="margin-bottom:20px">
-        <h2>2D agent totals · {{ ucfirst($report['period']) }}</h2>
+        <h2>{{ __('app.reports.agent_totals_2d', ['period' => __('app.reports.period_'.$report['period'])]) }}</h2>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Agent</th><th>Closed Agent/Rounds</th><th>Accepted stakes</th><th>Winning stakes</th><th>Winnings</th><th>Commission</th><th>Business net</th></tr></thead>
+                <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.reports.col_closed_agent_rounds') }}</th><th>{{ __('app.reports.col_accepted_stakes') }}</th><th>{{ __('app.reports.col_winning_stakes') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th></tr></thead>
                 <tbody>
                 @forelse($report['agent_totals'] as $agent)
                     <tr>
@@ -79,7 +79,7 @@
                         <td>{{ number_format($agent['business_net'], 2) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="muted">No Agent sales in this period.</td></tr>
+                    <tr><td colspan="7" class="muted">{{ __('app.reports.no_agent_sales') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -87,18 +87,18 @@
     </section>
 
     <section class="grid" style="margin-bottom:20px">
-        <div class="card"><div class="eyebrow">2D accepted stakes ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['total_stake'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D winning stakes ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winning_stake'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D winnings expense ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winnings'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D agent commissions ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['commission'], 2) }}</h2></div>
-        <div class="card"><div class="eyebrow">2D business net ({{ $currency }})</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['business_net'], 2) }}</h2><p style="margin-bottom:0">Accepted stakes − winnings − commissions</p></div>
+        <div class="card"><div class="eyebrow">{{ __('app.reports.stat_accepted_2d', ['currency' => $currency]) }}</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['total_stake'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">{{ __('app.reports.stat_winning_2d', ['currency' => $currency]) }}</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winning_stake'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">{{ __('app.reports.stat_winnings_2d', ['currency' => $currency]) }}</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['winnings'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">{{ __('app.reports.stat_commission_2d', ['currency' => $currency]) }}</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['commission'], 2) }}</h2></div>
+        <div class="card"><div class="eyebrow">{{ __('app.reports.stat_business_net_2d', ['currency' => $currency]) }}</div><h2 style="font-size:24px;margin-top:8px">{{ number_format($report['totals']['business_net'], 2) }}</h2><p style="margin-bottom:0">{{ __('app.reports.net_formula') }}</p></div>
     </section>
 
     <section class="card" style="margin-bottom:20px">
-        <h2>Daily breakdown · 2D</h2>
+        <h2>{{ __('app.reports.daily_breakdown_2d') }}</h2>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Date</th><th>Closed rounds</th><th>Accepted stakes</th><th>Winning stakes</th><th>Winnings</th><th>Commission</th><th>Business net</th></tr></thead>
+                <thead><tr><th>{{ __('app.common.date') }}</th><th>{{ __('app.reports.col_closed_rounds') }}</th><th>{{ __('app.reports.col_accepted_stakes') }}</th><th>{{ __('app.reports.col_winning_stakes') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th></tr></thead>
                 <tbody>
                 @forelse($report['daily_rows'] as $day)
                     <tr>
@@ -111,7 +111,7 @@
                         <td>{{ number_format($day['business_net'], 2) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="muted">No closed Rounds in this period.</td></tr>
+                    <tr><td colspan="7" class="muted">{{ __('app.reports.no_closed_rounds') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -119,10 +119,10 @@
     </section>
 
     <section class="card">
-        <h2>Agent · day · Round details · 2D</h2>
+        <h2>{{ __('app.reports.detail_2d') }}</h2>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Agent</th><th>Date</th><th>Round</th><th>Round handler</th><th>2D result</th><th>Accepted stakes</th><th>Winning stakes</th><th>Winnings</th><th>Commission</th><th>Business net</th><th></th></tr></thead>
+                <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.common.date') }}</th><th>{{ __('app.common.round') }}</th><th>{{ __('app.reports.col_round_handler') }}</th><th>{{ __('app.rounds.col_result_2d') }}</th><th>{{ __('app.reports.col_accepted_stakes') }}</th><th>{{ __('app.reports.col_winning_stakes') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th><th></th></tr></thead>
                 <tbody>
                 @forelse($detailRows as $row)
                     <tr>
@@ -138,14 +138,14 @@
                         <td>{{ number_format($row['business_net'], 2) }}</td>
                         <td>
                             @if($isAdmin)
-                                <a href="{{ route('admin.rounds.settlement', $row['round_id']) }}">Settlement</a>
+                                <a href="{{ route('admin.rounds.settlement', $row['round_id']) }}">{{ __('app.rounds.col_settlement') }}</a>
                             @else
                                 <span class="muted">—</span>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="11" class="muted">No Agent sales in this period.</td></tr>
+                    <tr><td colspan="11" class="muted">{{ __('app.reports.no_agent_sales') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>

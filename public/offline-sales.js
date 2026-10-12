@@ -5,10 +5,13 @@
     const listNode = document.getElementById('offline-queue-list');
     const offlineSessionId = document.querySelector('meta[name="offline-session-id"]')?.content;
     const syncUrl = document.querySelector('meta[name="offline-sync-url"]')?.content;
+    const t = window.offlineLabels;
+    const fmt = (text, vars = {}) => text.replace(/:(\w+)/g,
+        (token, key) => Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : token);
 
     const openDatabase = () => new Promise((resolve, reject) => {
         if (!('indexedDB' in window)) {
-            reject(new Error('This browser does not support local offline storage.'));
+            reject(new Error(t.storage_unsupported));
             return;
         }
         const request = indexedDB.open(databaseName, databaseVersion);
@@ -19,7 +22,7 @@
             }
         };
         request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error || new Error('Could not open offline storage.'));
+        request.onerror = () => reject(request.error || new Error(t.storage_open_failed));
     });
 
     const storeRecords = async (mode, operation) => {
@@ -28,11 +31,11 @@
             const transaction = database.transaction('sales', mode);
             const request = operation(transaction.objectStore('sales'));
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error || new Error('Offline storage operation failed.'));
+            request.onerror = () => reject(request.error || new Error(t.storage_op_failed));
             transaction.oncomplete = () => database.close();
             transaction.onerror = () => {
                 database.close();
-                reject(transaction.error || new Error('Offline storage transaction failed.'));
+                reject(transaction.error || new Error(t.storage_tx_failed));
             };
         });
     };
@@ -73,7 +76,7 @@
         if (sessionRecords.length === 0) {
             const empty = document.createElement('p');
             empty.className = 'muted';
-            empty.textContent = 'No unsynchronized sales for this Agent/Round.';
+            empty.textContent = t.queue_empty;
             listNode.append(empty);
             return;
         }
@@ -84,7 +87,7 @@
             label.textContent = `${record.sale_type.toUpperCase()} · ${record.input}`;
             const detail = document.createElement('span');
             detail.className = 'muted';
-            detail.textContent = ` · ${record.state || 'queued'}${record.error ? ` · ${record.error}` : ''}`;
+            detail.textContent = ` · ${record.state === 'queued' || !record.state ? t.state_queued : record.state}${record.error ? ` · ${record.error}` : ''}`;
             row.append(label, detail);
             listNode.append(row);
         }
@@ -102,14 +105,14 @@
 
     const syncQueue = async () => {
         if (!navigator.onLine) {
-            showStatus('No internet connection. Saved sales remain on this phone.', true);
+            showStatus(t.no_internet, true);
             return;
         }
         const records = (await getAllRecords())
             .filter(record => !offlineSessionId || String(record.session_id) === offlineSessionId)
             .slice(0, 100);
         if (records.length === 0) {
-            showStatus('There are no saved sales to sync.');
+            showStatus(t.nothing_to_sync);
             return;
         }
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -130,8 +133,8 @@
             });
             if (!response.ok) {
                 throw new Error(response.status === 419 || response.status === 401
-                    ? 'Sign in again while online, then reopen offline mode to refresh the secure session.'
-                    : `Server returned ${response.status}; saved sales were kept on this phone.`);
+                    ? t.session_stale
+                    : fmt(t.server_status, { status: response.status }));
             }
             const result = await response.json();
             const outcomes = new Map(result.results.map(item => [item.client_uuid, item]));
@@ -146,15 +149,19 @@
                     await saveRecord({
                         ...record,
                         state: outcome?.status || 'error',
-                        error: outcome?.message || 'No response for this sale.',
+                        error: outcome?.message || t.no_response,
                     });
                     errors++;
                 }
             }
-            showStatus(`${records.length - errors} synchronized${reviewCount ? `; ${reviewCount} sent to Admin review` : ''}${errors ? `; ${errors} retained on this phone because of errors` : ''}.`, errors > 0);
+            showStatus(fmt(t.synced, {
+                count: records.length - errors,
+                review: reviewCount ? fmt(t.synced_review, { count: reviewCount }) : '',
+                errors: errors ? fmt(t.synced_errors, { count: errors }) : '',
+            }), errors > 0);
             await refreshQueue();
         } catch (error) {
-            showStatus(`${error.message || 'Sync failed.'} Saved sales were kept on this phone.`, true);
+            showStatus(fmt(t.sync_failed_kept, { message: error.message || t.sync_failed }), true);
         }
     };
 
@@ -166,10 +173,10 @@
             try {
                 await saveRecord(createRecord(offlineSessionId, saleType, input));
                 form.reset();
-                showStatus('Sale saved on this phone. Sync when internet returns.');
+                showStatus(t.saved_locally);
                 await refreshQueue();
             } catch (error) {
-                showStatus(error.message || 'Could not save this sale locally. Keep this page open and retry.', true);
+                showStatus(error.message || t.save_failed, true);
             }
         });
     });
@@ -194,7 +201,7 @@
                     headers: { 'Accept': 'text/html' },
                 });
                 if (!response.ok || response.url.includes('/login')) {
-                    showStatusNode('The server did not accept this sale. Check your sign-in and Round status; nothing was moved to offline storage.', true);
+                    showStatusNode(t.server_rejected, true);
                     return;
                 }
                 window.location.assign(response.url);
@@ -202,11 +209,11 @@
                 const input = data.get('input');
                 try {
                     await saveRecord(createRecord(form.action.match(/sessions\/(\d+)/)?.[1], data.get('sale_type'), input));
-                    showStatusNode('Connection lost. Sale saved on this phone; sync it when internet returns.', false);
+                    showStatusNode(t.connection_saved, false);
                     form.reset();
                     await refreshQueue();
                 } catch (storageError) {
-                    showStatusNode(storageError.message || 'Connection lost and local storage failed. Keep this page open and copy the input before retrying.', true);
+                    showStatusNode(storageError.message || t.connection_storage_failed, true);
                 }
             } finally {
                 submitButton.disabled = false;
@@ -218,6 +225,6 @@
 
     refreshQueue().catch(error => showStatus(error.message, true));
     window.addEventListener('online', () => {
-        showStatus('Internet connection detected. Sync any saved sales.');
+        showStatus(t.internet_detected);
     });
 })();

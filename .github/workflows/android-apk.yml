@@ -1,0 +1,58 @@
+name: Android APK
+
+# Builds the Agent mobile app so a testable APK comes out of the same push that
+# updates the API. Release signing is not configured here - see mobile/README.md.
+on:
+  workflow_dispatch:
+    inputs:
+      server_url:
+        description: Office VPS address baked into the APK
+        required: false
+        default: ''
+  push:
+    branches: [master, VPS2D3D]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/android-apk.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Debug APK
+    runs-on: ubuntu-latest
+    env:
+      WYA_SERVER_URL: ${{ github.event.inputs.server_url || vars.WYA_SERVER_URL || 'https://wya.example.com' }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.24.5'
+          cache: true
+
+      - name: Install packages
+        run: flutter pub get
+
+      - name: Generate Android project
+        run: flutter create --platforms=android --org com.wya --project-name wya_agent_mobile .
+
+      - name: Analyze Dart sources
+        run: flutter analyze
+
+      - name: Build debug APK
+        run: flutter build apk --debug --dart-define=WYA_SERVER_URL=$WYA_SERVER_URL
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wya-agent-debug-apk
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error

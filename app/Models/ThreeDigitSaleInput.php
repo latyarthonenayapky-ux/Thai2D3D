@@ -24,12 +24,19 @@ class ThreeDigitSaleInput extends Model
         'total_amount',
         'status',
         'reject_reason',
+        'voided_at',
+        'voided_by',
+        'void_reason',
+        'pre_void_status',
+        'pre_void_detail_statuses',
     ];
 
     protected $casts = [
         'number_count' => 'integer',
         'amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'voided_at' => 'datetime',
+        'pre_void_detail_statuses' => 'array',
     ];
 
     public function agentSession(): BelongsTo
@@ -45,6 +52,16 @@ class ThreeDigitSaleInput extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    public function voidedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->status === 'voided';
     }
 
     public function drawAgentSetting(): BelongsTo

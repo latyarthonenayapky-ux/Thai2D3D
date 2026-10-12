@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\InitializeAdminBusiness;
 use App\Services\RoundSettlementCalculator;
 use App\Services\ThreeDigitInputParser;
+use App\Services\ThreeDigitSaleProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -77,6 +78,24 @@ class ThreeDigitSalesTest extends TestCase
         $this->assertSame('NUMBER_LIMIT_3D', $overLimit->reject_reason);
         $this->assertSame(1, ThreeDigitSaleDetail::query()->where('three_digit_sale_input_id', $overLimit->id)->where('reject_reason', 'NUMBER_LIMIT_3D')->count());
         $this->assertSame(0, SaleDetail::query()->count());
+    }
+
+    public function test_3d_sales_are_locked_once_the_round_close_time_has_passed(): void
+    {
+        [, , $round, , $session] = $this->createBusiness();
+        $round->update(['number_limit_3d' => 9, 'close_time' => '00:00:00']);
+
+        try {
+            app(ThreeDigitSaleProcessor::class)->process('123500', $session);
+            $this->fail('Expected a past close time to reject 3D sale processing.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame(
+                'This Round closed at 00:00:00. Sales are locked until the next Round opens.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertSame(0, ThreeDigitSaleInput::query()->count());
     }
 
     public function test_3d_hot_numbers_are_separate_and_are_rejected_before_acceptance(): void
@@ -189,10 +208,10 @@ class ThreeDigitSalesTest extends TestCase
         ]);
         $round = Round::query()->create([
             'admin_id' => $admin->id,
-            'round_date' => '2026-10-07',
+            'round_date' => now('Asia/Yangon')->toDateString(),
             'round_no' => 1,
-            'start_time' => '07:00:00',
-            'close_time' => '09:30:00',
+            'start_time' => '00:00:00',
+            'close_time' => '23:59:59',
             'number_limit' => 500,
             'number_limit_3d' => 100,
             'status' => 'open',

@@ -102,6 +102,40 @@ class SaleProcessorTest extends TestCase
         $this->assertSame(0, SaleInput::query()->count());
     }
 
+    public function test_sales_are_locked_once_the_round_close_time_has_passed(): void
+    {
+        $round = $this->createRound(10);
+        $round->update(['close_time' => '00:00:00']);
+        $operator = $this->createOperator();
+        $session = $this->createSession($round, $operator, 'PASTCLOSE');
+
+        // The scheduler has not flipped the status yet, so the row still reads open.
+        $this->assertSame('open', $round->fresh()->status);
+
+        try {
+            $this->processor->process('121000', $session);
+            $this->fail('Expected a past close time to reject sale processing.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame(
+                'This Round closed at 00:00:00. Sales are locked until the next Round opens.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertSame(0, SaleInput::query()->count());
+    }
+
+    public function test_a_manually_reopened_round_accepts_sales_after_its_close_time(): void
+    {
+        $round = $this->createRound(10);
+        $round->update(['close_time' => '00:00:00']);
+        $operator = $this->createOperator();
+        $session = $this->createSession($round, $operator, 'REOPENED');
+        $round->forceFill(['manual_reopen' => true])->save();
+
+        $this->assertSame('accepted', $this->processor->process('121000', $session)->status);
+    }
+
     public function test_excluded_numbers_are_audited_and_not_counted(): void
     {
         $round = $this->createRound(8);

@@ -66,7 +66,7 @@ function loadOrCreateAppKey(directory) {
 function createRuntimeEnvironment(databasePath, storagePath, bootstrapPath, appKey, appUrl, phpIniScanPath) {
     const environment = {
         ...process.env,
-        APP_NAME: 'Thai2D3D',
+        APP_NAME: 'Winning Yields Always (WYA)',
         APP_ENV: 'local',
         APP_KEY: appKey,
         APP_DEBUG: 'false',
@@ -226,7 +226,7 @@ async function startLocalApp() {
         `127.0.0.1:${port}`,
         '-t',
         path.join(APP_ROOT, 'public'),
-        path.join(APP_ROOT, 'public', 'index.php'),
+        path.join(APP_ROOT, 'server-router.php'),
     ]), {
         cwd: APP_ROOT,
         env: environment,
@@ -238,7 +238,7 @@ async function startLocalApp() {
     serverProcess.once('error', error => console.error('Local PHP server error:', error));
     serverProcess.once('close', code => {
         if (!shuttingDown && app.isReady()) {
-            dialog.showErrorBox('Thai2D3D stopped', `The local app server exited (${code}). See ${path.join(logDirectory, 'server.log')}.`);
+            dialog.showErrorBox('Winning Yields Always (WYA) stopped', `The local app server exited (${code}). See ${path.join(logDirectory, 'server.log')}.`);
             app.quit();
         }
     });
@@ -266,6 +266,7 @@ async function startLocalApp() {
 
 function createWindow(url) {
     mainWindow = new BrowserWindow({
+        icon: path.join(APP_ROOT, 'public', 'images', 'wya-logo.png'),
         width: 1280,
         height: 860,
         minWidth: 900,
@@ -324,7 +325,7 @@ app.whenReady().then(async () => {
         });
     } catch (error) {
         console.error(error);
-        dialog.showErrorBox('Thai2D3D could not start', error.message);
+        dialog.showErrorBox('Winning Yields Always (WYA) could not start', error.message);
         app.quit();
     }
 });

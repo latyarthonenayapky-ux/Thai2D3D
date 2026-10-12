@@ -1,4 +1,4 @@
-# Thai2D3D အသုံးပြုသူလမ်းညွှန်
+# Winning Yields Always (WYA) အသုံးပြုသူလမ်းညွှန်
 
 ဤလမ်းညွှန်သည် Owner, Admin နှင့် Operator များအတွက်ဖြစ်သည်။ App များတွင်
 ၂မျိုးရှိသည်။
@@ -50,10 +50,44 @@ Password ကို ကိုယ်တိုင်သီးသန့်ထား�
 မရွေးပါနှင့်။ Password မေ့သွားလျှင် password reset လင့်ခ်ကို သုံးနိုင်သော်လည်း
 server ပေါ် SMTP email ကို မှန်ကန်စွာ configure လုပ်ထားရမည်။
 
+### Password ပြန်တည်ခြင်း (data မပျက်ဘဲ)
+
+Password မေ့သွားလျှင် app ထဲရှိ **account စာရင်းကို အရင်ကြည့်ပါ** — email ကို
+တစ်ခါတည်း မမှတ်မိဘူးဆိုလည်း account စာရင်းထဲမှ ပြင်ချင်သော account ၏ email ကို
+လေ့လာနိုင်ပါသည်။
+
+- **Windows (folder build)** — `Reset Thai2D3D password.cmd` ကို run ပါ။
+  Account စာရင်းပေါ်လာပြီး ပြင်ချင်သော account ၏ email ရိုက်ထည့်ပြီး၊
+  password အသစ် ၂ ခါ ဖြည့်ပါ (အနည်းဆုံး ၆ လုံး)။ Data များမပျက်ပါ။
+- **Linux (AppImage)** — AppImage ရှိသည့်နေရာတွင် terminal ဖွင့်ပြီး အောက်ပါအတိုင်း
+  အဆင့်ဆင့် run ပါ (data မပျက်ပါ) —
+  ```
+  ./Thai2D3D-1.1.0.AppImage --appimage-extract
+  cd squashfs-root
+  PHP=$(find . -path '*/php/bin/php' -type f | head -1)
+  ART=$(find . -name artisan -type f | head -1)
+  export LD_LIBRARY_PATH="$(dirname "$PHP")/../lib"
+  "$PHP" -c "$HOME/.config/Thai2D3D/php.ini" \
+      -d "extension_dir=$(dirname "$PHP")/../ext" \
+      "$ART" thai2d3d:reset-password --list
+  ```
+  `--list` ဖြင့် account စာရင်းကြည့်ပြီး email သိပြီးလျှင် `--list` ကို
+  မထည့်ဘဲ account email ဖြင့် run ၍ password အသစ် ၂ ခါ ဖြည့်ပါ။
+- **VPS Web App** — server administrator သည် SSH ဖြင့် app folder ထဲသို့ဝင်ပြီး
+  `php artisan thai2d3d:reset-password admin@example.com` ကို run ပါ။
+  `--list` option ဖြင့် account စာရင်းကို ကြည့်နိုင်သည်။ Server ပေါ် SMTP
+  configure လုပ်ထားလျှင် login page ၏ "Forgot password" လင့်ခ်လည်း
+  သုံးနိုင်ပါသည်။
+
+Password ပြင်ပြီးနောက် အဲဒီ account ဖြင့် အရင်က "Keep me signed in" ရွေးထားသော
+device များ အလိုအလျောက် logout သွားပါမည်။
+
 ## 2. Role နှင့် အကောင့်တာဝန်
 
 - **Owner** — Admin account ဖန်တီး/စီမံသည်။ Controlled testing အတွက် 7 ရက်
-  သက်တမ်းရှိ Temp Admin ဖန်တီးနိုင်သည်။
+  သက်တမ်းရှိ Temp Admin ဖန်တီးနိုင်သည်။ Setting မီနူးတွင် Account users၊ Display၊
+  Language၊ Data Backup နှင့် Activity Log တို့ကိုသာ ဖွင့်ထားပြီး business
+  settings (Round/Draw/Agent/payout) များကို ဝင်ရောက်၍ မရပါ။
 - **Admin** — မိမိ business အတွင်း Operator နှင့် Agent၊ Round/Draw settings,
   Hot Numbers, results, settlements နှင့် reports ကို စီမံသည်။
 - **Operator** — Admin ကဖန်တီးပေးသော account ဖြစ်သည်။ မိမိခွင့်ပြုထားသော
@@ -98,8 +132,9 @@ Agent တစ်ခုကို တစ်ခုသော Round/Draw အတွင�
 မစတင်ရသေးသော Round များကိုသာ သက်ရောက်သည်။
 
 2D payout multiplier ကို တစ်ကြိမ်သတ်မှတ်ပြီး ပြောင်းလိုသည့်အခါမှ ပြင်ပါ။
-Hot Numbers နှင့် ပိတ်မည့် 2D value များကို သက်ဆိုင်ရာ Round ၏ Sale Entry ထဲတွင်
-ရွေးထည့်နိုင်သည်။ သတ်မှတ်ပိတ်ချိန်ကျော်ပြီး Round ကို **Reopen** လုပ်ထားလျှင်
+Hot Numbers နှင့် ပိတ်မည့် 2D value များကို **2D Sale Entry** ဝင်သည်နှင့် ပေါ်သော
+**Sale Entry · 2D Round setup** စာမျက်နှာရှိ **Round limits · all Agents** အပိုင်းတွင်
+ရွေးထည့်နိုင်သည်။ Sale Input စာမျက်နှာတွင် ထို limit များကို ဖတ်ရုံသာ ပြသည်။ သတ်မှတ်ပိတ်ချိန်ကျော်ပြီး Round ကို **Reopen** လုပ်ထားလျှင်
 **Setting → Upcoming Rounds and Hot Numbers** အပိုင်းရှိ Round စာရင်းတွင်
 **Manually reopened** ဟု ပြမည်။ ထို Round အတန်း၏ **Reclose reopened Round** ကို
 နှိပ်၍ အချိန်မရွေး ချက်ချင်းပြန်ပိတ်နိုင်သည်။ ပိတ်ပြီးသည်နှင့် သက်ဆိုင်ရာ Agent
@@ -119,8 +154,14 @@ sessions များ read-only ဖြစ်ပြီး scheduler က ထို
 - **3D Number Limit** သည် Draw တစ်ခုအတွင်း Agent အားလုံး၏ accepted number
   အရေအတွက်ကို စုပေါင်းကန့်သတ်သည်။
 - **Amount Limit** သည် Agent ၏ sales ပမာဏကို စောင့်ကြည့်ရန် threshold သာဖြစ်ပြီး
-  sale ကို reject လုပ်သည့် limit မဟုတ်ပါ။ Sale Entry တွင် Agent တစ်ဦးချင်း၏
-  Amount Limit နှင့် အဲဒီ Agent ၏ number တစ်ခုချင်း excess ကိုကြည့်နိုင်သည်။
+  sale ကို reject လုပ်သည့် limit မဟုတ်ပါ။ **Sale Entry · 2D Round setup** စာမျက်နှာ၏
+  **Round limits · all Agents** အပိုင်းတွင် Agent **အားလုံး၏** Amount Limit ကို
+  တစ်ပြိုင်နက် မြင်နိုင်/ပြင်နိုင်ပြီး၊ Sale Input စာမျက်နှာ ညာဘက်ကော်လံတွင် Agent
+  အားလုံး၏ limit ကျော် number များကို excess အများဆုံးမှစီ ညာဘက်အပေါ်တွင် ကြည့်နိုင်သည်။
+  **Agent Statement** တွင်သာ ရွေးထားသော Agent တစ်ဦးချင်း၏ limit ကျော်
+  number များကို ပြသည်။ ထိုစာရင်းကို **Copy · No=Excess** ခလုတ်ဖြင့်
+  `No=Excess` (ဥပမာ `17=35000`) format ဖြင့် clipboard သို့ copy လုပ်ကာ
+  သက်ရောက်ရာနေရာတွင် paste လုပ်နိုင်သည်။
 - **Hot Number** နှင့်ကိုက်ညီသော number ကို reject လုပ်သည်။ Rule တွင် အခြား
   valid number များပါလျှင် အသေးစိတ် status ကို saved sales မှ စစ်ဆေးပါ။
 
@@ -130,28 +171,48 @@ sessions များ read-only ဖြစ်ပြီး scheduler က ထို
    **Menu → Agent Statement** မှ per-Agent စာရင်းကို ဖွင့်နိုင်သည်။ Admin ၏
    Live of items sold သည် ရွေးထားသော Round အတွင်း Agent အားလုံး၏ accepted sale
    များကို စုပေါင်းပြသည်။
-2. 2D အတွက် ဖွင့်ထားသော Round ကိုရွေးပါ။ 3D အတွက် လက်ရှိ Draw ကိုရွေးပါ။
+2. **2D Sale Entry** ကိုနှိပ်လျှင် အရင်ဆုံး **Sale Entry · 2D Round setup** စာမျက်နှာသို့
+   ရောက်သည်။ ထိုနေရာတွင် **Round** ကိုရွေးပြီး **Number Limit** (ပိတ်ထားသော 00–99)၊
+   **Hot Numbers** နှင့် **Amount Limit · every Agent** တို့ကို သတ်မှတ်ကာ
+   **Continue to Sale Input** နှိပ်ပါ။ မိမိဖွင့်ထားသော session ရှိပြီးသားဖြစ်လျှင်
+   **2D Sale Entry** နှိပ်သည်နှင့် Sale Input စာမျက်နှာသို့ တိုက်ရိုက်ရောက်ပြီး
+   Round setup ကို ညာဘက်ရှိ **Round setup · limits** link မှ ပြန်ဝင်နိုင်သည်။
+   ဖွင့်ထားသော Round မရှိ (သို့) Agent အားလုံး အခြားအကောင့်လက်တွင် ရှိနေလျှင်
+   Sale Entry အစား အကြောင်းကြားစာမျက်နှာပေါ်မည်။
+   3D အတွက် လက်ရှိ Draw ကိုရွေးပါ။
    Draw day သည် လစဉ် 1/16 ရက်ဖြစ်ပြီး Yangon time 00:00 မှ 15:30 အထိသာ sales
    ဖွင့်သည်။
-3. 2D Sale Entry တွင် Admin သည် Sale input အပေါ်က Agent dropdown မှ မိမိ၏
-   business အတွင်းရှိ active Agent အားလုံးကို ရွေးနိုင်သည်။ Agent ကို Operator
-   တစ်ဦးက အဲဒီ Round အတွက် claim လုပ်ပြီးသားဆိုလျှင် dropdown ထဲတွင်
-   unavailable ဟုပြသပြီး Admin က ဝင်ရိုက်၍မရပါ။ မ claim ရသေးသော Agent ကို
-   ရွေးလိုက်လျှင် Admin အတွက် အဲဒီ Round ၌ ချက်ချင်း claim လုပ်ပေးမည်။
-   **Save (F1)** ပြီးလျှင် dropdown မှ အခြားရနိုင်သော Agent သို့ ပြောင်း၍
-   ဆက်ရောင်းနိုင်သည်။ Operator သည် မိမိသို့ claim လုပ်ထားသော Agent များကိုသာ
-   ရွေးနိုင်သည်။ 3D တွင်လည်း Agent/Draw ကို ပထမ claim လုပ်သည့် account က
-   ဆက်လက်ပိုင်ဆိုင်သည်။
+3. **Sale Input စာမျက်နှာရောက်မှ Agent ကို dropdown မှရွေးပါ။** Agent မရွေးခင်
+   input box ကို မြင်နေရသော်လည်း သော့ခတ်ထားသည်။ **Select** နှိပ်သည်နှင့် ထို
+   Agent ကို claim/reopen လုပ်ကာ input box ပေါ်ပြီး sale ရိုက်နိုင်သည်။ ထို dropdown
+   တွင် Round ၏ Agent အားလုံးပါဝင်ပြီး အခြားအကောင့်က ကိုင်ထားသော Agent ကို
+   **In use by …** ဟုပြပြီး ရွေး၍မရပါ။ Sale Input စာမျက်နှာအတွင်း **Round**
+   dropdown မရှိတော့ပါ — Round ပြောင်းလိုလျှင် **Round setup · limits** link ကို
+   သုံးပါ။ Admin သည် Round setup တွင် Agent တစ်ဦးချင်း Amount Limit ကို
+   ထည့်ပြီး **Save** နှိပ်ကာ ပြင်ဆင်နိုင်သည်။ Operator သည် မိမိ business
+   ရှိ ရွေးချယ်ရန်ရသော Agent များကိုသာ dropdown မှ ရွေးနိုင်သည်။ 3D တွင်လည်း
+   Agent/Draw ကို ပထမ
+   claim လုပ်သည့် account က ဆက်လက်ပိုင်ဆိုင်သည်။
 4. Input box ထဲ sale စာသားရိုက်ပြီး **Enter** နှိပ်ပါ။ အဲဒါက browser ထဲရှိ
    **Recent Sales** draft စာရင်းထဲသာ ထည့်သေးသည်။
 5. Draft များကိုစစ်ပြီး **Save (F1)** နှိပ်ပါ။ အဲဒီအခါမှ server/database ထဲ
    ပို့သွားမည်။ မအောင်မြင်သော draft ကို error message နှင့် ပြန်စစ်ပြီးမှ retry
    လုပ်ပါ။
 6. **List of items sold** တွင် လက်ခံထားသော number နှင့် စုစုပေါင်း amount
-   ပေါ်မည်။ Amount အများဆုံးမှ အနည်းဆုံးအလိုက် စီထားသည်။
+   ပေါ်မည်။ Amount အများဆုံးမှ အနည်းဆုံးအလိုက် စီထားသည်။ ညာဘက်ကော်လံတွင်
+   **Above Amount Limit** အပိုင်းအပေါ် (2D သည် Round အတွင်း Agent အားလုံး၏
+   limit ကျော် number များ — No./Agent/Excess)၊ **Top sales · high → low** အောက်တွင်
+   အပေါ်အောက်ချိန်ထား ပြသည်။ **Agent Statement** တွင် Above Amount Limit သည်
+   ရွေးထားသော Agent တစ်ဦးချင်းအတွက်သာ ဖြစ်သည်။
+7. စာရင်းအထက်ပိုင်း (Rejected numbers နှင့် Log out ကြား ညာဘက်ဒေါင့်) ရှိ
+   **Copy · No=Excess** ခလုတ်ကို နှိပ်လျှင် Above Amount Limit စာရင်းတစ်ခုလုံး
+   clipboard ထဲသို့ ရောက်ပြီး **`No=Excess`** format (တစ်ကြောင်းလျှင် တစ် number,
+   ဥပမာ `17=35000`) ဖြင့် သက်ရောက်ရာနေရာတွင် paste လုပ်နိုင်သည်။ Save (F1) ပြီး
+   တိုင်း အသစ်တန်ဖိုးများပါ ထည့်ပေးသည်။ limit ကျော် number မရှိလျှင်
+   "nothing to copy" ဟုသာ ပြမည်။
 
 Keyboard shortcut များ: `Enter` = draft ထဲထည့်, `F1` = Save, `F2` = Agent
-selector, `F3` = input box.
+dropdown သို့ focus, `F3` = input box.
 Desktop 2D Sale Entry တွင် စာလုံးများကို အလိုအလျောက် uppercase ပြောင်းပြီး
 ရိုက်သည့် `*` ကို `R` အဖြစ် သုံးသည်။ Legacy `*` list ကို paste လုပ်လျှင် မပြောင်းပါ။
 
@@ -255,18 +316,61 @@ browser profile ပြောင်းခြင်းကြောင့် queue 
 ပြသသည်ကို အတည်ပြုပြီး server-side report မှာ တူညီကြောင်း စစ်မှသာ online data
 ထဲဝင်သည်ဟု ယူဆပါ။
 
-## 8. Theme, font size, clock နှင့် notification
+## 8. Setting မီနူး — ဘာသာစကား၊ အပြင်အဆင်၊ အသိပေးချက်နှင့် လုံခြုံရေး
 
-Header control မှ **System / Light / Dark** theme နှင့် font size ရွေးနိုင်သည်။
-ရွေးချယ်မှုသည် browser ၏ local storage ထဲတွင်သိမ်းထားပြီး ထို browser/device
-အတွက်သာဖြစ်သည်။ Header clock/date သည် Yangon time ကိုပြသည်။ Active Round
-ပိတ်ချိန်နီးလာလျှင် countdown အရောင်ပြောင်းသည်။
+Header ရှိ **Setting** နှင့် **Menu** တို့တွင် အကြောင်းအရာများကို account အခွင့်အာဏာအလိုက်
+ခွဲပြထားသည်။ Dashboard အောက်မှာ အတိုကောက်ခလုတ်များ (Round schedule၊ Results and
+settlements၊ Period summaries၊ Enable phone alerts) ကို ဖယ်ပြီး Setting/Menu ထဲသို့
+ရွှေ့ထားသည်။ Dashboard တွင် live statistics နှင့် account စီမံခန့်ခွဲမှု card များသာ
+ကျန်သည်။
 
-Admin live dashboard သည်ဖွင့်ထားစဉ် update လုပ်ပြီး browser notification သို့မဟုတ်
-audio alert သည် user permission ပေးထားမှ အလုပ်လုပ်မည်။ App/browser ပိတ်ထားချိန်
-push notification မရပါ။
+- **Application settings / Add Agent / Sale Entry behaviour / Notifications / Security**
+  တို့သည် Admin တွင်သာ ပေါ်သည်။ Desktop Owner (install ပထမဆုံးဖွင့်သည့် account)
+  သည် business settings စာမျက်နှာကို ဝင်ခွင့်မရသဖြင့် ဤအခွင့်အာဏာများကို မပြတော့ပါ။
+- **Add Operator**၊ **Display**၊ **Language**၊ **Data Backup**၊ **Activity Log**
+  တို့ကို Owner နှင့် Admin နှစ်မျိုးလုံး အသုံးပြုနိုင်သည်။
+- **Language (ဘာသာစကား)** ဖြင့် English / မြန်မာ ရွေးနိုင်သည်။ ရွေးထားသည့် ဘာသာစကားသည်
+  account ထဲ သိမ်းထားပြီး ထို account ဖြင့် ဝင်သည့်နေရာအားလုံး (navigation၊ Dashboard၊
+  Settings၊ Data Backup၊ Activity log) တွင် အသုံးပြုသည်။ Sale Entry နှင့် Report
+  စာမျက်နှာများသည် ယခင်စာသားအတိုင်း ဖြစ်သည်။
+- **Display (အပြင်အဆင်)** တွင် theme (System/Light/Dark)၊ စာလုံးအရွယ်၊ နာရီပုံစံ
+  (၂၄/၁၂ နာရီ) နှင့် ငွေကြေးတံဆိပ် (currency label) ရွေးနိုင်သည်။ theme နှင့် စာလုံးအရွယ်
+  သည် browser/device တစ်ခုချင်းစီတွင်သာ သိမ်းသည်။ နာရီပုံစံနှင့် ငွေကြေးတံဆိပ်သည်
+  account ထဲ သိမ်းပြီး Report များတွင်ပါ သက်ရောက်သည်။
+- **Notifications** သည် Admin live dashboard ၏ pending review alert ကို ဖွင့်/ပိတ်
+  သတ်မှတ်သည်။ browser notification/audio alert အတွက် permission လိုပြီး
+  app/browser ပိတ်ထားချိန် push notification မရပါ။
+- **Security** တွင် idle minutes (0 = မထုတ်ပယ်) သတ်မှတ်နိုင်သည်။ သတ်မှတ်ချိန်အထိ
+  လှုပ်ရှားမှုမရှိလျှင် စနစ်က အလိုအလျောက် ထုတ်ပယ်သည်။
 
-## 9. Data ကိုကာကွယ်ခြင်း
+**Menu** တွင် Round schedule၊ Agents and limits၊ Hot Numbers၊ Results and settlements၊
+3D Draw settings၊ Period summaries၊ Pending Review၊ Agent Statement တို့ကို Admin တွင်
+ပြပြီး နောက်ဆုံးအဖြစ် **Manual (လက်စွဲ)** ကို အမြဲထားသည်။ Operator အတွက် Menu ထဲတွင်
+Display နှင့် Language ကို ထည့်ပြသည်။
+
+Header clock/date သည် Yangon time ကို ပြသည်။ Active Round ပိတ်ချိန်နီးလာလျှင်
+countdown အရောင်ပြောင်းသည်။
+
+## 9. Data Backup၊ Restore နှင့် data ကိုကာကွယ်ခြင်း
+
+**Setting → Data Backup (ဒေတာ အရန်သိမ်း)** တွင် database အားလုံးကို text dump ဖိုင်အဖြစ်
+download လုပ်နိုင်ပြီး၊ ရှိပြီးသား ဖိုင် (သို့မဟုတ် upload ပြန်တင်သည့် ဖိုင်) မှတစ်ဆင့်
+ပြန်သွင်းနိုင်သည်။
+
+- ဖိုင်ထိပ်တွင် `WYA_BACKUP_V1` နှင့် `engine=` (sqlite / mysql) တံဆိပ်ပါသည်။ SQLite
+  (Windows/Linux desktop) နှင့် MariaDB/MySQL (VPS) နှစ်မျိုးလုံးတွင် `mysqldump`
+  ကိရိယာမလိုဘဲ အလုပ်လုပ်သည်။
+- Restore မတိုင်မီ လက်ရှိ database ကို အစိုးရံ backup အဖြစ် အလိုအလျောက် သိမ်းထားသည်။
+  ထို့ကြောင့် Restore ပြီးလျှင် login ပြန်ဝင်ရပြီး အစိုးရံဖိုင်အမည်ကို status တွင်ပြသည်။
+- `engine=` မကိုက်လျှင် (ဥပမာ VPS dump ကို desktop တွင်ပြန်သွင်းမည်) ငြင်းပယ်သည်။
+- ဖိုင်နာမည်ပုံစံ `wya-backup-YYYYMMDD-HHMMSS-xxxxxx.sql` ကိုသာ လက်ခံပြီး နာမည်အတုဖြင့်
+  folder ပြင်ထွက်ဖတ်ခြင်းကို ကာကွယ်ထားသည်။
+- အခွင့်အာဏာ: Admin နှင့် desktop Owner သာ။ Restore အတွက် စာမျက်နှာထဲက confirm
+  checkbox ကို မဖြစ်မနေ check ရမည်။
+
+**Activity Log** (Setting) တွင် အကောင့်ဝင်ရောက်ခြင်း၊ ဆက်တင်ပြောင်းလဲခြင်း၊ backup
+လုပ်ဆောင်ချက်နှင့် offline sale ဆုံးဖြတ်ချက်များကို ရက်စွဲ/အကောင့်/IP ဖြင့် စစ်ဆေးနိုင်ပြီး
+CSV အဖြစ် ဒေါင်းလုဒ်ဆွဲနိုင်သည်။
 
 - AppImage အသုံးပြုလျှင် app ကိုပိတ်ပြီး `~/.config/Thai2D3D/` folder တစ်ခုလုံးကို
   လုံခြုံသောနေရာသို့ copy လုပ်ပါ။ Live database ဖိုင်ကို app ဖွင့်နေစဉ် copy

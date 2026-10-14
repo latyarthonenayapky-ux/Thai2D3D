@@ -49,8 +49,10 @@ $maxAdmins = (int) ($options['max_admins'] ?? prompt('Max admins [1]: ', '1'));
 $maxAgents = (int) ($options['max_agents'] ?? prompt('Max agents [50]: ', '50'));
 $paymentRef = trim((string) ($options['payment_ref'] ?? prompt('Payment reference: ', '')));
 
-$issuedAt = date('Y-m-d');
-$expiresAt = date('Y-m-d', strtotime($issuedAt.' +'.$years.' year'));
+$issuedAt = trim((string) ($options['issued'] ?? date('Y-m-d')));
+// A renewal is often dated from the old expiry so the customer does not lose
+// days; without an explicit date the term is counted from today.
+$expiresAt = trim((string) ($options['expires'] ?? date('Y-m-d', strtotime($issuedAt.' +'.$years.' year'))));
 
 try {
     $licenceString = Licence::sign([
@@ -73,7 +75,9 @@ try {
     exit(1);
 }
 
-append_ledger([
+$ledgerPath = trim((string) ($options['csv'] ?? ledger_path()));
+
+append_ledger($ledgerPath, [
     'id' => $verified->id,
     'email' => $verified->email,
     'plan' => $verified->plan,
@@ -85,7 +89,7 @@ append_ledger([
 fwrite(STDOUT, "\nLicence for {$verified->email} ({$verified->plan}) valid until {$verified->expiresAt}\n\n");
 fwrite(STDOUT, $licenceString."\n\n");
 fwrite(STDOUT, "Paste this into the customer's setup screen or Settings > Licence.\n");
-fwrite(STDOUT, "Recorded in ".ledger_path()."\n");
+fwrite(STDOUT, 'Recorded in '.$ledgerPath."\n");
 
 exit(0);
 
@@ -138,9 +142,8 @@ function load_secret_key(string $path): string
     return $decoded;
 }
 
-function append_ledger(array $row): void
+function append_ledger(string $path, array $row): void
 {
-    $path = ledger_path();
     $isNew = ! is_file($path);
     $handle = fopen($path, 'a');
 
@@ -194,10 +197,13 @@ function usage(): string
       --id            licence id            (default WYA-<year>-<random>)
       --plan          plan name             (default standard)
       --years         term in years         (default 1)
+      --issued        issued date Y-m-d     (default today)
+      --expires       expiry date Y-m-d     (default issued + term)
       --max-admins    admin seats           (default 1)
       --max-agents    agent seats           (default 50)
       --payment-ref   ledger note           (default empty)
       --key           private key file      (default ~/.wya-licence-key/secret-key.txt)
+      --csv           ledger file           (default issued-licences.csv beside this script)
 
     TEXT;
 }

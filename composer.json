@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "Winning Yields Always(WYA)",
+    "name": "wya/thai2d3d",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Winning Yields Always (WYA) — proprietary 2D/3D sales, agent, result and settlement application.",
+    "keywords": ["wya", "thai2d3d", "2d", "3d", "proprietary"],
     "license": "proprietary",
     "require": {
         "php": "^8.2",

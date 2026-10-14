@@ -1,0 +1,94 @@
+WINNING YIELDS ALWAYS (WYA) — PROPRIETARY LICENCE
+
+Copyright (c) 2026 Wai Yan Aung, trading as Winning Yields Always (WYA)
+
+All rights reserved. / မူပိုင်ခွင့်အားလုံး ကာကွယ်ထားသည်။
+
+
+1. WHAT THIS IS / ဒါ ဘာလဲ
+
+This repository holds source code belonging to Winning Yields Always (WYA), a 2D/3D
+sales, agent, result and settlement application. The code is hosted publicly for
+visibility only. **It is not open-source software.** Publishing the files here grants
+nobody any right to use, copy, modify or redistribute them beyond what section 2
+allows.
+
+
+2. WHAT YOU MAY AND MAY NOT DO / ခွင့်ပြုချက်နှင့် မခွင့်ပြုချက်
+
+You may read this code and study it. Because the repository is hosted on GitHub, you
+also have the rights GitHub's Terms of Service grant to anyone viewing public
+repositories — chiefly, the right to view it and to fork it on the GitHub platform.
+
+You may NOT, without prior written permission from the copyright owner:
+
+  a) use this code, or any part of it, in your own product, service, website or
+     internal tooling, whether commercial or non-commercial;
+  b) copy, distribute, sublicense, sell, host elsewhere, or mirror it outside GitHub;
+  c) remove, alter or conceal any copyright, licence or attribution notice, including
+     this file;
+  d) present this code, or work derived from it, as your own;
+  e) use the "Winning Yields Always", "WYA" or "Thai2D3D" names, marks or branding.
+
+No patent licence, implied licence, or fair-use extension is granted by anything in
+this repository. Any permission not expressly written here is reserved.
+
+
+3. COMMERCIAL AND DEPLOYMENT USE / စီးပွားရေး အသုံးပြုခွင့်
+
+WYA is licensed to customers individually, under a written agreement covering scope,
+term, machines or installations, and support. Nothing in this file constitutes such an
+agreement. To request one, use the contact details in section 7.
+
+
+4. CONTRIBUTIONS / ကူညီပံ့ပိုးမှု
+
+Unsolicited pull requests, patches and code contributions are **not accepted** for
+this repository and will be closed without being merged. If you would like to
+contribute, contact the copyright owner first and sign a written contributor agreement
+before submitting any code. This keeps the ability to license, relicense or close the
+source in the future with a single counterparty's consent.
+
+Ideas, issue reports and feedback you choose to post publicly may be considered
+without obligation, but no code licence is transferred by posting them.
+
+
+5. SECURITY REPORTS / လုံခြုံရေး တင်ပြချက်
+
+If you believe you have found a vulnerability in WYA, report it privately to the email
+in section 7 rather than opening a public issue. Do not test against installations you
+do not own or have written permission to assess.
+
+
+6. THIRD-PARTY COMPONENTS / တတိယပုဂ္ဂိုလ် ဆော့ဖ်ဝဲ
+
+This project is built on the Laravel framework and other open-source packages, which
+remain under their own licences — Laravel itself is MIT-licensed. Those licences govern
+those components only, never WYA's own source code. When WYA ships built artifacts, the
+attribution notices for bundled dependencies are published alongside them in that
+release.
+
+
+7. CONTACT / ဆက်သွယ်ရန်
+
+  Copyright owner : Wai Yan Aung, trading as Winning Yields Always (WYA)
+  Licensing email : waiyanaung.atm@gmail.com
+
+Include the repository name and commit hash you are asking about.
+
+
+8. NO WARRANTY / အာမခံ မပေးခြင်း
+
+THE CODE IN THIS REPOSITORY IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+A PARTICULAR PURPOSE AND NON-INFRINGEMENT. THE COPYRIGHT OWNER IS NOT RESPONSIBLE FOR
+ANY DAMAGE ARISING FROM ITS USE OR INABILITY TO USE IT.
+
+
+9. LAW AND JURISDICTION / ဥပဒေနှင့် တရားမှု
+
+This licence is governed by the laws of the Republic of the Union of Myanmar. The
+courts of Yangon Region have jurisdiction over any dispute arising from it.
+
+
+Version 1.0 · 2026-10-14 · Source: LICENSE.txt

@@ -46,16 +46,20 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --org com.wya --project-name wya_agent_mobile .
 
-      # The generated project carries the raw project name and blocks cleartext,
-      # so the launcher would read "wya_agent_mobile" and a VPS without HTTPS yet
-      # could not be reached at all.
+      # The generated project carries the raw project name, blocks cleartext and
+      # has no INTERNET permission (Flutter only adds it to the debug/profile
+      # manifests), so a release APK could not open a single socket.
       - name: Label the app and allow a plain-HTTP VPS
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
           sed -i 's|android:label="[^"]*"|android:label="WYA Agent"|' "$MANIFEST"
           sed -i 's|<application|<application\n        android:usesCleartextTraffic="true"|' "$MANIFEST"
+          if ! grep -q 'permission.INTERNET' "$MANIFEST"; then
+            sed -i 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.INTERNET"/>|' "$MANIFEST"
+          fi
           grep -q 'WYA Agent' "$MANIFEST"
           grep -q 'usesCleartextTraffic' "$MANIFEST"
+          grep -q 'permission.INTERNET' "$MANIFEST"
 
       # lib/ has never been compiled, so a lint complaint must not be what stops
       # an office from getting its APK. The annotation is still printed in the log.

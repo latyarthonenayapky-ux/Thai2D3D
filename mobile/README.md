@@ -56,6 +56,31 @@ For a VPS without HTTPS yet, allow cleartext traffic in
 <application android:usesCleartextTraffic="true" ...>
 ```
 
+The same file must also declare the network permission — `flutter create` only
+adds it to the debug/profile manifests, so a release APK built without it cannot
+open a socket and sign-in fails with "Cannot reach the office server":
+
+```xml
+<uses-permission android:name="android.permission.INTERNET"/>
+```
+
+## If sign-in says "Cannot reach the office server"
+
+That message is the app's catch-all for any network-level failure, so the office
+address is the first thing to check:
+
+1. Use the domain, not the IP — `https://wya2d3d.site`. Typing `118.27.150.3`
+   fails the TLS certificate check even though the server itself answers.
+2. A bare `wya2d3d.site` is treated as `https://wya2d3d.site` by the app.
+3. The phone must have working internet (Wi‑Fi with a captive portal, or no data
+   credit, blocks it just as effectively as a dead server).
+4. Missing `INTERNET` permission in the installed APK (older builds). Reinstall
+   the current APK published under **Settings → Agent mobile app (APK)**.
+
+From the office machine this proves itself: `curl -o /dev/null -w '%{http_code}\n'
+https://wya2d3d.site/up` should print `200`, and `POST /api/v1/auth/login` with
+`Accept: application/json` should print `422`.
+
 ## Sign in
 
 The office issues credentials under **Settings → Agents → Mobile app access**:

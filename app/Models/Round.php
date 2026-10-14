@@ -15,6 +15,8 @@ class Round extends Model
         'number_limit' => 'integer',
         'number_limit_3d' => 'integer',
         'number_limits' => 'array',
+        'amount_limit_all' => 'decimal:2',
+        'amount_limit_all_3d' => 'decimal:2',
         'opened_at' => 'datetime',
         'manual_reopen' => 'boolean',
         'manually_closed' => 'boolean',
@@ -29,6 +31,9 @@ class Round extends Model
         'number_limit',
         'number_limit_3d',
         'number_limits',
+        'amount_limit_all',
+        'amount_limit_all_3d',
+        'amount_limit_all_mode',
         'status',
         'opened_at',
         'manual_reopen',
@@ -54,6 +59,11 @@ class Round extends Model
     public function agentRoundSettings(): HasMany
     {
         return $this->hasMany(AgentRoundSetting::class);
+    }
+
+    public function operatorRoundSettings(): HasMany
+    {
+        return $this->hasMany(OperatorRoundSetting::class);
     }
 
     public function result(): HasOne

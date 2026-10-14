@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AmountLimitExceededException;
 use App\Models\AgentSession;
 use App\Models\OfflineSyncReview;
 use App\Models\SaleDetail;
@@ -115,6 +116,8 @@ class OfflineSaleSyncService
                     'status' => 'invalid',
                     'message' => $exception->getMessage(),
                 ];
+            } catch (AmountLimitExceededException $exception) {
+                return $this->createReview($operator, $session, $record, $exception->getMessage());
             } catch (RuntimeException $exception) {
                 if (str_contains($exception->getMessage(), 'Round is not open')
                     || str_contains($exception->getMessage(), 'session is not open')) {

@@ -73,7 +73,7 @@ class OperatorAgentClaimTest extends TestCase
         $this->recordSale($otherSession, $otherOperator, [
             ['90', '99000.00', 'accepted', false],
         ]);
-        app(ThreeDigitSaleProcessor::class)->process('1231000', $lowerSession);
+        app(ThreeDigitSaleProcessor::class)->process('123100', $lowerSession);
 
         $this->actingAs($admin)
             ->get(route('dashboard'))
@@ -120,9 +120,11 @@ class OperatorAgentClaimTest extends TestCase
             ->assertOk()
             ->assertSee('Sale input');
 
+        // The Admin reads the Agent's own sales but never types into them.
         $this->actingAs($admin)
             ->get(route('operator.sales.show', $session))
-            ->assertNotFound();
+            ->assertOk()
+            ->assertSee('disabled');
         $this->post(route('operator.sales.store', $session), ['input' => '121000'])
             ->assertNotFound();
 

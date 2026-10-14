@@ -153,15 +153,26 @@ sessions များ read-only ဖြစ်ပြီး scheduler က ထို
   စာရင်းထဲရှိ value များသာ reject ဖြစ်ပြီး sale အရေအတွက်ကို မကန့်သတ်ပါ။
 - **3D Number Limit** သည် Draw တစ်ခုအတွင်း Agent အားလုံး၏ accepted number
   အရေအတွက်ကို စုပေါင်းကန့်သတ်သည်။
-- **Amount Limit** သည် Agent ၏ sales ပမာဏကို စောင့်ကြည့်ရန် threshold သာဖြစ်ပြီး
-  sale ကို reject လုပ်သည့် limit မဟုတ်ပါ။ **Sale Entry · 2D Round setup** စာမျက်နှာ၏
-  **Round limits · all Agents** အပိုင်းတွင် Agent **အားလုံး၏** Amount Limit ကို
-  တစ်ပြိုင်နက် မြင်နိုင်/ပြင်နိုင်ပြီး၊ Sale Input စာမျက်နှာ ညာဘက်ကော်လံတွင် Agent
-  အားလုံး၏ limit ကျော် number များကို excess အများဆုံးမှစီ ညာဘက်အပေါ်တွင် ကြည့်နိုင်သည်။
-  **Agent Statement** တွင်သာ ရွေးထားသော Agent တစ်ဦးချင်း၏ limit ကျော်
-  number များကို ပြသည်။ ထိုစာရင်းကို **Copy · No=Excess** ခလုတ်ဖြင့်
+- **Amount Limit** သည် မိမိ ပေးလျှောက်နိုင်သော ငွေပမာဏကို ကြိုတင်မှတ်ထားသည် ဖြစ်ပြီး
+  tier ၃ ထပ် ရှိသည် — **Agent ဦးချင်း**၊ **Operator ဦးချင်း** (သူကိုင်တွယ်သော Agent
+  အားလုံးပေါင်း)၊ **Round တစ်ခုလုံး** (Agent + Operator အားလုံးပေါင်း)။ Tier တစ်ခုချင်း
+  စီတွင် mode နှစ်ခုရှိသည် — **Warn** (ပုံသေ: ကျော်လွန်သော sale ကို လက်ခံသိမ်းပြီး
+  Amount နှင့် alert bar ကို အနီရောင်ပြသည်)၊ **Block** (ကျော်မည့် sale ကို ငြင်းဆန်ပြီး
+  ဘာမှ မသိမ်းတော့ပါ; offline/ဖုန်း upload သည် Admin review queue သို့ ရောက်သည်)။
+  Settings → **Amount Limits** တွင် Round/Agent/Operator တစ်ခုချင်းစီ၏ limit နှင့်
+  mode ကို ပြင်ဆင်နိုင်သည်။ Sale Entry ledger ၌ **Round limits · all Agents** အပိုင်းတွင်
+  Agent **အားလုံး၏** Amount Limit ကို တစ်ပြိုင်နက် မြင်နိုင်/ပြင်နိုင်ပြီး၊ ညာဘက်ကော်လံတွင်
+  Agent အားလုံး၏ limit ကျော် number များကို excess အများဆုံးမှစီ ပြသည်။
+  **Agent Statement** တွင်သာ ရွေးထားသော Agent တစ်ဦးချင်း၏ limit ကျော် number များကို ပြသည်။
+  ထိုစာရင်းကို **Copy · No=Excess** ခလုတ်ဖြင့်
   `No=Excess` (ဥပမာ `17=35000`) format ဖြင့် clipboard သို့ copy လုပ်ကာ
   သက်ရောက်ရာနေရာတွင် paste လုပ်နိုင်သည်။
+- **Admin Sale Entry · Sales by Agent** — ဖုန်း (သို့) office မှ Agent ထည့်သွင်းသော
+  အရောင်းများသည် Admin ၏ Sale Entry ထဲသို့ တိုက်ရိုက်ရောက်ပြီး **Agent ခေါင်းစဉ်အလိုက်**
+  (Sub Operator အတိုင်း) စာရင်းပြသည်။ တစ်ကြောင်းစီတွင် Agent code/နာမည်၊ ကိုင်တွယ်သူ၊
+  accepted number အရေအတွက်၊ accepted amount ပြပြီး **Open** နှိပ်လျှင် ထို Agent ၏
+  Agent Statement ကို ဖတ်ရုံသာ (read-only) မြင်နိုင်သည်။ Admin က Operator လက်ထဲရှိ Agent
+  အတွင် sale အသစ် ထည့်၍ မရပါ — ထည့်ခွင့်သည် ကိုင်တွယ်သူ (Handler) တစ်ဦးထဲသာ။
 - **Hot Number** နှင့်ကိုက်ညီသော number ကို reject လုပ်သည်။ Rule တွင် အခြား
   valid number များပါလျှင် အသေးစိတ် status ကို saved sales မှ စစ်ဆေးပါ။
 
@@ -269,8 +280,9 @@ Sale Entry history တွင် `accepted`, `rejected`, `excluded` status နှ
 reject reason များကို ကြည့်ပါ။ 2D Number Limit စာရင်းထဲရှိ value တစ်ခုချင်းသာ
 reject ဖြစ်သည်။ 3D Number Limit
 ပြည့်နေခြင်း သို့မဟုတ် ဒီ input တစ်ခုက ကျန်ရှိသော 3D count ထက်ကျော်သွားခြင်းရှိလျှင်
-3D input တစ်ခုလုံး reject ဖြစ်နိုင်သည်။ Amount Limit သည် sale ကို reject လုပ်သည့်အကြောင်း
-မဟုတ်ပါ။ Admin သည် သက်ဆိုင်ရာ Round ၏ ပိတ်ထားသော 2D values၊ Draw ၏ 3D
+3D input တစ်ခုလုံး reject ဖြစ်နိုင်သည်။ Amount Limit သည် ပုံသေ mode **Warn** ဖြစ်၍
+ကျော်လွန်သော sale ကို လက်ခံပြီး အနီရောင်သတိပေးသည်; Admin က ထို tier ကို **Block**
+ပြောင်းမှသာ sale ငြင်းခံရမည်။ Admin သည် သက်ဆိုင်ရာ Round ၏ ပိတ်ထားသော 2D values၊ Draw ၏ 3D
 Number Limit၊ Hot Numbers,
 input code/spaces, Round/Draw ဖွင့်နေသလားကို စစ်ပြီး လိုအပ်လျှင် ဆုံးဖြတ်ပါ။
 Already saved sale ကို အလိုအလျောက်ပြင်မပေးပါ။

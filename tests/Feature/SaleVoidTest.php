@@ -220,7 +220,7 @@ class SaleVoidTest extends TestCase
             'agent_id' => $agent->id,
             'round_id' => $round->id,
             'operator_id' => $operator->id,
-            'amount_limit' => '1000.00',
+            'amount_limit' => '100000.00',
         ]);
         HotNumber::query()->create(['round_id' => $round->id, 'number' => '07']);
 

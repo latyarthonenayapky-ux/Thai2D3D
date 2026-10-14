@@ -75,6 +75,9 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-history th,.sale-history td{padding:8px}
     .sale-search{width:130px;min-height:30px;padding:5px 8px;border-radius:4px}
     .sale-alert{margin:0;padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px}
+    .amount-limit-alert{background:var(--danger-bg);color:var(--danger-text);border-left:4px solid var(--clock-red);font-size:13px;font-weight:800}
+    .over-limit{color:var(--clock-red);font-weight:900}
+    .agent-breakdown{margin:0 0 12px}
     .sale-number-chips{display:flex;gap:4px;flex-wrap:wrap;max-width:470px}
     .sale-number-chip{padding:2px 5px;border:1px solid var(--gridline);font-variant-numeric:tabular-nums}
     .sale-number-chip.rejected{color:var(--danger-text);background:var(--danger-bg)}
@@ -136,6 +139,18 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         <div class="error sale-alert" role="alert">{{ $errors->first('agent') }}</div>
     @endif
     <div class="sale-alert notice" data-sale-status role="status" aria-live="polite" hidden></div>
+    @php
+        $limitBannerRows = collect($amountLimitBreaches ?? [])->map(fn (array $breach): string => __('app.sale.over_amount_limit_row', [
+            'tier' => $breach['label'],
+            'limit' => number_format($breach['limit'], 2),
+            'used' => number_format($breach['used'], 2),
+            'over' => number_format($breach['over'], 2),
+        ]))->all();
+    @endphp
+    <div class="sale-alert amount-limit-alert" role="alert" data-limit-banner @if($limitBannerRows === [])hidden @endif>
+        <strong>{{ __('app.sale.over_amount_limit_title') }}</strong>
+        <span data-limit-banner-body>{{ implode('  ·  ', $limitBannerRows) }}</span>
+    </div>
 
     <section class="sale-summary" aria-label="{{ __('app.sale.summary_aria') }}">
         <div class="sale-stat">
@@ -144,7 +159,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         </div>
         <div class="sale-stat">
             <span class="sale-stat-label">{{ __('app.sale.accepted_amount') }}</span>
-            <span class="sale-stat-value" data-accepted-amount>{{ number_format($saleMode === '2d' ? $acceptedAmount : $threeDigitAcceptedAmount, 2) }}</span>
+            <span class="sale-stat-value {{ ($amountLimitBreaches ?? []) !== [] ? 'over-limit' : '' }}" data-accepted-amount>{{ number_format($saleMode === '2d' ? $acceptedAmount : $threeDigitAcceptedAmount, 2) }}</span>
         </div>
         <div class="sale-stat">
             <span class="sale-stat-label">{{ __('app.sale.rejected_numbers') }}</span>
@@ -157,6 +172,82 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             </div>
         @endif
     </section>
+
+    @if(! empty($agentBreakdown))
+        <section class="sale-panel agent-breakdown" aria-label="{{ __('app.sale.agent_breakdown_title') }}">
+            <div class="sale-panel-title">
+                <span>{{ __('app.sale.agent_breakdown_title') }}</span>
+                <span>{{ __('app.sale.agent_breakdown_help') }}</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr>
+                        <th>{{ __('app.sale.agent') }}</th>
+                        <th>{{ __('app.settings.col_handler') }}</th>
+                        <th>{{ __('app.sale.accepted_numbers') }}</th>
+                        <th>{{ __('app.sale.accepted_amount') }}</th>
+                        <th>{{ __('app.common.action') }}</th>
+                    </tr></thead>
+                    <tbody>
+                    @foreach($agentBreakdown as $agentRow)
+                        <tr>
+                            <td><strong>{{ $agentRow['agent_code'] }}</strong> · {{ $agentRow['agent_name'] }}</td>
+                            <td>{{ $agentRow['handler'] }}</td>
+                            <td>{{ number_format($agentRow['numbers']) }}</td>
+                            <td>{{ number_format($agentRow['amount'], 2) }}</td>
+                            <td>
+                                @if($agentRow['url'])
+                                    <a class="button secondary" href="{{ $agentRow['url'] }}">{{ __('app.sale.open_agent_statement') }}</a>
+                                @else
+                                    <span class="muted">{{ __('app.common.not_set') }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
+
+    @if(! empty($agentBreakdown))
+        <section class="sale-panel agent-breakdown" aria-label="{{ __('app.sale.agent_breakdown_title') }}">
+            <div class="sale-panel-title">
+                <span>{{ __('app.sale.agent_breakdown_title') }}</span>
+                <span>{{ count($agentBreakdown) }}</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{{ __('app.sale.agent') }}</th>
+                            <th>{{ __('app.sale.agent_breakdown_handler') }}</th>
+                            <th>{{ __('app.sale.accepted_numbers') }}</th>
+                            <th>{{ __('app.sale.accepted_amount') }}</th>
+                            <th>{{ __('app.common.action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($agentBreakdown as $agentRow)
+                            <tr>
+                                <td><strong>{{ $agentRow['agent_code'] }}</strong> · {{ $agentRow['agent_name'] }}</td>
+                                <td>{{ $agentRow['handler'] }}</td>
+                                <td>{{ number_format($agentRow['numbers']) }}</td>
+                                <td>{{ number_format($agentRow['amount'], 2) }}</td>
+                                <td>
+                                    @if($agentRow['url'] !== null)
+                                        <a class="button secondary" href="{{ $agentRow['url'] }}">{{ __('app.sale.agent_breakdown_open') }}</a>
+                                    @else
+                                        <span class="muted">—</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 
     <div class="sale-grid">
         <section class="sale-panel">
@@ -185,7 +276,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                     </form>
                     <div class="sale-agent-row sale-limit-readout">
                         <span class="sale-stat-label">{{ __('app.sale.amount_limit') }}</span>
-                        <strong>{{ $amountLimit === null ? __('app.sale.not_set') : number_format((float) $amountLimit, 2) }}</strong>
+                        <strong data-agent-limit class="{{ collect($amountLimitBreaches ?? [])->contains('key', 'agent') ? 'over-limit' : '' }}">{{ $amountLimit === null ? __('app.sale.not_set') : number_format((float) $amountLimit, 2) }}</strong>
                         <span class="muted">{{ $agentState ?: ($selectableCount === 0 ? __('app.sale.all_agents_in_use') : __('app.sale.no_agent_chosen')) }}</span>
                     </div>
                 @else
@@ -398,6 +489,27 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         const draftList = document.querySelector('[data-draft-list]');
         const draftCount = document.querySelector('[data-draft-count]');
         const status = document.querySelector('[data-sale-status]');
+        const limitBanner = document.querySelector('[data-limit-banner]');
+        const limitBannerBody = document.querySelector('[data-limit-banner-body]');
+        const money = value => Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        let limitBreaches = @json($amountLimitBreaches ?? []);
+        const renderLimitBanner = () => {
+            if (!limitBreaches.length) return;
+            if (limitBanner) {
+                limitBannerBody.textContent = limitBreaches.map(row => fmt(t.over_limit_row, {
+                    tier: row.label,
+                    limit: money(row.limit),
+                    used: money(row.used),
+                    over: money(row.over),
+                })).join('  ·  ');
+                limitBanner.hidden = false;
+            }
+            document.querySelector('[data-accepted-amount]')?.classList.add('over-limit');
+            if (limitBreaches.some(row => row.key === 'agent')) {
+                document.querySelector('[data-agent-limit]')?.classList.add('over-limit');
+            }
+        };
+        renderLimitBanner();
         const saveButton = document.querySelector('[data-save-sales]');
         const storageKey = workspace.dataset.storageKey;
         const mode = workspace.dataset.saleMode;
@@ -678,6 +790,8 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                             failed++;
                         }
                     }
+                    if (Array.isArray(result.amount_limit_breaches)) limitBreaches = result.amount_limit_breaches;
+                    renderLimitBanner();
                     persist();
                     renderDrafts();
                 } catch (error) {

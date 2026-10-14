@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\DB;
 class SaleProcessor
 {
     public function __construct(
-        protected SaleInputParser $parser
+        protected SaleInputParser $parser,
+        protected AmountLimitPolicy $amountLimits
     ) {}
 
     /**
@@ -24,8 +25,9 @@ class SaleProcessor
      * - Shared by all Agents in the same Round.
      *
      * Amount Limit:
-     * - Not used as a rejection condition here.
-     * - Admin can monitor amounts separately.
+     * - Blocks the whole input when it would take the Agent, the Operator, or
+     *   the Round past the Admin's Amount Limit. Nothing is saved for a blocked
+     *   input; see AmountLimitExceededException.
      *
      * Hot Number:
      * - Rejects matching numbers.
@@ -157,6 +159,55 @@ class SaleProcessor
              * rejected inputs are also stored for audit/history.
              */
 
+            $hotNumbers = HotNumber::query()
+                ->where('round_id', $round->id)
+                ->pluck('number')
+                ->map(fn ($number) => str_pad(
+                    (string) $number,
+                    2,
+                    '0',
+                    STR_PAD_LEFT
+                ))
+                ->unique()
+                ->values()
+                ->all();
+            $hotNumbers = array_fill_keys($hotNumbers, true);
+            $numberLimits = array_fill_keys($round->number_limits ?? [], true);
+
+            /*
+             * --------------------------------------------------------
+             * 4.1 AMOUNT LIMIT
+             * --------------------------------------------------------
+             *
+             * Only the numbers that would actually be accepted consume the
+             * limit, so excluded, Hot and Number-Limit values are not counted.
+             * A blocked input writes nothing at all.
+             */
+
+            $billableNumbers = 0;
+
+            foreach ($generatedNumbers as $number) {
+                $number = str_pad((string) $number, 2, '0', STR_PAD_LEFT);
+
+                if (in_array($number, $excludedNumbers, true)) {
+                    continue;
+                }
+
+                if (isset($hotNumbers[$number]) || isset($numberLimits[$number])) {
+                    continue;
+                }
+
+                $billableNumbers++;
+            }
+
+            $this->amountLimits->assertWithinLimits(
+                $round,
+                (int) $session->agent_id,
+                (int) $session->operator_id,
+                round($billableNumbers * $amount, 2),
+                '2d'
+            );
+
             $saleInput = SaleInput::create([
                 'agent_session_id' => $session->id,
                 'operator_id' => $session->operator_id,
@@ -183,21 +234,6 @@ class SaleProcessor
 
                 'reject_reason' => null,
             ]);
-
-            $hotNumbers = HotNumber::query()
-                ->where('round_id', $round->id)
-                ->pluck('number')
-                ->map(fn ($number) => str_pad(
-                    (string) $number,
-                    2,
-                    '0',
-                    STR_PAD_LEFT
-                ))
-                ->unique()
-                ->values()
-                ->all();
-            $hotNumbers = array_fill_keys($hotNumbers, true);
-            $numberLimits = array_fill_keys($round->number_limits ?? [], true);
 
             /*
              * ============================================================

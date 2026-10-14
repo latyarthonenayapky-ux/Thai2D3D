@@ -168,8 +168,23 @@ class SaleEntryWorkspaceTest extends TestCase
         [, $operator, $round, $agentOne, $agentTwo] = $this->business();
         $oneSession = AgentSession::openSession($agentOne, $round, $operator->id);
         $twoSession = AgentSession::openSession($agentTwo, $round, $operator->id);
+        // Wide caps let these sales through so the caps can then be tightened below them.
+        AgentRoundSetting::query()
+            ->where('round_id', $round->id)
+            ->update(['amount_limit' => '100000.00']);
+
         app(SaleProcessor::class)->process('121500', $oneSession);
         app(SaleProcessor::class)->process('343600', $twoSession);
+
+        // An Admin tightening a cap afterwards must still flag the sales already above it.
+        AgentRoundSetting::query()
+            ->where('round_id', $round->id)
+            ->where('agent_id', $agentOne->id)
+            ->update(['amount_limit' => '1000.00']);
+        AgentRoundSetting::query()
+            ->where('round_id', $round->id)
+            ->where('agent_id', $agentTwo->id)
+            ->update(['amount_limit' => '2500.00']);
 
         $this->actingAs($operator)
             ->get(route('operator.sales.show', [$oneSession, 'mode' => '2d']))

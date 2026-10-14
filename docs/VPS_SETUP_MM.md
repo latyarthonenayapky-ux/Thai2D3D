@@ -465,6 +465,37 @@ Update step တစ်ခုခု error ဖြစ်ပါက ပြဿနာက
 backup မရှိဘဲ rollback မလုပ်ပါနှင့်။ Source code version နှင့် DB migration အခြေအနေ
 ကို မှတ်တမ်းတင်ထားပါ။
 
+### Windows Desktop မှ တစ်ချက်နှိပ်၍ update တင်ခြင်း
+
+`rsync`/`sshpass` မလိုသော နည်းလမ်းကို `scripts/vps-deploy.sh` ဖြင့် ပြင်ဆင်ထားသည်။
+Desktop ပေါ်ရှိ `Deploy to WYA VPS.cmd` ကို နှစ်ချက်နှိပ်လျှင် ဤ machine တွင် SSH key
+မလိုအပ်ဘဲ အောက်ပါအတိုင်း ဆောင်ရွက်သည် -
+
+1. Repository ၏ source ဖိုင်များကိုသာ bundle အဖြစ် ထုပ်ပိတ်သည်
+   (`vendor/`၊ `.env`၊ `storage/`၊ `desktop/`၊ `release/`၊ `tests/` တို့ကို အမြဲဖယ်သည်)။
+   `scripts/vps-bundle.sh --tarball <path>` က ထို bundle ကို ဖန်တီးသည်။
+2. `scp` ဖြင့် bundle နှင့် `scripts/vps-deploy.sh` ကို server ၏ `/tmp/` သို့ တင်ပြီး
+   `ssh` ဖြင့် ထို script ကို run သည်။ **`ssh`/`scp` ၏ stdin ကို ဘယ်တော့မှ
+   file ဖြင့် redirect မလုပ်ပါနှင့်** - Git for Windows ၏ `ssh.exe` က stdin သည်
+   file ဖြစ်လျှင် password prompt မပြဘဲ ထို file ၏ ပထမကြောင်းကို password အဖြစ်
+   ပို့ပြီး `Permission denied` ဖြစ်သွားသည် (2026-10-14 တွင် တွေ့ရသည့် အမှား)။
+   အစား `ssh -T user@host "bash /tmp/vps-deploy.sh"` ပုံစံသုံးပြီး stdout ကိုသာ
+   log သို့ ညွှန်းသည်။ ဒါကြောင့် user အတိုင်း password ကို ၂ ကြိမ် (upload + run)
+   ရိုက်ရပါမည်။
+   Server ဘက်၌ - ဖိုင်များနှင့် database ကို `/var/backups/thai2d3d/` သို့ backup အရင်ချ၊
+   bundle ကို `/var/www/thai2d3d` သို့ ဖြည်ထုတ်ထည့်သွင်း၊ `composer install --no-dev`၊
+   `php artisan migrate --force`၊ `db:seed --force`၊ `optimize`၊ `php artisan up`
+   ဆောင်ရွက်သည်။
+3. မေးမြန်းလျှင် `wya2d3d.site` nginx vhost ကို `/etc/nginx/sites-available/` သို့
+   ထည့်ပြီး `nginx -t` ဖြင့် စစ်ဆေးကာ reload လုပ်သည် (N ဖြေလျှင် code update သီးသန့်)။
+
+Server password ကို Windows console window ထဲတွင်သာ ရိုက်ထည့်ရသည် - chat, git သို့မဟုတ်
+ဖိုင်အတွင်း သေချာပေါက် မထည့်ပါနှင့်။ အားလုံးအဆုံးသတ်ပါက `DEPLOY COMPLETE` ကို
+စာတန်းထိုးထုတ်ပြီး အသေးစိတ်ကို project root ၏ `vps-deploy.log` (gitignored) တွင်
+သိမ်းသည်။ Rollback လိုအပ်လျှင် ဤ script က ပြသသော
+`tar -xzf /var/backups/thai2d3d/files-<stamp>.tar.gz -C /var/www/thai2d3d && php artisan up`
+ကို သုံးပါ။
+
 ## 10. Audit log (activity_logs)
 
 Login အောင်မြင်ခြင်း/မြင်ခြင်း၊ logout နှင့် Admin area ၏ write လုပ်ဆောင်ချက်များ
@@ -487,8 +518,10 @@ mysql -h 127.0.0.1 -u thai2d3d_app -p thai2d3d \
 - Cron အမှန်တကယ်အလုပ်လုပ်ပြီး Yangon time အတိုင်း Round/Draw အခြေအနေ
   ပြောင်းလဲနေကြောင်း စစ်ပါ။
 - Accepted/rejected/Hot Number/blocked 2D value နှင့် 3D count-limit offline sync review ကို
-  controlled test ဖြင့်စမ်းပါ။ Amount Limit သည် monitoring သာဖြစ်ပြီး sale ကို
-  reject လုပ်မည့် threshold မဟုတ်ပါ။
+  controlled test ဖြင့်စမ်းပါ။ Amount Limit သည် mode နှစ်ခုရှိသည် — **Warn** (ပုံသေ:
+  ကျော်သော sale ကို လက်ခံပြီး အနီရောင်ပြသည်) နှင့် **Block** (ငြင်းဆန်ပြီး offline review
+  queue သို့လွှေ့သည်)။ Tier ၃ ထပ် (Agent / Operator / Round) အတွက် Settings →
+  Amount Limits တွင် mode ချိန်ညှိပါ။
 - 2D/3D result, payout, commission, settlement ကို အချက်အလက်နမူနာဖြင့်ပြန်တွက်ပါ။
 - DB backup restore၊ SMTP password reset၊ SSH access recovery ကို စမ်းပါ။
 

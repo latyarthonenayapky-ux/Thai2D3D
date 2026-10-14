@@ -9,6 +9,7 @@ use App\Models\AgentSession;
 use App\Models\Round;
 use App\Models\SaleDetail;
 use App\Models\ThreeDigitSaleDetail;
+use App\Services\AmountLimitPolicy;
 use App\Services\RoundSettlementCalculator;
 use App\Services\SaleProcessor;
 use App\Services\ThreeDigitSaleProcessor;
@@ -16,12 +17,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use RuntimeException;
 
 class SaleEntryController extends Controller
 {
+    public function __construct(private readonly AmountLimitPolicy $amountLimits)
+    {
+    }
+
     public function workspace(Request $request): RedirectResponse|View
     {
         $adminId = $this->authorizeWorkspace($request);
@@ -386,24 +392,52 @@ class SaleEntryController extends Controller
                 ->where('agent_id', $agentSession->agent_id)
                 ->where('round_id', $round->id)
                 ->value($saleMode === '3d' ? 'amount_limit_3d' : 'amount_limit'),
+            'amountLimitBreaches' => $awaitingAgent
+                ? $this->amountLimits->breaches($round, null, null, $saleMode)
+                : $this->amountLimits->breaches($round, $agentSession->agent_id, $agentSession->operator_id, $saleMode),
             'threeDigitAmountLimit' => $awaitingAgent ? 0.0 : (float) (AgentRoundSetting::query()
                 ->where('agent_id', $agentSession->agent_id)
                 ->where('round_id', $round->id)
                 ->value('amount_limit_3d') ?? 0),
             'canEnterSales' => ! $awaitingAgent
+                && (int) $agentSession->operator_id === (int) $user->id
                 && $agentSession->status === 'open'
                 && $round->status === 'open'
                 && ! $round->isPastScheduledClose(),
             'roundPastCloseTime' => $round->isPastScheduledClose(),
+            'agentBreakdown' => $user->isAdmin() ? $this->agentBreakdown($round, $saleMode) : null,
             'ownSettlement' => $awaitingAgent ? null : $calculator->calculate($round, (int) $user->id)['agents']
                 ->first(fn (array $row): bool => $row['agent']->id === $agentSession->agent_id),
         ]);
     }
 
+    /**
+     * "Accepted but over the Amount Limit" sentence for the alert bar and the
+     * save confirmation. Empty while every monitored tier is still inside its
+     * limit, so a warning tier never adds noise.
+     */
+    private function amountLimitNotice(Round $round, ?int $agentId, ?int $operatorId, string $saleMode): string
+    {
+        $breaches = $this->amountLimits->breaches($round, $agentId, $operatorId, $saleMode);
+        if ($breaches === []) {
+            return '';
+        }
+
+        $parts = array_map(fn (array $tier): string => sprintf(
+            '%s · limit %s · sold %s · over %s',
+            $tier['label'],
+            number_format($tier['limit'], 2),
+            number_format($tier['used'], 2),
+            number_format($tier['over'], 2)
+        ), $breaches);
+
+        return ' · ABOVE AMOUNT LIMIT: '.implode(' | ', $parts);
+    }
+
     public function offlineShell(Request $request, AgentSession $agentSession): View
     {
         abort_unless($request->user()->isOperator(), 403);
-        $this->authorizeSession($request, $agentSession);
+        $this->authorizeSession($request, $agentSession, true);
 
         return view('operator.sales.offline', [
             'agentSession' => $agentSession->load(['agent', 'round']),
@@ -416,7 +450,7 @@ class SaleEntryController extends Controller
         SaleProcessor $processor,
         ThreeDigitSaleProcessor $threeDigitProcessor
     ): JsonResponse|RedirectResponse {
-        $this->authorizeSession($request, $agentSession);
+        $this->authorizeSession($request, $agentSession, true);
         abort_unless($agentSession->status === 'open' && $agentSession->round->status === 'open', 409, 'This Round is closed to sales.');
 
         $validated = $request->validate([
@@ -445,7 +479,7 @@ class SaleEntryController extends Controller
                     $acceptedNumbers,
                     $rejectedNumbers,
                     number_format($acceptedAmount, 2)
-                );
+                ).$this->amountLimitNotice($agentSession->round, $agentSession->agent_id, $agentSession->operator_id, '3d');
 
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -477,6 +511,7 @@ class SaleEntryController extends Controller
 
         $acceptedNumbers = $saleInput->details()->where('status', 'accepted')->count();
         $rejectedNumbers = $saleInput->details()->where('status', 'rejected')->count();
+        $notice = $this->amountLimitNotice($agentSession->round, $agentSession->agent_id, $agentSession->operator_id, '2d');
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -486,7 +521,7 @@ class SaleEntryController extends Controller
                     ucfirst($saleInput->status),
                     $acceptedNumbers,
                     $rejectedNumbers
-                ),
+                ).$notice,
                 'details' => $saleInput->details()->get(['number', 'amount', 'status', 'reject_reason', 'is_excluded']),
             ]);
         }
@@ -498,7 +533,7 @@ class SaleEntryController extends Controller
                 $acceptedNumbers,
                 $rejectedNumbers,
                 number_format((float) $saleInput->details()->where('status', 'accepted')->where('is_excluded', false)->sum('amount'), 2)
-            ));
+            ).$notice);
     }
 
     public function storeBatch(
@@ -507,7 +542,7 @@ class SaleEntryController extends Controller
         SaleProcessor $processor,
         ThreeDigitSaleProcessor $threeDigitProcessor
     ): JsonResponse {
-        $this->authorizeSession($request, $agentSession);
+        $this->authorizeSession($request, $agentSession, true);
         abort_unless($agentSession->status === 'open' && $agentSession->round->status === 'open', 409, 'This Round is closed to sales.');
 
         $validated = $request->validate([
@@ -552,7 +587,15 @@ class SaleEntryController extends Controller
             ];
         }
 
-        return response()->json(['results' => $results]);
+        return response()->json([
+            'results' => $results,
+            'amount_limit_breaches' => $this->amountLimits->breaches(
+                $agentSession->round,
+                $agentSession->agent_id,
+                $agentSession->operator_id,
+                $saleMode
+            ),
+        ]);
     }
 
     private function soldItemsForSession(int $agentSessionId, string $saleMode): array
@@ -606,17 +649,90 @@ class SaleEntryController extends Controller
             ->all();
     }
 
-    private function authorizeSession(Request $request, AgentSession $agentSession): void
+    /**
+     * A session is readable by its handler and, for an Admin, by anyone in the
+     * same business — that is how Agent sales uploaded from the phone reach the
+     * Admin's own Sale Entry. Writing stays with the handler only, so an Admin
+     * can read another Operator's Agent but never enter sales into it.
+     */
+    /**
+     * One row per Agent that has sold in this Round, so the Admin's Sale Entry
+     * reads as a list of Agent headings — the way an Operator sees the Agents
+     * they handle. Mobile/offline uploads land here because they are written
+     * against the Agent's own session.
+     *
+     * @return array<int, array{agent_id: int, agent_code: string, agent_name: string, handler: string, numbers: int, amount: float, url: string|null}>
+     */
+    private function agentBreakdown(Round $round, string $saleMode): array
+    {
+        $threeDigit = $saleMode === '3d';
+        $detailTable = $threeDigit ? 'three_digit_sale_details' : 'sale_details';
+        $inputTable = $threeDigit ? 'three_digit_sale_inputs' : 'sale_inputs';
+        $inputKey = $threeDigit ? 'three_digit_sale_input_id' : 'sale_input_id';
+
+        $totals = DB::table($detailTable)
+            ->join($inputTable, $inputTable.'.id', '=', $detailTable.'.'.$inputKey)
+            ->join('agent_sessions', 'agent_sessions.id', '=', $inputTable.'.agent_session_id')
+            ->where('agent_sessions.round_id', $round->id)
+            ->where($detailTable.'.status', 'accepted')
+            ->when(! $threeDigit, fn ($query) => $query->where($detailTable.'.is_excluded', false))
+            ->addSelect('agent_sessions.agent_id as agent_id')
+            ->selectRaw('COUNT(*) as accepted_count, SUM('.$detailTable.'.amount) as accepted_amount')
+            ->groupBy('agent_sessions.agent_id')
+            ->get()
+            ->keyBy('agent_id');
+
+        $sessions = AgentSession::query()
+            ->with(['agent', 'operator'])
+            ->where('round_id', $round->id)
+            ->orderBy('status')
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('agent_id')
+            ->map(fn ($group) => $group->first());
+
+        return Agent::query()
+            ->where('admin_id', $round->admin_id)
+            ->orderBy('agent_code')
+            ->get()
+            ->map(function (Agent $agent) use ($totals, $sessions, $saleMode): ?array {
+                $total = $totals->get($agent->id);
+                $session = $sessions->get($agent->id);
+                if ($total === null && $session === null) {
+                    return null;
+                }
+
+                return [
+                    'agent_id' => (int) $agent->id,
+                    'agent_code' => $agent->agent_code,
+                    'agent_name' => $agent->agent_name,
+                    'handler' => $session?->operator?->name ?? '—',
+                    'numbers' => (int) ($total?->accepted_count ?? 0),
+                    'amount' => (float) ($total?->accepted_amount ?? 0),
+                    'url' => $session === null ? null : route('operator.sales.show', [$session, 'mode' => $saleMode, 'view' => 'agent']),
+                ];
+            })
+            ->filter()
+            // stable chained sorts: Agent code first, then amount high→low wins
+            ->sortBy('agent_code')
+            ->sortByDesc('amount')
+            ->values()
+            ->all();
+    }
+
+    private function authorizeSession(Request $request, AgentSession $agentSession, bool $canWrite = false): void
     {
         $user = $request->user();
         abort_unless($user->isAdmin() || $user->isOperator(), 403);
 
         $agentSession->loadMissing(['round', 'agent']);
         $adminId = $user->isAdmin() ? $user->id : $user->admin_id;
+        $isHandler = (int) $agentSession->operator_id === (int) $user->id;
+
         abort_unless(
-            (int) $agentSession->operator_id === (int) $user->id
-            && (int) $agentSession->round->admin_id === (int) $adminId
-            && (int) $agentSession->agent->admin_id === (int) $adminId,
+            (int) $agentSession->round->admin_id === (int) $adminId
+            && (int) $agentSession->agent->admin_id === (int) $adminId
+            && ($isHandler || ($user->isAdmin() && ! $canWrite)),
             404
         );
 

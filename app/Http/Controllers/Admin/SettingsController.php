@@ -8,11 +8,14 @@ use App\Models\Agent;
 use App\Models\CodeRule;
 use App\Models\HotNumber;
 use App\Models\MobileAppPackage;
+use App\Models\OperatorRoundSetting;
 use App\Models\Round;
 use App\Models\RoundSchedule;
 use App\Models\ThreeDigitHotNumber;
+use App\Models\User;
 use App\Services\AgentAccessTokenGuard;
 use App\Services\AgentMobileAccessService;
+use App\Services\AmountLimitPolicy;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +72,14 @@ class SettingsController extends Controller
                 ->get(),
             'agentRoundSettings' => $selectedRound
                 ? $selectedRound->agentRoundSettings()->with('operator')->get()->keyBy('agent_id')
+                : collect(),
+            'operators' => User::query()
+                ->where('admin_id', $request->user()->id)
+                ->where('role', 'operator')
+                ->orderBy('name')
+                ->get(),
+            'operatorRoundSettings' => $selectedRound
+                ? $selectedRound->operatorRoundSettings()->get()->keyBy('operator_id')
                 : collect(),
             'rounds' => $rounds,
             'selectedRound' => $selectedRound,
@@ -364,25 +375,32 @@ class SettingsController extends Controller
 
         $validated = $request->validate([
             'amount_limit' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'amount_limit_3d' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'amount_limit_mode' => ['nullable', 'in:warn,block'],
         ]);
-        $amountLimit = $validated['amount_limit'] ?? null;
         $setting = $round->agentRoundSettings()->where('agent_id', $agent->id)->first();
 
-        if ($amountLimit === null || $amountLimit === '') {
+        $twoDigit = $this->limitOrNull($validated['amount_limit'] ?? null);
+        $threeDigit = array_key_exists('amount_limit_3d', $validated)
+            ? $this->limitOrNull($validated['amount_limit_3d'])
+            : ($setting?->amount_limit_3d === null ? null : (float) $setting->amount_limit_3d);
+        $mode = AmountLimitPolicy::normalizeMode($validated['amount_limit_mode'] ?? null);
+
+        if ($twoDigit === null && $threeDigit === null) {
             if ($setting?->operator_id !== null) {
-                $setting->update(['amount_limit' => null]);
+                $setting->update(['amount_limit' => null, 'amount_limit_3d' => null]);
             } else {
                 $setting?->delete();
             }
         } else {
             $round->agentRoundSettings()->updateOrCreate(
                 ['agent_id' => $agent->id],
-                ['amount_limit' => $amountLimit]
+                ['amount_limit' => $twoDigit, 'amount_limit_3d' => $threeDigit, 'amount_limit_mode' => $mode]
             );
         }
 
         return back()
-            ->with('status', "Amount Limit saved for {$agent->agent_name}. This threshold monitors sales only and does not reject them.");
+            ->with('status', "Amount Limits saved for {$agent->agent_name}. ".$this->modeExplain($mode));
     }
 
     public function updateAgentRoundAmountLimit3d(Request $request, Round $round, Agent $agent): RedirectResponse
@@ -410,7 +428,73 @@ class SettingsController extends Controller
         }
 
         return redirect()->route('admin.settings.index', ['round_id' => $round->id])
-            ->with('status', "3D Amount Limit saved for {$agent->agent_name}. This threshold monitors sales only and does not reject them.");
+            ->with('status', "3D Amount Limit saved for {$agent->agent_name}.");
+    }
+
+    public function updateOperatorRoundAmountLimit(Request $request, Round $round, User $operator): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+        $this->authorizeRound($request, $round);
+        abort_unless($operator->isOperator() && (int) $operator->admin_id === (int) $request->user()->id, 404);
+
+        $validated = $request->validate([
+            'amount_limit' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'amount_limit_3d' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'amount_limit_mode' => ['nullable', 'in:warn,block'],
+        ]);
+
+        $twoDigit = $this->limitOrNull($validated['amount_limit'] ?? null);
+        $threeDigit = $this->limitOrNull($validated['amount_limit_3d'] ?? null);
+        $mode = AmountLimitPolicy::normalizeMode($validated['amount_limit_mode'] ?? null);
+        $setting = $round->operatorRoundSettings()->where('operator_id', $operator->id)->first();
+
+        if ($twoDigit === null && $threeDigit === null) {
+            $setting?->delete();
+        } else {
+            $round->operatorRoundSettings()->updateOrCreate(
+                ['operator_id' => $operator->id],
+                ['amount_limit' => $twoDigit, 'amount_limit_3d' => $threeDigit, 'amount_limit_mode' => $mode]
+            );
+        }
+
+        return back()->with('status', "Amount Limits saved for {$operator->name}. Every Agent this Operator sells for shares the cap. ".$this->modeExplain($mode));
+    }
+
+    public function updateRoundAmountLimits(Request $request, Round $round): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+        $this->authorizeRound($request, $round);
+
+        $validated = $request->validate([
+            'amount_limit_all' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'amount_limit_all_3d' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'amount_limit_all_mode' => ['nullable', 'in:warn,block'],
+        ]);
+
+        $mode = AmountLimitPolicy::normalizeMode($validated['amount_limit_all_mode'] ?? null);
+        $round->update([
+            'amount_limit_all' => $this->limitOrNull($validated['amount_limit_all'] ?? null),
+            'amount_limit_all_3d' => $this->limitOrNull($validated['amount_limit_all_3d'] ?? null),
+            'amount_limit_all_mode' => $mode,
+        ]);
+
+        return back()->with('status', 'Round-wide Amount Limits saved. They count every Agent and Operator in this Round. '.$this->modeExplain($mode));
+    }
+
+    private function modeExplain(string $mode): string
+    {
+        return $mode === AmountLimitPolicy::MODE_BLOCK
+            ? 'A sale that would pass this limit is refused.'
+            : 'A sale that passes this limit is still accepted and flagged in red.';
+    }
+
+    private function limitOrNull(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return round((float) $value, 2);
     }
 
     public function storeHotNumbers(Request $request, Round $round): RedirectResponse

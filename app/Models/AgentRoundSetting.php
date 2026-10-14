@@ -16,6 +16,7 @@ class AgentRoundSetting extends Model
         'operator_id',
         'amount_limit',
         'amount_limit_3d',
+        'amount_limit_mode',
     ];
 
     protected $casts = [

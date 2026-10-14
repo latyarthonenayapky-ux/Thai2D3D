@@ -266,6 +266,14 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
             SettingsController::class,
             'updateAgentRoundAmountLimit3d',
         ])->middleware('throttle:120,1')->name('settings.rounds.agents.amount-limit-3d');
+        Route::patch('/settings/rounds/{round}/operators/{operator}/amount-limits', [
+            SettingsController::class,
+            'updateOperatorRoundAmountLimit',
+        ])->middleware('throttle:120,1')->name('settings.rounds.operators.amount-limits');
+        Route::patch('/settings/rounds/{round}/amount-limits', [
+            SettingsController::class,
+            'updateRoundAmountLimits',
+        ])->middleware('throttle:120,1')->name('settings.rounds.amount-limits');
         Route::post('/settings/rounds/{round}/hot-numbers', [
             SettingsController::class,
             'storeHotNumbers',

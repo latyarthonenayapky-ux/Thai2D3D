@@ -45,14 +45,24 @@ class ThreeDigitSalesTest extends TestCase
         }
     }
 
-    public function test_3d_sales_use_separate_round_limits_and_hot_numbers_and_never_use_amount_limit_for_rejection(): void
+    public function test_3d_sales_use_separate_round_limits_and_hot_numbers_and_the_3d_amount_limit_rejects(): void
     {
         [$admin, $operator, $round, $agent, $session] = $this->createBusiness();
         $round->update(['number_limit_3d' => 9]);
         $agentSetting = $round->agentRoundSettings()->where('agent_id', $agent->id)->firstOrFail();
-        $agentSetting->update(['amount_limit_3d' => '1.00']);
+        $agentSetting->update(['amount_limit_3d' => '1.00', 'amount_limit_mode' => 'block']);
 
         ThreeDigitHotNumber::query()->create(['round_id' => $round->id, 'number' => '111']);
+
+        $this->actingAs($operator)
+            ->post(route('operator.sales.store', $session), ['sale_type' => '3d', 'input' => 'A1000'])
+            ->assertRedirect()
+            ->assertSessionHasErrors('input');
+
+        $this->assertSame(0, ThreeDigitSaleInput::query()->count());
+        $this->assertSame(0, ThreeDigitSaleDetail::query()->count());
+
+        $agentSetting->update(['amount_limit_3d' => '100000.00']);
         $this->actingAs($operator)
             ->post(route('operator.sales.store', $session), ['sale_type' => '3d', 'input' => 'A1000'])
             ->assertRedirect()

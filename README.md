@@ -71,6 +71,53 @@ scripts, tests` နှင့် `artisan` စသည်တို့ကို `rel
 `vendor/`, `bootstrap/cache/`, `storage/`, `public/storage` တို့ကို မထိဘဲ
 `.env` နှင့် `.sqlite` ဖိုင်များကို ဘယ်တော့မှ မကူးပါ။
 
+## Online server (VPS) — လက်ရှိအခြေအနေနှင့် လုပ်ရန်များ
+
+Online app ထိပ်မတင်ခင် ဘယ်အဆင့် ရပ်နေလဲ သိနိုင်အောင် အောက်ပါဇယားကို
+2026-10-13 တပ်ဆင်စစ်ဆေးမှုအရ ရေးထားသည်။
+
+| အဆင့် | အခြေအနေ | အဖြေပြ အထူးစစ် |
+| --- | --- | --- |
+| Domain DNS | ❌ မထည့်ရသေး | `nslookup wya2d3d.site 8.8.8.8` → အဖြေမရှိ |
+| VPS web server | ⚠️ nginx + PHP-FPM run နေ, HTTP သာ | `http://118.27.150.3/up` → reachable; `https://` → port 443 ပိတ် |
+| Agent mobile API | ❌ server ပေါ် မတက်ရသေး | `POST /api/v1/auth/login` → **404** |
+| GitHub | ❌ branch မတင်ရသေး | `git ls-remote` → `master`, `MasterW` သာ; local commits ၃ ခု (`9a42eea`, `78899e8`, `65f96ad`) |
+| APK build | ❌ မဖွင့်သေး | `…/actions` → run အဟောင်း ၁ ခု (Symfony template, failed) |
+| Admin APK publish | ✅ code ထဲ ပြီး | `scripts/smoke-release.sh` 23/23 PASS (Windows + VPS payload) |
+
+Blocker မှာ code မဟုတ်ပါ — **credential ၂ ခု** သာလိုသည်: GitHub push login၊
+VPS SSH access။ ၎င်းတို့ကို လက်လုပ်ရိုက်တင်ရန် မလိုအောင် Desktop ထဲ helper
+၂ ဖိုင်ထားပေးထားသည် (ဖိုင်ထဲက code သည် `git push` နှင့် read-only SSH
+inspection သာ လုပ်သည်)။
+
+- **`Push Thai2D3D to GitHub.cmd`** — double-click → branch `VPS2D3D` ကို push
+  ပို့မည်။ ပထမဆုံးအကြိမ် browser ထဲ GitHub (Google) login မေးနိုင်သည်။
+  Window ထဲ `PUSH OK` ပေါ်လျှင် Laravel CI နှင့် Android APK workflow အလိုအလျောက်
+  စတင်မည်။
+- **`Check WYA VPS.cmd`** — double-click → SSH user (default `root`) နှင့် server
+  password ရိုက်ထည့်ပါ။ `scripts/vps-inspect.sh` ကို server ပေါ်တွင် pipe ဖြင့်
+  run ပါသည် (install/write/restart ဘာမှ မလုပ်)၊ ရလဒ်ကို project root ထဲ
+  `vps-inspect.log` (`*.log` ဖြစ်သဖြင့် Git ထဲ မဝင်) သို့ ရေးသည်။ စစ်ပေးသည်:
+  PHP/Composer/nginx/MySQL/certbot version + service status၊ `/var/www` ထဲ
+  application directory၊ `vendor/` နှင့် `.env` ရှိ/မရှိ၊ `storage`/
+  `bootstrap/cache` ရေးချခွင့်၊ အရေးကြီး route ၄ ခု (`api/v1/auth/login`,
+  `api/v1/sales/upload`, `settings/mobile-app`, `operator.offline`) တပ်ထားခြင်း
+  ရှိ/မရှိ၊ nginx `server_name`/`root`/`client_max_body_size`၊ PHP upload limit၊
+  Let's Encrypt certificate၊ `http://127.0.0.1/up` နှင့် `/api/v1/auth/login`
+  HTTP code၊ www-data cron နှင့် backup။ **.env value များနှင့် password များကို
+  ဘယ်တော့မှ မပုံနှိပ်ပါ** — key နာမည်များသာ ပြသည်။
+
+Server အခြေအနေ သိပြီးလျှင် upgrade အစီအစဉ် (တစ်ခုချင်း run ပါ):
+code ပို့ → `composer install --no-dev --prefer-dist --optimize-autoloader` →
+`php artisan migrate --force` → `php artisan db:seed --force` →
+`php artisan optimize` → vhost (`deploy/nginx/wya2d3d.site.conf`) + PHP upload
+limit (`upload_max_filesize=130M`) → `certbot --nginx -d wya2d3d.site -d
+www.wya2d3d.site` → `.env` ထဲ `APP_URL=https://wya2d3d.site`,
+`SESSION_SECURE_COOKIE=true` → config clear + optimize။ အသေးစိတ် (Burmese):
+[VPS Setup Guide](docs/VPS_SETUP_MM.md) §1 DNS ဇယား၊ §5 `.env`၊ §6 nginx +
+certbot၊ §7 scheduler။ Mobile API/APK အတွက်:
+[Agent Mobile Sales](docs/mobile-agent-sales.md)။
+
 ## စာရွက်စာတမ်း
 
 - [Burmese User Manual](docs/USER_MANUAL_MM.md) — login, role, 2D/3D sales,

@@ -19,7 +19,8 @@ use RuntimeException;
 class ThreeDigitSaleProcessor
 {
     public function __construct(
-        protected ThreeDigitInputParser $parser
+        protected ThreeDigitInputParser $parser,
+        protected AmountLimitPolicy $amountLimits
     ) {}
 
     public function process(string $input, AgentSession $session, ?string $clientUuid = null): ThreeDigitSaleInput
@@ -92,6 +93,16 @@ class ThreeDigitSaleProcessor
                 ->where('status', 'accepted')
                 ->count();
             $exceedsLimit = $acceptedCount + count($eligibleNumbers) > $round->number_limit_3d;
+
+            if (! $exceedsLimit) {
+                $this->amountLimits->assertWithinLimits(
+                    $round,
+                    (int) $lockedSession->agent_id,
+                    (int) $lockedSession->operator_id,
+                    round(count($eligibleNumbers) * (float) $parsed['amount'], 2),
+                    '3d'
+                );
+            }
 
             $saleInput = ThreeDigitSaleInput::query()->create([
                 'agent_session_id' => $lockedSession->id,

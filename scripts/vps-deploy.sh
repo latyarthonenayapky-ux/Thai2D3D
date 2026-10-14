@@ -64,6 +64,20 @@ fi
 step 'Unpacking the new code'
 tar -xzf "$BUNDLE" -C "$APP_DIR"
 
+step 'Restoring file permissions'
+# tar on Git for Windows records the NTFS ACLs, which land on Linux as 0600/0700
+# modes owned by root. nginx then answers 403 for the new static files and
+# PHP-FPM answers "Primary script unknown" for index.php - the site 404s even
+# though the code unpacked correctly (seen on 2026-10-14 after the first run of
+# this script). Put the standard web modes back before anything else reads them.
+if [ "$(id -un)" = 'root' ] || [ -n "${SUDO_USER:-}" ]; then
+    chown -R "root:$WEB_GROUP" "$APP_DIR" || true
+fi
+find "$APP_DIR" -type d -exec chmod 755 {} +
+find "$APP_DIR" -type f -exec chmod 644 {} +
+chmod 640 "$APP_DIR/.env"
+echo "index.php now: $(ls -l public/index.php 2>/dev/null || echo MISSING)"
+
 step 'Refreshing dependencies'
 if command -v composer >/dev/null; then
     composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
@@ -101,6 +115,11 @@ if [ "$INSTALL_VHOST" = '1' ]; then
     fi
     if [ -z "$VHOST" ] || [ ! -f deploy/nginx/wya2d3d.site.conf ] || ! command -v nginx >/dev/null; then
         warn 'no nginx config directory, nginx binary or deploy/nginx/wya2d3d.site.conf - vhost skipped'
+    elif [ -f "$VHOST" ] && grep -q 'listen 443\|listen \[::\]:443' "$VHOST"; then
+        # certbot writes its TLS block into this same file, so overwriting it
+        # silently deletes HTTPS and the 80->443 redirect (seen 2026-10-14: the
+        # site answered 443 "connection refused" right after a vhost reinstall).
+        warn "$VHOST already serves 443 - leaving it untouched. Re-run this step only after 'certbot delete' or a new certificate."
     elif $RUN cp deploy/nginx/wya2d3d.site.conf "$VHOST" &&
          { [ -z "$LINK" ] || $RUN ln -sf "$VHOST" "$LINK"; } then
         if $RUN nginx -t >/dev/null 2>&1 && $RUN systemctl reload nginx; then

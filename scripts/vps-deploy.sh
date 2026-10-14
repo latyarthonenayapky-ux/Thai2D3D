@@ -133,6 +133,31 @@ if [ "$INSTALL_VHOST" = '1' ]; then
     fi
 fi
 
+step 'Raising the PHP upload limits'
+# Laravel's ValidatePostSize middleware compares CONTENT_LENGTH against PHP's
+# post_max_size - 8M on a stock Ubuntu PHP-FPM - and answers 413 before nginx or
+# the app's own 120 MB APK rule is ever reached. Publishing the Agent app from
+# Settings needs the drop-in that deploy/nginx/wya2d3d.site.conf already
+# documents, so install it here instead of trusting a hand-run step.
+RUN=''
+[ "$(id -un)" = 'root' ] || RUN='sudo'
+PHP_VER="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo '')"
+UPLOAD_INI=''
+for DIR in "/etc/php/$PHP_VER/fpm/conf.d" "/etc/php/$PHP_VER/cli/conf.d"; do
+    [ -d "$DIR" ] || continue
+    UPLOAD_INI="$DIR/99-wya-uploads.ini"
+    printf 'upload_max_filesize = 130M\npost_max_size = 135M\nmax_execution_time = 300\n' \
+        | $RUN tee "$UPLOAD_INI" > /dev/null \
+        && echo "written: $UPLOAD_INI" \
+        || warn "could not write $UPLOAD_INI - upload it as root"
+done
+[ -n "$UPLOAD_INI" ] || warn 'no PHP conf.d directory found - upload limits left untouched'
+if [ -n "$UPLOAD_INI" ] && command -v systemctl > /dev/null; then
+    $RUN systemctl reload "php$PHP_VER-fpm" 2> /dev/null \
+        || warn "PHP-FPM was not reloaded - run: systemctl restart php$PHP_VER-fpm"
+fi
+echo "limits seen by the php command: $(php -r 'echo ini_get("upload_max_filesize"), " / ", ini_get("post_max_size");' 2>/dev/null || echo unknown)"
+
 step 'Putting the site back online'
 php artisan up || true
 

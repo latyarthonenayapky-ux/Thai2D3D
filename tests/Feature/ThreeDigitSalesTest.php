@@ -218,7 +218,7 @@ class ThreeDigitSalesTest extends TestCase
             ->assertSee('Phone · Agent app')
             ->assertSee('Inter · web entry')
             ->assertDontSee('00–24')
-            ->assertViewHas('numberAmountLimits', fn (array $caps): bool => $caps === []);
+            ->assertViewHas('numberAmountLimit', fn (?float $cap): bool => $cap === null);
     }
 
     private function createBusiness(): array

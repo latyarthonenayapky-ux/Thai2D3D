@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AgentLedgerController;
 use App\Http\Controllers\Admin\DataBackupController;
 use App\Http\Controllers\Admin\MobileAppPackageController;
 use App\Http\Controllers\Admin\OfflineSyncReviewController;
@@ -258,6 +259,22 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
             MobileAppPackageController::class,
             'destroy',
         ])->middleware('throttle:10,1')->name('settings.mobile-app.destroy');
+        Route::get('/ledger', [
+            AgentLedgerController::class,
+            'index',
+        ])->middleware('throttle:30,1')->name('ledger.index');
+        Route::get('/ledger/{agent}', [
+            AgentLedgerController::class,
+            'show',
+        ])->whereNumber('agent')->middleware('throttle:30,1')->name('ledger.show');
+        Route::post('/ledger/{agent}', [
+            AgentLedgerController::class,
+            'store',
+        ])->whereNumber('agent')->middleware('throttle:20,1')->name('ledger.store');
+        Route::delete('/ledger/{agent}/{entry}', [
+            AgentLedgerController::class,
+            'destroy',
+        ])->whereNumber('agent')->whereNumber('entry')->middleware('throttle:20,1')->name('ledger.destroy');
         Route::patch('/settings/rounds/{round}/agents/{agent}/amount-limit', [
             SettingsController::class,
             'updateAgentRoundAmountLimit',
@@ -274,10 +291,6 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
             SettingsController::class,
             'updateRoundAmountLimits',
         ])->middleware('throttle:120,1')->name('settings.rounds.amount-limits');
-        Route::patch('/settings/rounds/{round}/number-amount-limits', [
-            SettingsController::class,
-            'updateRoundNumberAmountLimits',
-        ])->middleware('throttle:120,1')->name('settings.rounds.number-amount-limits');
         Route::post('/settings/rounds/{round}/hot-numbers', [
             SettingsController::class,
             'storeHotNumbers',

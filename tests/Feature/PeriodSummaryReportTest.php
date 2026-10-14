@@ -120,6 +120,38 @@ class PeriodSummaryReportTest extends TestCase
             ->assertDontSee('2026-09-30');
     }
 
+    public function test_an_agent_total_figure_links_to_its_own_days_and_rounds(): void
+    {
+        [$admin, $firstOperator, $secondOperator, $agentOne, $agentTwo] = $this->createBusiness();
+        AdminBusinessSetting::query()->where('admin_id', $admin->id)->update(['payout_2d_multiplier' => '5.00']);
+        $monday = $this->createClosedRound($admin, $agentOne, $firstOperator, '2026-10-05', 1, '12', 1);
+        $this->enterSales($firstOperator, $monday, ['121000']);
+        $tuesday = $this->createClosedRound($admin, $agentOne, $secondOperator, '2026-10-07', 2, '12', 3);
+        $this->enterSales($secondOperator, $tuesday, ['121000', '121000']);
+        $betaRound = $this->createClosedRound($admin, $agentTwo, $secondOperator, '2026-10-07', 1, '12', 2);
+        $this->enterSales($secondOperator, $betaRound, ['341000']);
+
+        $this->actingAs($admin)
+            ->get(route('reports.summary', ['period' => 'weekly', 'date' => '2026-10-07']))
+            ->assertOk()
+            ->assertViewHas('selectedFigure', null)
+            ->assertSee('figure=business_net', false)
+            ->assertSee('#report-detail', false);
+
+        $response = $this->get(route('reports.summary', [
+            'period' => 'weekly',
+            'date' => '2026-10-07',
+            'agent_id' => $agentOne->id,
+            'figure' => 'business_net',
+        ]))
+            ->assertOk()
+            ->assertViewHas('selectedFigure', 'business_net')
+            ->assertSee('Agent · day · Round details · 2D · Business net')
+            ->assertSee('class="figure-focus"', false);
+
+        $this->assertCount(2, $response->viewData('detailRows'));
+    }
+
     public function test_operator_reports_include_only_agents_and_sales_assigned_to_that_operator(): void
     {
         [$admin, $firstOperator, $secondOperator, $agentOne, $agentTwo] = $this->createBusiness();

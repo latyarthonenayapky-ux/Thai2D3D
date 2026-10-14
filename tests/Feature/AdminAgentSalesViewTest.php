@@ -39,11 +39,18 @@ class AdminAgentSalesViewTest extends TestCase
             ->assertSee('Inter · web entry')
             ->assertSee('data-source="web"', false)
             ->assertSee('data-source="phone"', false)
+            // The Amount figure opens the same Day · Round · Agent · Number list the
+            // office asked for, not a separate input log.
+            ->assertSee('data-figure="amount" data-sheet="numbers"', false)
+            ->assertDontSee('data-sheet="inputs"', false)
             ->assertDontSee('Sales by Agent')
             ->assertViewHas('channelBreakdown', fn (array $channels): bool => $channels['web']['accepted_numbers'] === 3
                 && (float) $channels['web']['accepted_amount'] === 4500.0
                 && $channels['phone']['accepted_numbers'] === 0
-                && count($channels['web']['numbers']) === 2);
+                // Each sheet row names the Agent it came from, so '12' is two rows here.
+                && count($channels['web']['numbers']) === 3
+                && array_keys($channels['web']) === ['accepted_numbers', 'accepted_amount', 'rejected_numbers', 'numbers', 'rejected']
+                && array_values(array_unique(array_column($channels['web']['numbers'], 'agent'))) === ['PH-01 · PH-01', 'PH-02 · PH-02']);
     }
 
     public function test_the_admin_opens_an_operators_agent_statement_read_only(): void

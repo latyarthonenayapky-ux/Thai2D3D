@@ -30,12 +30,28 @@ class AuthenticationTest extends TestCase
         $this->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'correct-password',
-        ])->assertRedirect(route('draw-mode.index'));
+        ])->assertRedirect(route('dashboard'));
 
         $this->assertAuthenticatedAs($user);
-        $this->get(route('draw-mode.index'))->assertOk();
+        $this->get(route('dashboard'))->assertOk();
         $this->post(route('logout'))->assertRedirect(route('login'));
         $this->assertGuest();
+    }
+
+    public function test_an_admin_also_signs_straight_into_the_dashboard(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'password' => 'correct-password',
+            'status' => true,
+        ]);
+
+        $this->post(route('login.store'), [
+            'email' => $admin->email,
+            'password' => 'correct-password',
+        ])->assertRedirect(route('dashboard'));
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Live sales dashboard');
     }
 
     public function test_inactive_account_cannot_sign_in(): void

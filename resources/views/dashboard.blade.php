@@ -9,26 +9,30 @@
         'title' => __('app.dashboard.notify_title'),
         'body' => __('app.dashboard.notify_body'),
     ], JSON_UNESCAPED_UNICODE);
+    $liveLabels = json_encode([
+        'no_sales' => __('app.dashboard.live_no_sales'),
+        'no_over' => __('app.dashboard.live_no_over'),
+        'status_open' => __('app.common.status_open'),
+        'status_closed' => __('app.common.status_closed'),
+    ], JSON_UNESCAPED_UNICODE);
 @endphp
 <style>
     .live-round-list{display:grid;gap:18px}
     .live-round-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
     .live-round-totals{display:flex;gap:24px;flex-wrap:wrap}
     .live-round-totals strong{display:block;font-size:18px;margin-top:3px}
-    .live-agent-list{display:grid;gap:1px;margin:18px -24px -24px;background:#edf1ee;border-radius:0 0 16px 16px;overflow:hidden}
-    .live-agent{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(100px,1fr) repeat(2,minmax(85px,.7fr)) minmax(125px,.9fr);gap:12px;align-items:center;background:#fff;padding:14px 24px}
-    .live-agent-name{font-weight:750;color:#183a2a}
-    .live-agent-sub{display:block;margin-top:4px;color:#718078;font-size:12px}
-    .live-agent-value{font-weight:700;font-variant-numeric:tabular-nums}
-    .live-table-labels{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(100px,1fr) repeat(2,minmax(85px,.7fr)) minmax(125px,.9fr);gap:12px;padding:0 24px 10px;color:#718078;font-size:11px;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+    .live-round-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .live-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--border);margin-top:16px}
+    .live-panel{background:var(--surface);padding:12px 16px;min-width:0}
+    .live-panel h3{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .live-table{width:100%;border-collapse:collapse;font-size:13px}
+    .live-table th,.live-table td{padding:5px 6px;border-bottom:1px solid var(--gridline);text-align:right;font-variant-numeric:tabular-nums}
+    .live-table th:first-child,.live-table td:first-child{text-align:left}
+    .live-table thead th{color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+    .live-table .over-limit{color:var(--clock-red);font-weight:900}
+    .live-table tfoot td{border-top:1px solid var(--border);border-bottom:0;font-weight:800}
     @media(max-width:900px){
-        .live-agent-list{margin:16px -19px -19px}
-        .live-table-labels{display:none}
-        .live-agent{grid-template-columns:1fr auto;gap:8px 14px;padding:14px 19px}
-        .live-agent-name{grid-column:1 / -1}
-        .live-agent-limit{grid-column:1 / -1}
-        .live-agent-operator{grid-column:1 / -1}
-        .live-agent-count::before,.live-agent-amount::before{content:attr(data-inline-label);color:#718078;font-size:12px;font-weight:500}
+        .live-panels{grid-template-columns:1fr}
         .live-round-totals{gap:18px}
     }
 </style>
@@ -39,8 +43,47 @@
         <script>
             (() => {
                 const endpoint = @json(route('dashboard.live'));
+                const labels = {!! $liveLabels !!};
                 const formatCount = value => Number(value).toLocaleString();
                 const formatAmount = value => Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const renderTop = (body, rows) => {
+                    if (!body) return;
+                    body.replaceChildren();
+                    if (!rows.length) {
+                        const cell = body.insertRow().insertCell();
+                        cell.colSpan = 2;
+                        cell.className = 'muted';
+                        cell.textContent = labels.no_sales;
+                        return;
+                    }
+                    rows.forEach(row => {
+                        const tr = body.insertRow();
+                        tr.insertCell().textContent = row.number;
+                        tr.insertCell().textContent = formatAmount(row.amount);
+                    });
+                };
+
+                const renderOver = (body, rows) => {
+                    if (!body) return;
+                    body.replaceChildren();
+                    if (!rows.length) {
+                        const cell = body.insertRow().insertCell();
+                        cell.colSpan = 4;
+                        cell.className = 'muted';
+                        cell.textContent = labels.no_over;
+                        return;
+                    }
+                    rows.forEach(row => {
+                        const tr = body.insertRow();
+                        tr.insertCell().textContent = row.number;
+                        ['limit', 'sold', 'excess'].forEach(key => {
+                            const cell = tr.insertCell();
+                            cell.textContent = formatAmount(row[key]);
+                            if (key !== 'limit') cell.className = 'over-limit';
+                        });
+                    });
+                };
 
                 const refreshLive = async () => {
                     try {
@@ -57,19 +100,27 @@
                             return;
                         }
                         for (const round of rounds) {
-                            const count = document.querySelector(`[data-live-round-count="${round.id}"]`);
-                            const amount = document.querySelector(`[data-live-round-amount="${round.id}"]`);
+                            const section = document.querySelector(`[data-live-round="${round.id}"]`);
+                            const count = section?.querySelector('[data-live-round-count]');
+                            const amount = section?.querySelector('[data-live-round-amount]');
                             if (count) count.textContent = formatCount(round.accepted_count);
                             if (amount) amount.textContent = formatAmount(round.accepted_amount);
-                            for (const agent of round.agents || []) {
-                                const row = document.querySelector(`[data-live-agent-row="${round.id}-${agent.agent_id}"]`);
-                                if (!row) { window.location.reload(); return; }
-                                row.querySelector('[data-live-agent-count]').textContent = formatCount(agent.accepted_count);
-                                row.querySelector('[data-live-agent-amount]').textContent = formatAmount(agent.accepted_amount);
-                                const pill = row.querySelector('[data-live-limit-pill]');
-                                if (pill) pill.style.display = (agent.amount_limit !== null && agent.accepted_amount >= agent.amount_limit) ? '' : 'none';
-                            }
+                            renderTop(section?.querySelector('[data-live-top]'), round.top || []);
+                            renderOver(section?.querySelector('[data-live-over]'), round.breaches || []);
                         }
+                        const today = data.today || {rounds: []};
+                        for (const row of today.rounds || []) {
+                            const tr = document.querySelector(`[data-today-row="${row.id}"]`);
+                            if (!tr) { window.location.reload(); return; }
+                            tr.querySelector('[data-today-count]').textContent = formatCount(row.accepted_count);
+                            tr.querySelector('[data-today-amount]').textContent = formatAmount(row.accepted_amount);
+                            tr.querySelector('[data-today-result]').textContent = row.result_2d ?? '—';
+                            tr.querySelector('[data-today-status]').textContent = labels['status_'+row.status] ?? row.status;
+                        }
+                        const dayCount = document.querySelector('[data-today-total-count]');
+                        const dayAmount = document.querySelector('[data-today-total-amount]');
+                        if (dayCount) dayCount.textContent = formatCount(today.accepted_count ?? 0);
+                        if (dayAmount) dayAmount.textContent = formatAmount(today.accepted_amount ?? 0);
                     } catch (error) {
                         // Keep showing the last known totals; the next tick retries.
                     }
@@ -197,64 +248,57 @@
         @endif
 
         @forelse($adminRounds as $round)
+            @php $figures = $round->figures; @endphp
             <section class="card live-round-list" style="margin-bottom:18px" data-live-round="{{ $round->id }}">
                 <div class="live-round-heading">
                     <div>
                         <h2 style="margin:0">{{ $round->round_date->format('Y-m-d') }} · {{ __('app.clock.round') }} {{ $round->round_no }}</h2>
                         <p style="margin:6px 0 0">{{ ($round->start_time ?? __('app.common.auto')) }}–{{ $round->close_time }} · {{ __('app.dashboard.round_open') }}</p>
                     </div>
-                    <a class="button secondary" href="{{ route('admin.settings.index', ['round_id' => $round->id]) }}#rounds">{{ __('app.dashboard.manage_round') }}</a>
+                    <div class="live-round-actions">
+                        <a class="button" href="{{ route('operator.sales.workspace', ['round_id' => $round->id]) }}">{{ __('app.dashboard.open_sale_entry') }}</a>
+                        <a class="button secondary" href="{{ route('admin.settings.index', ['round_id' => $round->id]) }}#rounds">{{ __('app.dashboard.manage_round') }}</a>
+                    </div>
                 </div>
 
                 <div class="live-round-totals" aria-label="{{ __('app.dashboard.accepted_numbers') }}">
-                    <div><span class="muted">{{ __('app.dashboard.accepted_numbers') }}</span><strong data-live-round-count="{{ $round->id }}">{{ number_format($round->accepted_count) }}</strong></div>
-                    <div><span class="muted">{{ __('app.dashboard.amount_2d') }}</span><strong data-live-round-amount="{{ $round->id }}">{{ number_format($round->accepted_amount, 2) }}</strong></div>
+                    <div><span class="muted">{{ __('app.dashboard.accepted_numbers') }}</span><strong data-live-round-count>{{ number_format($figures['accepted_count']) }}</strong></div>
+                    <div><span class="muted">{{ __('app.dashboard.amount_2d') }}</span><strong data-live-round-amount>{{ number_format($figures['accepted_amount'], 2) }}</strong></div>
+                    <div><span class="muted">{{ __('app.dashboard.round_amount_limit') }}</span><strong @if($figures['amount_limit'] === null) class="muted" @endif data-live-round-limit>{{ $figures['amount_limit'] === null ? __('app.common.not_set') : number_format($figures['amount_limit'], 2) }}</strong></div>
                 </div>
 
-                <div class="live-table-labels" aria-hidden="true">
-                    <span>{{ __('app.common.agent') }}</span><span>{{ __('app.settings.col_handler') }}</span><span>{{ __('app.dashboard.numbers_2d') }}</span><span>{{ __('app.dashboard.amount_2d_col') }}</span><span>{{ __('app.dashboard.limit_monitor') }}</span>
-                </div>
-                <div class="live-agent-list">
-                    @forelse($round->agent_sales as $agent)
-                        @php
-                            $amountLimitReached = $agent->amount_limit !== null && $agent->accepted_amount >= $agent->amount_limit;
-                        @endphp
-                        <article class="live-agent" data-live-agent-row="{{ $round->id }}-{{ $agent->agent_id }}">
-                            <div class="live-agent-name">
-                                {{ $agent->agent_code }} · {{ $agent->agent_name }}
-                                @if($agent->assigned_user_id === $me->id && $agent->agent_session_id)
-                                    <a class="button secondary" href="{{ route('operator.sales.show', $agent->agent_session_id) }}">{{ __('app.dashboard.enter_sales') }}</a>
-                                @elseif($agent->assigned_user_id === null || $agent->assigned_user_id === $me->id)
-                                    <form method="POST" action="{{ route('operator.agent-sessions.claim', [$round, $agent->agent_id]) }}" style="display:inline">
-                                        @csrf
-                                        <button class="button secondary" type="submit">{{ $agent->assigned_user_id === null ? __('app.dashboard.claim_agent') : __('app.dashboard.resume_agent') }}</button>
-                                    </form>
-                                @endif
-                                <span class="pill off" data-live-limit-pill @if(!$amountLimitReached) style="display:none" @endif>{{ __('app.dashboard.limit_reached') }}</span>
-                            </div>
-                            <div class="live-agent-operator">
-                                @if($agent->assigned_user_id === null)
-                                    {{ __('app.dashboard.not_claimed') }}
-                                @elseif($agent->assigned_user_id === $me->id)
-                                    {{ __('app.dashboard.you_admin') }}
-                                @else
-                                    {{ $agent->handler_name }} ({{ __('app.roles.'.$agent->handler_role) }})
-                                @endif
-                            </div>
-                            <div class="live-agent-count live-agent-value" data-live-agent-count data-inline-label="{{ __('app.dashboard.inline_numbers') }}">{{ number_format($agent->accepted_count) }}</div>
-                            <div class="live-agent-amount live-agent-value" data-live-agent-amount data-inline-label="{{ __('app.dashboard.inline_amount') }}">{{ number_format($agent->accepted_amount, 2) }}</div>
-                            <div class="live-agent-limit">
-                                @if($agent->amount_limit === null)
-                                    <span class="muted">{{ __('app.common.not_set') }}</span>
-                                @else
-                                    {{ number_format($agent->amount_limit, 2) }}
-                                    <span class="live-agent-sub">{{ __('app.dashboard.monitoring_only') }}</span>
-                                @endif
-                            </div>
-                        </article>
-                    @empty
-                        <p class="muted" style="padding:16px 24px;margin:0">{{ __('app.dashboard.create_agents') }}</p>
-                    @endforelse
+                <div class="live-panels">
+                    <div class="live-panel">
+                        <h3>{{ __('app.dashboard.top_sale_title') }}</h3>
+                        <table class="live-table">
+                            <thead><tr><th>{{ __('app.sale.number') }}</th><th>{{ __('app.sale.amount') }}</th></tr></thead>
+                            <tbody data-live-top>
+                                @forelse($figures['top'] as $row)
+                                    <tr><td>{{ $row['number'] }}</td><td>{{ number_format($row['amount'], 2) }}</td></tr>
+                                @empty
+                                    <tr><td colspan="2" class="muted">{{ __('app.dashboard.live_no_sales') }}</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="live-panel">
+                        <h3>{{ __('app.dashboard.over_limit_title') }}</h3>
+                        <table class="live-table">
+                            <thead><tr><th>{{ __('app.sale.number') }}</th><th>{{ __('app.sale.col_limit') }}</th><th>{{ __('app.sale.col_sold') }}</th><th>{{ __('app.sale.excess') }}</th></tr></thead>
+                            <tbody data-live-over>
+                                @forelse($figures['breaches'] as $row)
+                                    <tr>
+                                        <td class="over-limit">{{ $row['number'] }}</td>
+                                        <td>{{ number_format($row['limit'], 2) }}</td>
+                                        <td class="over-limit">{{ number_format($row['sold'], 2) }}</td>
+                                        <td class="over-limit">{{ number_format($row['excess'], 2) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="muted">{{ __('app.dashboard.live_no_over') }}</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
         @empty
@@ -265,6 +309,35 @@
                 <a class="button" href="{{ route('admin.settings.index') }}#round-schedule">{{ __('app.dashboard.configure_schedule') }}</a>
             </section>
         @endforelse
+
+        <section class="card live-round-list" data-live-today>
+            <div class="live-round-heading">
+                <h2 style="margin:0">{{ __('app.dashboard.today_title') }} · {{ today('Asia/Yangon')->format('Y-m-d') }}</h2>
+                <div class="live-round-totals">
+                    <div><span class="muted">{{ __('app.dashboard.accepted_numbers') }}</span><strong data-today-total-count>{{ number_format($todaySummary['accepted_count']) }}</strong></div>
+                    <div><span class="muted">{{ __('app.dashboard.amount_2d') }}</span><strong data-today-total-amount>{{ number_format($todaySummary['accepted_amount'], 2) }}</strong></div>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="live-table">
+                    <thead><tr><th>{{ __('app.common.round') }}</th><th>{{ __('app.common.status') }}</th><th>{{ __('app.rounds.col_result_2d') }}</th><th>{{ __('app.dashboard.accepted_numbers') }}</th><th>{{ __('app.dashboard.amount_2d') }}</th></tr></thead>
+                    <tbody>
+                        @forelse($todaySummary['rounds'] as $row)
+                            <tr data-today-row="{{ $row['id'] }}">
+                                <td>{{ __('app.clock.round') }} {{ $row['round_no'] }} · {{ ($row['start_time'] ?? __('app.common.auto')) }}–{{ $row['close_time'] }}</td>
+                                <td data-today-status>{{ __('app.common.status_'.$row['status']) }}</td>
+                                <td data-today-result>{{ $row['result_2d'] ?? '—' }}</td>
+                                <td data-today-count>{{ number_format($row['accepted_count']) }}</td>
+                                <td data-today-amount>{{ number_format($row['accepted_amount'], 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" class="muted">{{ __('app.dashboard.today_empty') }}</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <p class="muted" style="margin:10px 0 0">{{ __('app.dashboard.today_help') }}</p>
+        </section>
     @elseif($me->isOperator())
         <div class="eyebrow">{{ __('app.dashboard.operator_eyebrow') }}</div>
         <h1 class="page-title" style="margin-top:8px">{{ __('app.dashboard.welcome', ['name' => $me->name]) }}</h1>

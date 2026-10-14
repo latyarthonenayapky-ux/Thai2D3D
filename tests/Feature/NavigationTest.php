@@ -112,7 +112,7 @@ class NavigationTest extends TestCase
         $setting = $this->popover($html, 'Setting');
         $menu = $this->popover($html, 'Menu');
 
-        foreach (['Add Operator', 'Display', 'Language', 'Data Backup', 'Activity log'] as $item) {
+        foreach (['Add Operator', 'Display', 'Language', 'Data Backup'] as $item) {
             $this->assertStringContainsString($item, $setting, "Setting should list {$item} for the owner");
         }
 
@@ -121,9 +121,13 @@ class NavigationTest extends TestCase
             $this->assertStringNotContainsString($item, $setting, "Setting should hide {$item} from the owner");
         }
 
-        foreach (['admin.users.index', 'admin.data-backup.index', 'admin.activity-log.index'] as $route) {
+        // The audit trail belongs to the Admin alone.
+        $this->assertStringNotContainsString('Activity log', $setting);
+
+        foreach (['admin.users.index', 'admin.data-backup.index'] as $route) {
             $this->actingAs($owner)->get(route($route))->assertOk();
         }
+        $this->actingAs($owner)->get(route('admin.activity-log.index'))->assertForbidden();
 
         $this->assertStringNotContainsString('Language', $menu);
         $this->assertStringNotContainsString('Round schedule', $menu);

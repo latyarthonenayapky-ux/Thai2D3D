@@ -7,7 +7,6 @@ use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\HotNumber;
 use App\Models\Round;
-use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\SaleInput;
 use App\Models\User;
@@ -75,20 +74,30 @@ class OperatorAgentClaimTest extends TestCase
             ['90', '99000.00', 'accepted', false],
         ]);
         app(ThreeDigitSaleProcessor::class)->process('123100', $lowerSession);
+        $round->update(['amount_limit_all' => '2000.00']);
 
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Live sales dashboard')
             ->assertSee('updates in place every 15 seconds')
-            ->assertSee('A1 · Lower Sales')
-            ->assertSee('A2 · Higher Sales')
+            ->assertSee('Top Sale · High → low')
+            ->assertSee('Above Amount Limit · All Agents')
             ->assertSee('6,000.00')
+            ->assertSeeInOrder(['78', '5,000.00', '12', '1,000.00'])
+            // One Round-wide cap colours the number that passed it.
+            ->assertSee('class="over-limit"', false)
+            ->assertSeeInOrder(['2,000.00', '5,000.00', '3,000.00'])
+            // The per-Agent sheet is gone: one Round total counts every Agent together.
+            ->assertDontSee('A1 · Lower Sales')
+            ->assertDontSee('A2 · Higher Sales')
+            ->assertDontSee('Claim Agent')
+            ->assertDontSee('9,000.00')
+            ->assertDontSee('8,000.00')
             ->assertDontSee('3D accepted numbers')
             ->assertDontSee('3D sales remain accepted')
             ->assertDontSee('SECRET')
-            ->assertDontSee('99,000.00')
-            ->assertSeeInOrder(['A2 · Higher Sales', '5,000.00', 'A1 · Lower Sales', '1,000.00']);
+            ->assertDontSee('99,000.00');
     }
 
     public function test_admin_cannot_enter_sales_for_an_agent_claimed_by_an_operator(): void
@@ -112,7 +121,7 @@ class OperatorAgentClaimTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee($operator->name)
+            ->assertDontSee($operator->name)
             ->assertDontSee('Enter sales')
             ->assertDontSee('Claim Agent');
 
@@ -154,10 +163,14 @@ class OperatorAgentClaimTest extends TestCase
         $round = $this->openRound($admin, 1);
         $round->update(['number_limit_3d' => 100]);
 
+        // Agents are claimed from Sale Entry now; the Dashboard only reports.
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Claim Agent');
+            ->assertDontSee('Claim Agent');
+        $this->get(route('operator.sales.entry', ['round_id' => $round->id]))
+            ->assertOk()
+            ->assertSee('ADMIN-CLAIM · Admin claim test');
         $this->post(route('operator.agent-sessions.claim', [$round, $agent]))
             ->assertRedirect();
 
@@ -234,11 +247,7 @@ class OperatorAgentClaimTest extends TestCase
         $round = $this->openRound($admin, 1);
         AgentSession::openSession($agentOne, $round, $admin->id);
         AgentSession::openSession($agentFour, $round, $operator->id);
-        RoundNumberAmountLimit::query()->create([
-            'round_id' => $round->id,
-            'number' => '12',
-            'amount_limit' => '1250.00',
-        ]);
+        $round->update(['amount_limit_all' => '1250.00']);
 
         $adminSession = AgentSession::query()
             ->where('round_id', $round->id)
@@ -251,9 +260,9 @@ class OperatorAgentClaimTest extends TestCase
 
         $this->get(route('operator.sales.setup', ['round_id' => $round->id]))
             ->assertOk()
-            ->assertSee('Round limits · all Agents')
-            ->assertSee('Amount Limit per number · 00–99')
-            ->assertSee('1250.00');
+            ->assertSee('Amount Limit · every number 00–99')
+            ->assertSee('Round Limit — All Agents')
+            ->assertSee('1,250.00');
 
         $this->get(route('operator.sales.show', [$adminSession, 'mode' => '2d']))
             ->assertOk()
@@ -261,8 +270,8 @@ class OperatorAgentClaimTest extends TestCase
             ->assertSee('A2 · Available Agent Two')
             ->assertSee('A4 · Operator Agent Four')
             ->assertSee('In use by '.$operator->name)
-            ->assertViewHas('numberAmountLimits', fn (array $caps): bool => ($caps['12'] ?? null) === 1250.0)
-            ->assertDontSee('Round limits · all Agents')
+            ->assertViewHas('numberAmountLimit', 1250.0)
+            ->assertDontSee('Round Limit — All Agents')
             ->assertViewHas('agentOptions', fn ($options): bool => $options->firstWhere('agent.id', $agentTwo->id)['selectable']
                 && ! $options->firstWhere('agent.id', $agentFour->id)['selectable']);
 

@@ -8,7 +8,6 @@ use App\Models\AgentSession;
 use App\Models\OfflineSyncReview;
 use App\Models\OperatorRoundSetting;
 use App\Models\Round;
-use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\SaleInput;
 use App\Models\User;
@@ -34,7 +33,7 @@ class AmountLimitEnforcementTest extends TestCase
         ]);
         $first = $this->openAgentSession($round, $operator, 'ALL-A');
         $second = $this->openAgentSession($round, $secondOperator, 'ALL-B');
-        $this->cap($round, '12', '1500.00');
+        $this->cap($round, '1500.00');
 
         $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $first)->status);
         $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $second)->status);
@@ -52,8 +51,7 @@ class AmountLimitEnforcementTest extends TestCase
     {
         [, $operator, $round] = $this->business();
         $session = $this->openAgentSession($round, $operator, 'WARN-A');
-        $this->cap($round, '12', '1000.00');
-        $this->cap($round, '13', '9000.00');
+        $this->cap($round, '1000.00');
 
         $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $session)->status);
         $this->assertSame('accepted', app(SaleProcessor::class)->process('121500', $session)->status);
@@ -68,15 +66,17 @@ class AmountLimitEnforcementTest extends TestCase
             ->assertSee('over-limit')
             ->assertViewHas('overLimitRows', fn (array $rows): bool => count($rows) === 1
                 && $rows[0]['number'] === '12'
+                && (float) $rows[0]['limit'] === 1000.0
                 && (float) $rows[0]['sold'] === 2500.0
-                && (float) $rows[0]['excess'] === 1500.0);
+                && (float) $rows[0]['excess'] === 1500.0)
+            ->assertViewHas('numberAmountLimit', 1000.0);
     }
 
     public function test_a_voided_sale_stops_flagging_the_number(): void
     {
         [, $operator, $round] = $this->business();
         $session = $this->openAgentSession($round, $operator, 'VOID-CAP');
-        $this->cap($round, '12', '1000.00');
+        $this->cap($round, '1000.00');
 
         $sale = app(SaleProcessor::class)->process('121500', $session);
         $this->assertCount(1, app(AmountLimitPolicy::class)->numberBreaches($round));
@@ -107,30 +107,33 @@ class AmountLimitEnforcementTest extends TestCase
         $this->assertSame([], app(AmountLimitPolicy::class)->breaches($round, $session->agent_id, $session->operator_id, '2d'));
     }
 
-    public function test_admin_saves_and_clears_the_per_number_caps(): void
+    public function test_one_round_cap_applies_to_every_number_and_cleared_it_stops_flagging(): void
     {
-        [$admin, , $round] = $this->business();
+        [$admin, $operator, $round] = $this->business();
+        $session = $this->openAgentSession($round, $operator, 'ONE-CAP');
 
         $this->actingAs($admin)
-            ->patch(route('admin.settings.rounds.number-amount-limits', $round), [
-                'limits' => ['12' => '1500', '7' => '2000', '99' => '', '00' => '0'],
-            ])
+            ->patch(route('admin.settings.rounds.amount-limits', $round), ['amount_limit_all' => '1500'])
             ->assertRedirect();
+        $this->assertSame(1500.0, app(AmountLimitPolicy::class)->twoDigitCap($round->fresh()));
 
-        $caps = $round->numberAmountLimits()->orderBy('number')->pluck('amount_limit', 'number');
-        $this->assertSame(['00', '07', '12'], $caps->keys()->map(fn ($number): string => (string) $number)->values()->all());
-        $this->assertSame('1500.00', (string) $caps['12']);
-        $this->assertSame('2000.00', (string) $caps['07']);
-        $this->assertSame('0.00', (string) $caps['00']);
+        app(SaleProcessor::class)->process('123000', $session);
+        app(SaleProcessor::class)->process('713000', $session);
 
-        $this->patch(route('admin.settings.rounds.number-amount-limits', $round), ['limits' => ['12' => '']])
+        // One figure, so a second number is capped exactly like the first.
+        $breaches = app(AmountLimitPolicy::class)->numberBreaches($round->fresh());
+        $this->assertSame(['12', '71'], array_column($breaches, 'number'));
+        $this->assertSame([1500.0, 1500.0], array_column($breaches, 'limit'));
+
+        $this->patch(route('admin.settings.rounds.amount-limits', $round), ['amount_limit_all' => ''])
             ->assertRedirect();
-        $this->assertSame(0, $round->numberAmountLimits()->count());
+        $this->assertNull($round->fresh()->amount_limit_all);
+        $this->assertSame([], app(AmountLimitPolicy::class)->numberBreaches($round->fresh()));
 
         $stranger = User::factory()->create(['role' => 'admin', 'status' => true]);
         app(InitializeAdminBusiness::class)->initialize($stranger);
         $this->actingAs($stranger)
-            ->patch(route('admin.settings.rounds.number-amount-limits', $round), ['limits' => ['12' => '1']])
+            ->patch(route('admin.settings.rounds.amount-limits', $round), ['amount_limit_all' => '1'])
             ->assertNotFound();
     }
 
@@ -202,7 +205,7 @@ class AmountLimitEnforcementTest extends TestCase
     {
         [, $operator, $round] = $this->business();
         $session = $this->openAgentSession($round, $operator, 'OFFLINE-CAP');
-        $this->cap($round, '12', '500.00');
+        $this->cap($round, '500.00');
 
         $record = [
             'client_uuid' => (string) Str::uuid(),
@@ -224,13 +227,10 @@ class AmountLimitEnforcementTest extends TestCase
         $this->assertSame(500.0, $breaches[0]['excess']);
     }
 
-    private function cap(Round $round, string $number, string $amount): RoundNumberAmountLimit
+    private function cap(Round $round, string $amount): void
     {
-        return RoundNumberAmountLimit::query()->create([
-            'round_id' => $round->id,
-            'number' => $number,
-            'amount_limit' => $amount,
-        ]);
+        // One Round-wide figure caps every number 00–99.
+        $round->update(['amount_limit_all' => $amount]);
     }
 
     private function business(): array

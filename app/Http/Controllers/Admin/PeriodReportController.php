@@ -53,10 +53,22 @@ class PeriodReportController extends Controller
             'agents' => $agents,
             'selectedAgentId' => $agentId,
             'selectedRoundNo' => $roundNo,
+            'selectedFigure' => $this->selectedFigure($request),
             'isAdmin' => $user->isAdmin(),
             'mode' => $mode,
             'detailRows' => $paginator,
         ]);
+    }
+
+    /**
+     * Which Agent Total figure was clicked to open the Day/Round detail.
+     */
+    private function selectedFigure(Request $request): ?string
+    {
+        $figures = ['total_stake', 'winning_stake', 'winnings', 'commission', 'business_net'];
+        $figure = $request->query('figure');
+
+        return in_array($figure, $figures, true) ? $figure : null;
     }
 
     public function export(

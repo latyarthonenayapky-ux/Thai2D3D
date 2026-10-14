@@ -128,7 +128,9 @@
                                 <a href="{{ route('admin.settings.index') }}#security">{{ __('app.nav.security') }}</a>
                             @endif
                             <a href="{{ route('admin.data-backup.index') }}" @if(request()->routeIs('admin.data-backup.*')) aria-current="page" @endif>{{ __('app.nav.data_backup') }}</a>
-                            <a href="{{ route('admin.activity-log.index') }}" @if(request()->routeIs('admin.activity-log.*')) aria-current="page" @endif>{{ __('app.nav.activity_log') }}</a>
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.activity-log.index') }}" @if(request()->routeIs('admin.activity-log.*')) aria-current="page" @endif>{{ __('app.nav.activity_log') }}</a>
+                            @endif
                         </div>
                     </details>
                 @endif
@@ -140,6 +142,7 @@
                             <a href="{{ route('admin.settings.index') }}#agents">{{ __('app.nav.agents_limits') }}</a>
                             <a href="{{ route('admin.settings.index') }}#rounds">{{ __('app.nav.hot_numbers') }}</a>
                             <a href="{{ route('admin.settlements.index') }}" @if(request()->routeIs('admin.settlements.*', 'admin.rounds.*')) aria-current="page" @endif>{{ __('app.nav.results_settlements') }}</a>
+                            <a href="{{ route('admin.ledger.index') }}" @if(request()->routeIs('admin.ledger.*')) aria-current="page" @endif>{{ __('app.ledger.nav') }}</a>
                             <a href="{{ route('admin.three-digit.index') }}" @if(request()->routeIs('admin.three-digit.*')) aria-current="page" @endif>{{ __('app.nav.draw_settings') }}</a>
                             <a href="{{ route('reports.summary', ['mode' => $layoutMode]) }}">{{ __('app.nav.period_summaries') }}</a>
                             <a href="{{ route('admin.offline-reviews.index') }}" id="pending-review-link" aria-live="polite">

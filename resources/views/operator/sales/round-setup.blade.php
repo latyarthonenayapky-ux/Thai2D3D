@@ -29,16 +29,10 @@
     .limit-list input{width:104px;min-height:32px;padding:5px 7px;border-radius:4px;font-variant-numeric:tabular-nums}
     .limit-list .button{min-height:32px;padding:5px 8px;font-size:11px}
     .setup-next{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-    .cap-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
-    .cap-cell{display:grid;gap:3px;margin:0;font-size:11px}
-    .cap-cell span{text-align:center;color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}
-    .cap-cell input{width:100%;min-height:30px;padding:4px 5px;border-radius:4px;font-size:12px;font-variant-numeric:tabular-nums;text-align:right}
-    .cap-grid .button{margin-top:9px;padding:7px 12px;font-size:12px}
-    .cap-card .setup-body{padding:12px}
     .setup-next .button{min-height:44px;padding:11px 20px;font-weight:800}
     .setup-note{margin:0;font-size:12px;color:var(--muted)}
     .sale-alert{margin:0 0 12px;padding:9px 12px;border:1px solid var(--border);font-size:12px}
-    @media(max-width:900px){.setup-wrap{margin:12px auto;padding:0 10px}.setup-grid{grid-template-columns:1fr}.cap-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+    @media(max-width:900px){.setup-wrap{margin:12px auto;padding:0 10px}.setup-grid{grid-template-columns:1fr}}
 </style>
 <main class="setup-wrap">
     <h1 class="page-title">{{ __('app.setup.heading') }}</h1>
@@ -133,45 +127,16 @@
                 @endif
             </div>
 
-            @if(! auth()->user()->isAdmin())
             <div class="limit-block">
                 <h3>{{ __('app.setup.amount_limit_title') }}</h3>
                 <p>{{ __('app.setup.amount_limit_desc') }}</p>
                 <div class="limit-chips">
-                    @forelse($numberAmountLimits as $cappedNumber => $cap)
-                        <span class="limit-chip">{{ $cappedNumber }} · {{ number_format((float) $cap, 2) }}</span>
-                    @empty
-                        <span class="muted">{{ __('app.setup.nothing_capped') }}</span>
-                    @endforelse
+                    <span class="limit-chip">{{ $numberAmountLimit === null ? __('app.setup.nothing_capped') : number_format($numberAmountLimit, 2) }}</span>
                 </div>
-                <p class="setup-note">{{ __('app.setup.caps_readonly_hint') }}</p>
+                <p class="setup-note">{{ auth()->user()->isAdmin() ? __('app.setup.caps_admin_hint') : __('app.setup.caps_readonly_hint') }}</p>
             </div>
-            @endif
         </div>
     </section>
-
-    @if(auth()->user()->isAdmin())
-        <section class="setup-card cap-card">
-            <div class="setup-title"><span>{{ __('app.setup.caps_title') }}</span><span>{{ __('app.setup.caps_hint') }}</span></div>
-            <div class="setup-body">
-                <form method="POST" action="{{ route('admin.settings.rounds.number-amount-limits', $round) }}">
-                    @csrf
-                    @method('PATCH')
-                    <div class="cap-grid">
-                        @for($capNumber = 0; $capNumber < 100; $capNumber++)
-                            @php $capKey = str_pad((string) $capNumber, 2, '0', STR_PAD_LEFT); @endphp
-                            <label class="cap-cell">
-                                <span>{{ $capKey }}</span>
-                                <input type="number" name="limits[{{ $capKey }}]" min="0" step="0.01"
-                                       value="{{ $numberAmountLimits[$capKey] ?? '' }}" placeholder="—">
-                            </label>
-                        @endfor
-                    </div>
-                    <button class="button secondary" type="submit">{{ __('app.setup.caps_save') }}</button>
-                </form>
-            </div>
-        </section>
-    @endif
 
     <section class="setup-card">
         <div class="setup-title"><span>{{ __('app.setup.continue_title') }}</span><span>{{ __('app.setup.agents_ready', ['count' => $selectableCount]) }}</span></div>

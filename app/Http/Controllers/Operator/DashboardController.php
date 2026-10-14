@@ -9,22 +9,23 @@ use App\Models\AgentSession;
 use App\Models\OfflineSyncReview;
 use App\Models\Round;
 use App\Models\RoundSchedule;
+use App\Models\SaleDetail;
 use App\Models\User;
+use App\Services\AmountLimitPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly AmountLimitPolicy $amountLimits)
+    {
+    }
     public function index(Request $request): View|RedirectResponse
     {
         $operator = $request->user();
-        if (($operator->isAdmin() || $operator->isOperator()) && $request->session()->get('draw_mode', '2d') === '3d') {
-            return redirect()->route('three-digit.sales.workspace');
-        }
 
         if ($operator->isAdmin()) {
             $rounds = $this->adminLiveRounds($operator);
@@ -75,6 +76,7 @@ class DashboardController extends Controller
 
             return view('dashboard', [
                 'adminRounds' => $rounds,
+                'todaySummary' => $this->today($operator),
                 'pendingReviewCount' => (clone $pendingReviewQuery)->count(),
                 'latestPendingReviewId' => (clone $pendingReviewQuery)->latest()->value('id'),
                 'setupChecklist' => $setupChecklist,
@@ -120,22 +122,10 @@ class DashboardController extends Controller
 
         return response()->json([
             'rounds' => $this->adminLiveRounds($operator)
-                ->map(fn (Round $round): array => [
-                    'id' => $round->id,
-                    'accepted_count' => $round->accepted_count,
-                    'accepted_amount' => $round->accepted_amount,
-                    'agents' => $round->agent_sales
-                        ->map(fn (object $agent): array => [
-                            'agent_id' => $agent->agent_id,
-                            'accepted_count' => $agent->accepted_count,
-                            'accepted_amount' => $agent->accepted_amount,
-                            'amount_limit' => $agent->amount_limit,
-                        ])
-                        ->values()
-                        ->all(),
-                ])
+                ->map(fn (Round $round): array => ['id' => $round->id] + $round->figures)
                 ->values()
                 ->all(),
+            'today' => $this->today($operator),
         ]);
     }
 
@@ -149,69 +139,93 @@ class DashboardController extends Controller
             ->get();
 
         foreach ($rounds as $round) {
-            $round->setAttribute('agent_sales', DB::table('agents as a')
-                ->leftJoin('agent_round_settings as ars', function ($join) use ($round): void {
-                    $join->on('ars.agent_id', '=', 'a.id')
-                        ->where('ars.round_id', '=', $round->id);
-                })
-                ->leftJoin('users as handlers', 'handlers.id', '=', 'ars.operator_id')
-                ->leftJoin('agent_sessions as ases', function ($join) use ($round): void {
-                    $join->on('ases.agent_id', '=', 'a.id')
-                        ->on('ases.round_id', '=', 'ars.round_id')
-                        ->on('ases.operator_id', '=', 'ars.operator_id')
-                        ->where('ases.round_id', '=', $round->id)
-                        ->where('ases.status', '=', 'open');
-                })
-                ->leftJoin('sale_inputs as si', 'si.agent_session_id', '=', 'ases.id')
-                ->leftJoin('sale_details as sd', function ($join): void {
-                    $join->on('sd.sale_input_id', '=', 'si.id')
-                        ->where('sd.status', '=', 'accepted')
-                        ->where('sd.is_excluded', '=', false);
-                })
-                ->where('a.admin_id', $admin->id)
-                ->where('a.status', 'active')
-                ->select([
-                    'a.id as agent_id',
-                    'a.agent_code',
-                    'a.agent_name',
-                    'ases.id as agent_session_id',
-                    'ars.operator_id as assigned_user_id',
-                    'handlers.name as handler_name',
-                    'handlers.role as handler_role',
-                    'ars.amount_limit',
-                ])
-                ->selectRaw('COUNT(sd.id) as accepted_count')
-                ->selectRaw('COALESCE(SUM(sd.amount), 0) as accepted_amount')
-                ->groupBy(
-                    'a.id',
-                    'a.agent_code',
-                    'a.agent_name',
-                    'ases.id',
-                    'ars.operator_id',
-                    'handlers.name',
-                    'handlers.role',
-                    'ars.amount_limit'
-                )
-                ->get()
-                ->map(fn ($agent): object => (object) [
-                    'agent_id' => (int) $agent->agent_id,
-                    'agent_code' => $agent->agent_code,
-                    'agent_name' => $agent->agent_name,
-                    'agent_session_id' => $agent->agent_session_id === null ? null : (int) $agent->agent_session_id,
-                    'assigned_user_id' => $agent->assigned_user_id === null ? null : (int) $agent->assigned_user_id,
-                    'handler_name' => $agent->handler_name,
-                    'handler_role' => $agent->handler_role,
-                    'amount_limit' => $agent->amount_limit === null ? null : (float) $agent->amount_limit,
-                    'accepted_count' => (int) $agent->accepted_count,
-                    'accepted_amount' => (float) $agent->accepted_amount,
-                ])
-                ->sortBy([['accepted_amount', 'desc'], ['agent_code', 'asc']])
-                ->values());
-
-            $round->setAttribute('accepted_count', $round->agent_sales->sum('accepted_count'));
-            $round->setAttribute('accepted_amount', $round->agent_sales->sum('accepted_amount'));
+            $round->setAttribute('figures', $this->figures($round));
         }
 
         return $rounds;
+    }
+
+    /**
+     * What the office watches while a Round is live: the round-wide accepted
+     * figures, the best-selling numbers, and the numbers that passed the single
+     * 2D Amount Limit. Every Agent and Operator of the Round counts, phone
+     * uploads included.
+     *
+     * @return array{accepted_count: int, accepted_amount: float, amount_limit: float|null, top: array<int, array{number: string, amount: float}>, breaches: array<int, array{number: string, limit: float, sold: float, excess: float}>}
+     */
+    private function figures(Round $round): array
+    {
+        $sold = SaleDetail::query()
+            ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
+            ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
+            ->where('agent_sessions.round_id', $round->id)
+            ->where('sale_details.status', 'accepted')
+            ->where('sale_details.is_excluded', false)
+            ->select('sale_details.number as number')
+            ->selectRaw('COUNT(*) as entries, SUM(sale_details.amount) as total_amount')
+            ->groupBy('sale_details.number')
+            ->get();
+
+        $limit = $this->amountLimits->twoDigitCap($round);
+
+        $top = $sold
+            ->map(fn ($row): array => [
+                'number' => str_pad((string) $row->number, 2, '0', STR_PAD_LEFT),
+                'amount' => round((float) $row->total_amount, 2),
+            ])
+            ->sortBy([['amount', 'desc'], ['number', 'asc']])
+            ->take(10)
+            ->values()
+            ->all();
+
+        $breaches = $limit === null ? [] : $sold
+            ->filter(fn ($row): bool => round((float) $row->total_amount, 2) > $limit)
+            ->map(fn ($row): array => [
+                'number' => str_pad((string) $row->number, 2, '0', STR_PAD_LEFT),
+                'limit' => $limit,
+                'sold' => round((float) $row->total_amount, 2),
+                'excess' => round((float) $row->total_amount - $limit, 2),
+            ])
+            ->sortBy([['excess', 'desc'], ['number', 'asc']])
+            ->values()
+            ->all();
+
+        return [
+            'accepted_count' => (int) $sold->sum('entries'),
+            'accepted_amount' => round((float) $sold->sum('total_amount'), 2),
+            'amount_limit' => $limit,
+            'top' => $top,
+            'breaches' => $breaches,
+        ];
+    }
+
+    /**
+     * Today's book, round by round — what remains after the last Round closes.
+     *
+     * @return array{rounds: array<int, array<string, mixed>>, accepted_count: int, accepted_amount: float}
+     */
+    private function today(User $admin): array
+    {
+        $rounds = Round::query()
+            ->with('result')
+            ->where('admin_id', $admin->id)
+            ->whereDate('round_date', today('Asia/Yangon'))
+            ->orderBy('round_no')
+            ->get();
+
+        $rows = $rounds->map(fn (Round $round): array => [
+            'id' => $round->id,
+            'round_no' => $round->round_no,
+            'start_time' => $round->start_time,
+            'close_time' => $round->close_time,
+            'status' => $round->status,
+            'result_2d' => $round->result?->result_2d,
+        ] + $this->figures($round))->values()->all();
+
+        return [
+            'rounds' => $rows,
+            'accepted_count' => (int) array_sum(array_column($rows, 'accepted_count')),
+            'accepted_amount' => round((float) array_sum(array_column($rows, 'accepted_amount')), 2),
+        ];
     }
 }

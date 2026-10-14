@@ -314,6 +314,9 @@
             <form method="POST" action="{{ route('admin.settings.rounds.amount-limits', $selectedRound) }}" class="grid">
                 @csrf
                 @method('PATCH')
+                <label>{{ __('app.settings.amount_limit_2d') }}
+                    <input type="number" name="amount_limit_all" min="0" step="0.01" value="{{ old('amount_limit_all', $selectedRound->amount_limit_all) }}" placeholder="{{ __('app.common.not_set') }}">
+                </label>
                 <label>{{ __('app.settings.amount_limit_3d') }}
                     <input type="number" name="amount_limit_all_3d" min="0" step="0.01" value="{{ old('amount_limit_all_3d', $selectedRound->amount_limit_all_3d) }}" placeholder="{{ __('app.common.not_set') }}">
                 </label>

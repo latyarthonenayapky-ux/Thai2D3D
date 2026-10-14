@@ -44,9 +44,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->route($request->user()->isAdmin() || $request->user()->isOperator()
-            ? 'draw-mode.index'
-            : 'dashboard');
+        // Signing in always opens the Dashboard, whichever role signs in.
+        return redirect()->route('dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse

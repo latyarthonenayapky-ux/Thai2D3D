@@ -8,9 +8,7 @@ use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\Round;
 use App\Models\SaleDetail;
-use App\Models\SaleInput;
 use App\Models\ThreeDigitSaleDetail;
-use App\Models\ThreeDigitSaleInput;
 use App\Services\AmountLimitPolicy;
 use App\Services\RoundSettlementCalculator;
 use App\Services\SaleProcessor;
@@ -19,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\View\View;
 use InvalidArgumentException;
@@ -76,7 +75,7 @@ class SaleEntryController extends Controller
             'round' => $round,
             'agentOptions' => $options,
             'numberLimits' => $round->number_limits ?? [],
-            'numberAmountLimits' => $round->numberAmountLimits()->orderBy('number')->pluck('amount_limit', 'number'),
+            'numberAmountLimit' => $this->amountLimits->twoDigitCap($round),
             'hotNumbers' => $round->hotNumbers()->orderBy('number')->get(),
             'activeSession' => $this->readySession($round, $request->user()->id),
             'selectableCount' => $options->where('selectable', true)->count(),
@@ -261,10 +260,12 @@ class SaleEntryController extends Controller
     }
 
     /**
-     * What each sale channel has recorded in this view, and the number lists
+     * What each sale channel has recorded in this view, and the detail lists
      * behind its figures. 'phone' is the Agent app's auto-upload, 'web' is this
      * screen — the office needs the two apart because they arrive at different
-     * times and are keyed by different hands.
+     * times and are keyed by different hands. Every figure answers the same
+     * question: which Agent, on which date and Round, put how much on which
+     * number.
      *
      * @return array{phone: array<string, mixed>, web: array<string, mixed>}
      */
@@ -273,81 +274,52 @@ class SaleEntryController extends Controller
         $threeDigit = $saleMode === '3d';
         $scope = function ($query) use ($agentSession, $round, $roundWide): void {
             if ($roundWide) {
-                $query->where('agent_sessions.round_id', $round->id);
+                $query->where('rounds.id', $round->id);
             } else {
                 $query->where('agent_sessions.id', $agentSession?->id ?? 0);
             }
         };
+        $detail = $threeDigit ? 'three_digit_sale_details' : 'sale_details';
+        $input = $threeDigit ? 'three_digit_sale_inputs' : 'sale_inputs';
+        $inputId = $threeDigit ? 'three_digit_sale_input_id' : 'sale_input_id';
 
-        $acceptedQuery = $threeDigit
-            ? ThreeDigitSaleDetail::query()
-                ->join('three_digit_sale_inputs', 'three_digit_sale_inputs.id', '=', 'three_digit_sale_details.three_digit_sale_input_id')
-                ->join('agent_sessions', 'agent_sessions.id', '=', 'three_digit_sale_inputs.agent_session_id')
-                ->where('three_digit_sale_details.status', 'accepted')
-                ->select('three_digit_sale_inputs.source as source', 'three_digit_sale_details.number as number')
-                ->selectRaw('COUNT(*) as number_count, SUM(three_digit_sale_details.amount) as total_amount')
-                ->groupBy('three_digit_sale_inputs.source', 'three_digit_sale_details.number')
-            : SaleDetail::query()
-                ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
-                ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
-                ->where('sale_details.status', 'accepted')
-                ->where('sale_details.is_excluded', false)
-                ->select('sale_inputs.source as source', 'sale_details.number as number')
-                ->selectRaw('COUNT(*) as number_count, SUM(sale_details.amount) as total_amount')
-                ->groupBy('sale_inputs.source', 'sale_details.number');
-        $scope($acceptedQuery);
-        $accepted = $acceptedQuery->get();
+        $rows = function (array $statuses, bool $reason = false) use ($threeDigit, $detail, $input, $inputId, $scope): Collection {
+            $query = $threeDigit
+                ? ThreeDigitSaleDetail::query()
+                : SaleDetail::query();
+            $query
+                ->join($input, $input.'.id', '=', $detail.'.'.$inputId)
+                ->join('agent_sessions', 'agent_sessions.id', '=', $input.'.agent_session_id')
+                ->join('agents', 'agents.id', '=', 'agent_sessions.agent_id')
+                ->join('rounds', 'rounds.id', '=', 'agent_sessions.round_id')
+                ->whereIn($detail.'.status', $statuses)
+                ->when($threeDigit === false, fn ($q) => $q->where($detail.'.is_excluded', false))
+                ->select([
+                    'rounds.round_date as round_date',
+                    'rounds.round_no as round_no',
+                    'agents.agent_code as agent_code',
+                    'agents.agent_name as agent_name',
+                    $detail.'.number as number',
+                    $input.'.source as source',
+                ])
+                ->selectRaw('COUNT(*) as number_count, SUM('.$detail.'.amount) as total_amount');
+            if ($reason) {
+                $column = $detail.'.reject_reason';
+                $query->addSelect(DB::raw($column.' as reason'))->groupBy($column);
+            }
+            $query->groupBy('rounds.round_date', 'rounds.round_no', 'agents.agent_code', 'agents.agent_name', $detail.'.number', $input.'.source');
+            $scope($query);
 
-        $rejectedQuery = $threeDigit
-            ? ThreeDigitSaleDetail::query()
-                ->join('three_digit_sale_inputs', 'three_digit_sale_inputs.id', '=', 'three_digit_sale_details.three_digit_sale_input_id')
-                ->join('agent_sessions', 'agent_sessions.id', '=', 'three_digit_sale_inputs.agent_session_id')
-                ->where('three_digit_sale_details.status', 'rejected')
-                ->select('three_digit_sale_inputs.source as source', 'three_digit_sale_details.number as number', 'three_digit_sale_details.reject_reason as reason')
-                ->selectRaw('COUNT(*) as number_count, SUM(three_digit_sale_details.amount) as total_amount')
-                ->groupBy('three_digit_sale_inputs.source', 'three_digit_sale_details.number', 'three_digit_sale_details.reject_reason')
-            : SaleDetail::query()
-                ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
-                ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
-                ->where('sale_details.status', 'rejected')
-                ->select('sale_inputs.source as source', 'sale_details.number as number', 'sale_details.reject_reason as reason')
-                ->selectRaw('COUNT(*) as number_count, SUM(sale_details.amount) as total_amount')
-                ->groupBy('sale_inputs.source', 'sale_details.number', 'sale_details.reject_reason');
-        $scope($rejectedQuery);
-        $rejected = $rejectedQuery->get();
+            return $query->get()->map(fn ($row): array => $this->channelRow($row, $reason));
+        };
 
-        $inputQuery = $threeDigit ? ThreeDigitSaleInput::query() : SaleInput::query();
-        $inputs = $inputQuery
-            ->whereHas('agentSession', fn ($session) => $session->where('round_id', $round->id))
-            ->when(! $roundWide && $agentSession !== null, fn ($query) => $query->where('agent_session_id', $agentSession->id))
-            ->where('status', 'accepted')
-            ->latest()
-            ->limit(50)
-            ->get(['id', 'agent_session_id', 'source', 'original_input', 'number_count', 'total_amount', 'created_at']);
+        $accepted = $rows(['accepted']);
+        $rejected = $rows(['rejected'], true);
 
         $breakdown = [];
         foreach (['phone', 'web'] as $source) {
-            $acceptedRows = $accepted
-                ->where('source', $source)
-                ->sortByDesc('total_amount')
-                ->map(fn ($row): array => [
-                    'number' => (string) $row->number,
-                    'count' => (int) $row->number_count,
-                    'amount' => (float) $row->total_amount,
-                ])
-                ->values()
-                ->all();
-            $rejectedRows = $rejected
-                ->where('source', $source)
-                ->sortBy('number')
-                ->map(fn ($row): array => [
-                    'number' => (string) $row->number,
-                    'count' => (int) $row->number_count,
-                    'amount' => (float) $row->total_amount,
-                    'reason' => $this->rejectReasonLabel((string) ($row->reason ?? '')),
-                ])
-                ->values()
-                ->all();
+            $acceptedRows = $this->channelSubset($accepted, $source);
+            $rejectedRows = $this->channelSubset($rejected, $source);
 
             $breakdown[$source] = [
                 'accepted_numbers' => (int) array_sum(array_column($acceptedRows, 'count')),
@@ -355,20 +327,39 @@ class SaleEntryController extends Controller
                 'rejected_numbers' => (int) array_sum(array_column($rejectedRows, 'count')),
                 'numbers' => $acceptedRows,
                 'rejected' => $rejectedRows,
-                'inputs' => $inputs
-                    ->where('source', $source)
-                    ->map(fn ($input): array => [
-                        'time' => $input->created_at->timezone('Asia/Yangon')->format('M j, H:i:s'),
-                        'input' => (string) $input->original_input,
-                        'count' => (int) $input->number_count,
-                        'total' => (float) $input->total_amount,
-                    ])
-                    ->values()
-                    ->all(),
             ];
         }
 
         return $breakdown;
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function channelSubset(Collection $rows, string $source): array
+    {
+        return $rows->where('source', $source)
+            ->sortBy([['agent', 'asc'], ['date', 'desc'], ['amount', 'desc']])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function channelRow(object $row, bool $reason): array
+    {
+        return [
+            'date' => substr((string) $row->round_date, 0, 10),
+            'round_no' => (int) $row->round_no,
+            'agent' => trim($row->agent_code.' · '.(string) $row->agent_name),
+            'number' => str_pad((string) $row->number, 2, '0', STR_PAD_LEFT),
+            'count' => (int) $row->number_count,
+            'amount' => round((float) $row->total_amount, 2),
+            'source' => (string) ($row->source ?? 'web'),
+            'reason' => $reason ? $this->rejectReasonLabel((string) ($row->reason ?? '')) : null,
+        ];
     }
 
     private function rejectReasonLabel(string $reason): string
@@ -482,9 +473,7 @@ class SaleEntryController extends Controller
             'numberLimits' => $round->number_limits ?? [],
             'hotNumbers' => $round->hotNumbers()->orderBy('number')->get(),
             'overLimitRows' => $saleMode === '2d' ? $this->amountLimits->numberBreaches($round) : [],
-            'numberAmountLimits' => $saleMode === '2d'
-                ? $round->numberAmountLimits()->pluck('amount_limit', 'number')->map(fn ($limit): float => (float) $limit)->all()
-                : [],
+            'numberAmountLimit' => $saleMode === '2d' ? $this->amountLimits->twoDigitCap($round) : null,
             'channelBreakdown' => $this->channelBreakdown($round, $agentSession, $roundWide, $saleMode),
             'amountLimitBreaches' => $this->bannerBreaches($round, $agentSession, $awaitingAgent, $saleMode),
             'threeDigitAmountLimit' => $awaitingAgent ? 0.0 : (float) (AgentRoundSetting::query()

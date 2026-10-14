@@ -6,15 +6,14 @@ use App\Exceptions\AmountLimitExceededException;
 use App\Models\AgentRoundSetting;
 use App\Models\OperatorRoundSetting;
 use App\Models\Round;
-use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\ThreeDigitSaleDetail;
 
 /**
- * 2D Amount Limit is set per number (00–99) for one Round, and it counts every
- * Agent and Operator under that Round's Admin together. Passing a cap is
- * allowed — numberBreaches() lists the over-cap numbers for review, so 2D
- * sales never call assertWithinLimits().
+ * 2D Amount Limit is ONE figure per Round — rounds.amount_limit_all — and it
+ * applies to every number 00–99, counting every Agent and Operator under that
+ * Round's Admin together. Passing it is allowed — numberBreaches() lists the
+ * over-cap numbers for review, so 2D sales never call assertWithinLimits().
  *
  * 3D keeps the three scalar tiers:
  * - Agent    — agent_round_settings.amount_limit_3d
@@ -77,7 +76,8 @@ class AmountLimitPolicy
     /**
      * 3D tiers whose accepted total has already passed the limit, whatever the
      * mode — this is what the warning banner and the coloured amounts read.
-     * 2D has no scalar tiers any more, so it reports no tier breaches.
+     * 2D is monitored through numberBreaches() instead, so it reports no tier
+     * breaches here.
      *
      * @return array<int, array{key: string, label: string, limit: float, used: float, over: float, mode: string}>
      */
@@ -99,20 +99,21 @@ class AmountLimitPolicy
     }
 
     /**
-     * Every capped number whose round-wide accepted total has passed its cap.
+     * Every number whose round-wide accepted total has passed the Round's single
+     * 2D Amount Limit.
      *
      * @return array<int, array{number: string, limit: float, sold: float, excess: float}>
      */
     public function numberBreaches(Round $round): array
     {
-        $limits = RoundNumberAmountLimit::query()
-            ->where('round_id', $round->id)
-            ->pluck('amount_limit', 'number');
+        $cap = $round->amount_limit_all === null ? null : round((float) $round->amount_limit_all, 2);
 
-        if ($limits->isEmpty()) {
+        if ($cap === null) {
             return [];
         }
 
+        // At most one row per number 00–99, so the cap is compared in PHP —
+        // HAVING with a bound float is compared as text on SQLite.
         $sold = SaleDetail::query()
             ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
             ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
@@ -122,30 +123,29 @@ class AmountLimitPolicy
             ->select('sale_details.number as number')
             ->selectRaw('SUM(sale_details.amount) as total_amount')
             ->groupBy('sale_details.number')
-            ->get()
-            ->keyBy('number');
+            ->get();
 
-        return $limits
-            ->map(function ($limit, string $number) use ($sold): ?array {
-                $total = round((float) ($sold->get($number)?->total_amount ?? 0), 2);
-                $cap = round((float) $limit, 2);
-                if ($total <= $cap) {
-                    return null;
-                }
-
-                return [
-                    'number' => $number,
-                    'limit' => $cap,
-                    'sold' => $total,
-                    'excess' => round($total - $cap, 2),
-                ];
-            })
-            ->filter()
+        return $sold
+            ->map(fn ($row): array => [
+                'number' => str_pad((string) $row->number, 2, '0', STR_PAD_LEFT),
+                'limit' => $cap,
+                'sold' => round((float) $row->total_amount, 2),
+                'excess' => round((float) $row->total_amount - $cap, 2),
+            ])
+            ->filter(fn (array $row): bool => $row['sold'] > $cap)
             // stable chained sorts: number first, then excess high→low wins
             ->sortBy('number')
             ->sortByDesc('excess')
             ->values()
             ->all();
+    }
+
+    /**
+     * The Round's single 2D cap, or null when the Round is uncapped.
+     */
+    public function twoDigitCap(Round $round): ?float
+    {
+        return $round->amount_limit_all === null ? null : round((float) $round->amount_limit_all, 2);
     }
 
     /**

@@ -13,21 +13,26 @@ class ActivityLogController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->authorizeViewer($request);
         $filters = $this->filters($request);
+        $viewer = $request->user();
 
-        $entries = $this->query($filters)->paginate(50)->withQueryString();
+        $entries = $this->query($filters, $viewer)->paginate(50)->withQueryString();
 
         return view('admin.activity-log.index', [
             'entries' => $entries,
-            'accounts' => User::query()->orderBy('name')->get(['id', 'name', 'role']),
+            'accounts' => $this->businessUsers($viewer)
+                ->orderBy('name')
+                ->get(['id', 'name', 'role']),
             'filters' => $filters,
         ]);
     }
 
     public function export(Request $request): StreamedResponse
     {
+        $this->authorizeViewer($request);
         $filters = $this->filters($request);
-        $entries = $this->query($filters);
+        $entries = $this->query($filters, $request->user());
 
         $filename = sprintf('wya-activity-log-%s.csv', now('Asia/Yangon')->format('Ymd-His'));
 
@@ -57,6 +62,23 @@ class ActivityLogController extends Controller
     }
 
     /**
+     * The log is the business owner's audit trail: an Admin sees their own
+     * actions and those of the accounts under them, and nobody else opens the
+     * page at all.
+     */
+    private function authorizeViewer(Request $request): void
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+    }
+
+    private function businessUsers(User $viewer): \Illuminate\Database\Eloquent\Builder
+    {
+        return User::query()->where(fn ($query) => $query
+            ->where('admin_id', $viewer->id)
+            ->orWhere('id', $viewer->id));
+    }
+
+    /**
      * @return array{user_id?: int|null, action?: string|null}
      */
     private function filters(Request $request): array
@@ -67,10 +89,11 @@ class ActivityLogController extends Controller
         ]);
     }
 
-    private function query(array $filters): \Illuminate\Database\Eloquent\Builder
+    private function query(array $filters, User $viewer): \Illuminate\Database\Eloquent\Builder
     {
         return ActivityLog::query()
             ->with('user')
+            ->whereIn('user_id', $this->businessUsers($viewer)->select('id'))
             ->when($filters['user_id'] ?? null, fn ($query, $userId) => $query->where('user_id', $userId))
             ->when($filters['action'] ?? null, fn ($query, $action) => $query->where('action', 'like', $action.'%'))
             ->latest();

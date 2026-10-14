@@ -18,7 +18,6 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-agent-row .button{min-height:36px;padding:7px 12px}
     .sale-entry-form{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;min-width:0}
     .sale-entry-form .button{min-height:36px;padding:7px 12px}
-    .draft-list{max-height:280px;overflow:auto}
     .draft-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px dashed var(--gridline);font-size:13px}
     .draft-row small{display:block;color:var(--muted);margin-top:3px}
     .draft-row .button{padding:4px 8px;font-size:11px}
@@ -57,14 +56,8 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-stat:last-child{border-bottom:0}
     .sale-stat-label{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
     .sale-stat-value{display:block;margin-top:5px;font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
-    .sale-summary{display:flex;flex-wrap:wrap;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:10px}
-    .sale-summary .sale-stat{display:flex;align-items:baseline;gap:8px;background:var(--surface);padding:5px 12px;border:0;flex:1 1 150px}
-    .sale-summary .sale-stat-label{display:inline;margin:0}
-    .sale-summary .sale-stat-value{display:inline;margin:0;font-size:16px}
-    .sale-copy{display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}
-    .sale-copy .button{min-height:32px;padding:6px 10px;font-size:12px;white-space:nowrap}
     /* Phone / Inter rows: one row per channel, every figure opens its sheet. */
-    .sale-sources{width:100%;border-collapse:collapse;margin:-6px 0 12px;font-size:12px}
+    .sale-sources{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:12px}
     .sale-sources th,.sale-sources td{padding:0;border:1px solid var(--border);background:var(--surface)}
     .sale-sources thead th{background:var(--surface-soft);color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;text-align:right}
     .sale-sources thead th:first-child{text-align:left}
@@ -72,24 +65,35 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-sources .source-cell{display:block;width:100%;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding:5px 8px;cursor:pointer}
     .sale-sources .source-cell:hover,.sale-sources .source-cell[aria-expanded=true]{background:var(--accent-soft);color:var(--accent-text)}
     .sale-sources .source-cell.over-limit{color:var(--clock-red)}
+    .sale-sources .source-total th{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 8px;border-top:2px solid var(--border)}
+    .sale-sources .source-total .button{min-height:28px;padding:4px 9px;font-size:11px;white-space:nowrap}
+    .sale-sources .total-cell{display:block;text-align:right;padding:5px 8px;font-weight:800;font-variant-numeric:tabular-nums}
     .sale-sheet{background:var(--surface);border:1px solid var(--border);border-top:0;margin:-12px 0 12px}
     .sale-sheet table{width:100%;border-collapse:collapse;font-size:12px}
     .sale-sheet th,.sale-sheet td{padding:5px 8px;border-bottom:1px solid var(--gridline);text-align:right;font-variant-numeric:tabular-nums}
     .sale-sheet th:first-child,.sale-sheet td:first-child{text-align:left}
+    .sale-sheet tfoot td{border-top:1px solid var(--border);border-bottom:0;font-weight:800}
     .sale-sheet-body{max-height:260px;overflow:auto}
-    /* Sale input bar: agent, input, save and the staged queue on one line. */
+    /* Sale input bar: agent, a half-width input, save and the staged queue on one line. */
     .sale-bar{margin-bottom:12px}
-    .sale-bar-row{display:grid;grid-template-columns:minmax(190px,.75fr) minmax(230px,1.5fr) auto;gap:10px;align-items:end;padding:10px 12px}
+    .sale-bar-row{display:grid;grid-template-columns:minmax(180px,.7fr) minmax(200px,.7fr) auto minmax(200px,1fr);gap:10px;align-items:end;padding:10px 12px}
     .sale-bar-row label{margin:0 0 4px;font-size:11px}
     .sale-bar-row select,.sale-bar-row input{width:100%;min-height:36px;padding:6px 8px;border-radius:4px;font-size:13px}
     .sale-bar-row .button{min-height:36px;padding:7px 12px;white-space:nowrap}
     .sale-bar-entry{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
-    .draft-strip{max-height:130px;overflow:auto;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1px;background:var(--gridline)}
-    .draft-strip .draft-row{background:var(--surface);border-bottom:0;padding:6px 8px}
+    .sale-bar-queue{min-width:0;border:1px solid var(--border);background:var(--surface-soft)}
+    .sale-bar-queue-head{display:flex;justify-content:space-between;gap:8px;padding:4px 8px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--gridline)}
+    .draft-strip{max-height:104px;overflow:auto;display:grid;gap:1px;background:var(--gridline)}
+    .draft-strip .draft-row{background:var(--surface);border-bottom:0;padding:4px 8px;font-size:12px}
+    .draft-strip .draft-row small{margin-top:1px;font-size:10px}
+    .draft-strip .draft-empty{padding:8px;background:var(--surface)}
     .sale-bar-note{padding:0 12px 8px;color:var(--muted);font-size:11px;display:flex;gap:12px;flex-wrap:wrap}
     .sale-bar-note kbd{font:inherit;font-weight:800;color:var(--text)}
     .sale-save{min-height:36px}
     .sale-history{margin-top:14px}
+    .sale-history>summary{cursor:pointer;list-style:none}
+    .sale-history>summary::-webkit-details-marker{display:none}
+    .sale-history[open]>summary{border-bottom:1px solid var(--border)}
     .sale-history table{font-size:12px}
     .sale-history th,.sale-history td{padding:8px}
     .sale-search{width:130px;min-height:30px;padding:5px 8px;border-radius:4px}
@@ -102,7 +106,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-number-chip.excluded{color:var(--muted);background:var(--surface-soft);text-decoration:line-through}
     .sale-number-chip.voided{color:var(--muted);background:var(--surface-soft);text-decoration:line-through}
     @media(max-width:1060px){.sale-grid{grid-template-columns:1fr}.sale-stats{grid-column:auto}}
-    @media(max-width:700px){.sale-workspace{margin:12px auto;padding:0 10px}.sale-heading{align-items:flex-start;flex-direction:column}.sale-meta{flex-wrap:wrap;gap:6px 12px}.sale-summary .sale-stat{padding:8px 10px;flex:1 1 100%}.sale-summary .sale-stat-value{font-size:16px}.sale-copy{flex:1 1 100%;justify-content:flex-start}.sale-grid{grid-template-columns:1fr}.sale-ledger{grid-row:2}.sale-stats{grid-column:auto}.ledger-wrap{max-height:420px}.ledger-grid{font-size:11px}.ledger-grid th,.ledger-grid td{padding:4px 3px}.ledger-wrap-full{max-height:none}.ledger-wrap-full .ledger-grid{font-size:11px}.ledger-wrap-full .ledger-grid th,.ledger-wrap-full .ledger-grid td{padding:1px 2px}.sale-history{margin-top:10px}}
+    @media(max-width:700px){.sale-workspace{margin:12px auto;padding:0 10px}.sale-heading{align-items:flex-start;flex-direction:column}.sale-meta{flex-wrap:wrap;gap:6px 12px}.sale-bar-row{grid-template-columns:1fr}.sale-sources .source-total th{flex-wrap:wrap}.sale-grid{grid-template-columns:1fr}.sale-ledger{grid-row:2}.sale-stats{grid-column:auto}.ledger-wrap{max-height:420px}.ledger-grid{font-size:11px}.ledger-grid th,.ledger-grid td{padding:4px 3px}.ledger-wrap-full{max-height:none}.ledger-wrap-full .ledger-grid{font-size:11px}.ledger-wrap-full .ledger-grid th,.ledger-wrap-full .ledger-grid td{padding:1px 2px}.sale-history{margin-top:10px}}
 </style>
 <main class="sale-workspace" data-sale-workspace
       data-sale-mode="{{ $saleMode }}"
@@ -168,27 +172,6 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         <span data-limit-banner-body>{{ implode('  ·  ', $limitBannerRows) }}</span>
     </div>
 
-    <section class="sale-summary" aria-label="{{ __('app.sale.summary_aria') }}">
-        <div class="sale-stat">
-            <span class="sale-stat-label">{{ __('app.sale.accepted_numbers') }}</span>
-            <span class="sale-stat-value" data-accepted-count>{{ number_format($saleMode === '2d' ? $acceptedCount : $threeDigitAcceptedCount) }}</span>
-        </div>
-        <div class="sale-stat">
-            <span class="sale-stat-label">{{ __('app.sale.accepted_amount') }}</span>
-            <span class="sale-stat-value {{ ($amountLimitBreaches ?? []) !== [] ? 'over-limit' : '' }}" data-accepted-amount>{{ number_format($saleMode === '2d' ? $acceptedAmount : $threeDigitAcceptedAmount, 2) }}</span>
-        </div>
-        <div class="sale-stat">
-            <span class="sale-stat-label">{{ __('app.sale.rejected_numbers') }}</span>
-            <span class="sale-stat-value" data-rejected-count>{{ number_format($saleMode === '2d' ? $rejectedCount : $threeDigitRejectedCount) }}</span>
-        </div>
-        @if($saleMode === '2d')
-            <div class="sale-stat sale-copy">
-                <button class="button secondary" type="button" data-copy-over-limit
-                        title="{{ __('app.sale.copy_limit_title') }}">{{ __('app.sale.copy_limit') }}</button>
-            </div>
-        @endif
-    </section>
-
     <table class="sale-sources" aria-label="{{ __('app.sale.sources_aria') }}">
         <thead>
             <tr>
@@ -202,16 +185,32 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             @foreach($channelBreakdown as $channel => $channelRow)
                 <tr>
                     <th scope="row">{{ __('app.sale.source_'.$channel) }}</th>
-                    @foreach(['numbers' => $channelRow['accepted_numbers'], 'rejected' => $channelRow['rejected_numbers'], 'inputs' => $channelRow['accepted_amount']] as $sheet => $figure)
+                    @foreach([
+                        ['figure' => 'numbers', 'rows' => 'numbers', 'value' => $channelRow['accepted_numbers'], 'title' => __('app.sale.sheet_numbers')],
+                        ['figure' => 'rejected', 'rows' => 'rejected', 'value' => $channelRow['rejected_numbers'], 'title' => __('app.sale.sheet_rejected')],
+                        ['figure' => 'amount', 'rows' => 'numbers', 'value' => $channelRow['accepted_amount'], 'title' => __('app.sale.accepted_amount')],
+                    ] as $cell)
                         <td>
-                            <button class="source-cell" type="button" data-source="{{ $channel }}" data-sheet="{{ $sheet }}" aria-expanded="false"
-                                    title="{{ __('app.sale.source_open_aria', ['sheet' => __('app.sale.sheet_'.$sheet), 'source' => __('app.sale.source_'.$channel)]) }}">
-                                {{ $sheet === 'inputs' ? number_format((float) $figure, 2) : number_format((int) $figure) }}
+                            <button class="source-cell" type="button" data-source="{{ $channel }}" data-figure="{{ $cell['figure'] }}" data-sheet="{{ $cell['rows'] }}" aria-expanded="false"
+                                    title="{{ __('app.sale.source_open_aria', ['sheet' => $cell['title'], 'source' => __('app.sale.source_'.$channel)]) }}">
+                                {{ $cell['figure'] === 'amount' ? number_format((float) $cell['value'], 2) : number_format((int) $cell['value']) }}
                             </button>
                         </td>
                     @endforeach
                 </tr>
             @endforeach
+            <tr class="source-total">
+                <th scope="row">
+                    {{ __('app.sale.sources_total') }}
+                    @if($saleMode === '2d')
+                        <button class="button secondary" type="button" data-copy-over-limit
+                                title="{{ __('app.sale.copy_limit_title') }}">{{ __('app.sale.copy_limit') }}</button>
+                    @endif
+                </th>
+                <td><span class="total-cell" data-accepted-count>{{ number_format($saleMode === '2d' ? $acceptedCount : $threeDigitAcceptedCount) }}</span></td>
+                <td><span class="total-cell" data-rejected-count>{{ number_format($saleMode === '2d' ? $rejectedCount : $threeDigitRejectedCount) }}</span></td>
+                <td><span class="total-cell {{ ($amountLimitBreaches ?? []) !== [] ? 'over-limit' : '' }}" data-accepted-amount>{{ number_format($saleMode === '2d' ? $acceptedAmount : $threeDigitAcceptedAmount, 2) }}</span></td>
+            </tr>
         </tbody>
     </table>
     <div class="sale-sheet" data-source-sheet hidden></div>
@@ -219,7 +218,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     <section class="sale-panel sale-bar" aria-label="{{ __('app.sale.input_panel') }}">
         <div class="sale-panel-title">
             <span>{{ __('app.sale.input_panel') }} · {{ strtoupper($saleMode) }}</span>
-            <span>{{ __('app.sale.recent_sales') }} · <span data-draft-count>0</span></span>
+            <span>{{ __('app.sale.stage_help') }}</span>
         </div>
         <div class="sale-bar-row">
             @if($saleMode === '2d')
@@ -266,6 +265,15 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 <button class="button secondary" type="submit" @disabled(! $canEnterSales)>{{ __('app.sale.add') }}</button>
             </form>
             <button class="button sale-save" type="button" data-save-sales @disabled(! $canEnterSales)>{{ __('app.sale.save_button') }}</button>
+            <div class="sale-bar-queue">
+                <div class="sale-bar-queue-head">
+                    <span>{{ __('app.sale.recent_sales') }}</span>
+                    <span><span data-draft-count>0</span></span>
+                </div>
+                <div class="draft-strip" data-draft-list>
+                    <div class="draft-empty">{{ __('app.sale.draft_empty') }}</div>
+                </div>
+            </div>
         </div>
         <div class="sale-bar-note">
             <span><kbd>Enter</kbd> {{ __('app.sale.shortcut_add') }}</span>
@@ -273,13 +281,8 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             <span><kbd>F1</kbd> {{ __('app.sale.shortcut_save') }}</span>
             @if($saleMode === '2d')
                 <span>{{ $agentState ?: ($selectableCount === 0 ? __('app.sale.all_agents_in_use') : __('app.sale.no_agent_chosen')) }}</span>
+                <span>{{ __('app.sale.hint_2d') }}</span>
             @endif
-        </div>
-        @if($saleMode === '2d')
-            <div class="sale-bar-note">{{ __('app.sale.hint_2d') }}</div>
-        @endif
-        <div class="draft-list draft-strip" data-draft-list>
-            <div class="draft-empty">{{ __('app.sale.draft_empty') }}</div>
         </div>
     </section>
 
@@ -378,11 +381,11 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     @endif
 
     @if($agentSession !== null)
-    <section class="sale-panel sale-history">
-        <div class="sale-panel-title">
+    <details class="sale-panel sale-history">
+        <summary class="sale-panel-title">
             <span>{{ __('app.sale.saved_sales', ['mode' => strtoupper($saleMode)]) }}</span>
             <span>{{ __('app.sale.latest_50') }}</span>
-        </div>
+        </summary>
         <div class="table-wrap">
             @php
                 $actor = auth()->user();
@@ -443,7 +446,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 </tbody>
             </table>
         </div>
-    </section>
+    </details>
     @endif
 </main>
 @if($saleMode === '2d')
@@ -482,7 +485,17 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         const saveButton = document.querySelector('[data-save-sales]');
         const storageKey = workspace.dataset.storageKey;
         const mode = workspace.dataset.saleMode;
-        const numberCaps = @json($numberAmountLimits);
+        const amountCap = @json($numberAmountLimit);
+        @php
+            $liveRow = [
+                'date' => $round->round_date->format('Y-m-d'),
+                'round_no' => (int) $round->round_no,
+                'agent' => $agentSession?->agent === null
+                    ? '—'
+                    : trim($agentSession->agent->agent_code.' · '.(string) $agentSession->agent->agent_name),
+            ];
+        @endphp
+        const liveRow = {!! json_encode($liveRow, JSON_UNESCAPED_UNICODE) !!};
         const channels = @json($channelBreakdown);
         const draftId = () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         const typingNormalization = @json(auth()->user()->prefers('sale_typing_normalization', 'on'));
@@ -558,10 +571,9 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             if (mode === '2d') {
                 document.querySelectorAll('[data-amount-for]').forEach(cell => {
                     const amount = sold.get(cell.dataset.amountFor) || 0;
-                    const cap = numberCaps[cell.dataset.amountFor];
                     cell.textContent = amount ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
                     cell.classList.toggle('has-sales', amount > 0);
-                    cell.classList.toggle('over-limit', cap !== undefined && amount > Number(cap));
+                    cell.classList.toggle('over-limit', amountCap !== null && amount > Number(amountCap));
                     document.querySelector(`[data-number="${cell.dataset.amountFor}"]`).classList.toggle('has-sales', amount > 0);
                 });
                 return;
@@ -628,21 +640,21 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         };
         const sourceSheet = document.querySelector('[data-source-sheet]');
         const sheetHeadings = {
-            numbers: [t.sheet_number, t.sheet_count, t.sheet_amount],
-            rejected: [t.sheet_number, t.sheet_count, t.sheet_amount, t.sheet_reason],
-            inputs: [t.sheet_time, t.sheet_input, t.sheet_count, t.sheet_total],
+            numbers: [t.sheet_date, t.sheet_round, t.sheet_agent, t.sheet_number, t.sheet_count, t.sheet_amount],
+            rejected: [t.sheet_date, t.sheet_round, t.sheet_agent, t.sheet_number, t.sheet_count, t.sheet_amount, t.sheet_reason],
         };
         const sheetCells = {
-            numbers: row => [row.number, row.count, money(row.amount)],
-            rejected: row => [row.number, row.count, money(row.amount), row.reason],
-            inputs: row => [row.time, row.input, row.count, money(row.total)],
+            numbers: row => [row.date, row.round_no, row.agent, row.number, row.count, money(row.amount)],
+            rejected: row => [row.date, row.round_no, row.agent, row.number, row.count, money(row.amount), row.reason],
         };
+        // Columns the sheet total row spans before it reaches the count.
+        const sheetFooterSpans = {numbers: 4, rejected: 4};
         let openSheet = null;
         const markSourceCells = () => {
             document.querySelectorAll('.source-cell').forEach(cell => {
                 const active = openSheet !== null
                     && cell.dataset.source === openSheet.source
-                    && cell.dataset.sheet === openSheet.kind;
+                    && cell.dataset.figure === openSheet.figure;
                 cell.setAttribute('aria-expanded', active ? 'true' : 'false');
             });
         };
@@ -652,8 +664,8 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 sourceSheet.hidden = true;
                 return;
             }
-            const headings = sheetHeadings[openSheet.kind];
-            const rows = channels[openSheet.source][openSheet.kind];
+            const headings = sheetHeadings[openSheet.rows];
+            const rows = channels[openSheet.source][openSheet.rows];
             const title = document.createElement('div');
             title.className = 'sale-panel-title';
             const label = document.createElement('span');
@@ -662,7 +674,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             close.type = 'button';
             close.className = 'button secondary';
             close.textContent = t.sheet_close;
-            close.addEventListener('click', () => toggleSourceSheet(openSheet.source, openSheet.kind, openSheet.title));
+            close.addEventListener('click', () => toggleSourceSheet(openSheet.element));
             title.append(label, close);
             const table = document.createElement('table');
             const head = document.createElement('thead');
@@ -680,44 +692,70 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             }
             rows.forEach(row => {
                 const tr = body.insertRow();
-                sheetCells[openSheet.kind](row).forEach(value => {
+                sheetCells[openSheet.rows](row).forEach(value => {
                     tr.insertCell().textContent = value;
                 });
             });
             table.append(head, body);
+            if (rows.length) {
+                // One Agent per row means the office needs the channel's own total under it.
+                const foot = document.createElement('tfoot');
+                const footRow = foot.insertRow();
+                const footLabel = footRow.insertCell();
+                footLabel.colSpan = sheetFooterSpans[openSheet.rows];
+                footLabel.textContent = t.sheet_total;
+                footRow.insertCell().textContent = rows.reduce((sum, row) => sum + Number(row.count), 0).toLocaleString();
+                footRow.insertCell().textContent = money(rows.reduce((sum, row) => sum + Number(row.amount), 0));
+                if (openSheet.rows === 'rejected') footRow.insertCell().textContent = '';
+                table.append(foot);
+            }
             const scroll = document.createElement('div');
             scroll.className = 'sale-sheet-body';
             scroll.append(table);
             sourceSheet.append(title, scroll);
             sourceSheet.hidden = false;
         };
-        const toggleSourceSheet = (source, kind, title) => {
-            openSheet = openSheet !== null && openSheet.source === source && openSheet.kind === kind
+        const toggleSourceSheet = (cell) => {
+            openSheet = openSheet !== null && openSheet.cell === cell
                 ? null
-                : {source, kind, title};
+                : {cell, source: cell.dataset.source, figure: cell.dataset.figure, rows: cell.dataset.sheet, title: cell.title};
             markSourceCells();
             renderSourceSheet();
         };
         document.querySelectorAll('.source-cell').forEach(cell => {
-            cell.addEventListener('click', () => toggleSourceSheet(cell.dataset.source, cell.dataset.sheet, cell.title));
+            cell.addEventListener('click', () => toggleSourceSheet(cell));
         });
         const round2 = value => Math.round(Number(value) * 100) / 100;
         const mergeChannelNumber = (rows, number, amount, reason) => {
-            const row = rows.find(entry => entry.number === number && (reason === undefined || entry.reason === reason));
+            const row = rows.find(entry => entry.number === number
+                && entry.date === liveRow.date
+                && entry.round_no === liveRow.round_no
+                && entry.agent === liveRow.agent
+                && (reason === undefined || entry.reason === reason));
             if (row) {
                 row.count += 1;
                 row.amount = round2(row.amount + amount);
             } else {
-                rows.push({number, count: 1, amount: round2(amount), ...(reason === undefined ? {} : {reason})});
+                rows.push({
+                    ...liveRow,
+                    number,
+                    count: 1,
+                    amount: round2(amount),
+                    source: 'web',
+                    ...(reason === undefined ? {} : {reason}),
+                });
             }
-            rows.sort((a, b) => b.amount - a.amount || String(a.number).localeCompare(String(b.number)));
+            rows.sort((a, b) => String(a.agent).localeCompare(String(b.agent))
+                || String(b.date).localeCompare(String(a.date))
+                || b.amount - a.amount
+                || String(a.number).localeCompare(String(b.number)));
         };
         const writeSourceCells = () => {
             document.querySelectorAll('.source-cell').forEach(cell => {
                 const row = channels[cell.dataset.source];
-                const figure = cell.dataset.sheet === 'inputs'
+                const figure = cell.dataset.figure === 'amount'
                     ? money(row.accepted_amount)
-                    : String(row[cell.dataset.sheet === 'numbers' ? 'accepted_numbers' : 'rejected_numbers']).toLocaleString();
+                    : String(row[cell.dataset.figure === 'numbers' ? 'accepted_numbers' : 'rejected_numbers']).toLocaleString();
                 cell.textContent = figure;
             });
         };
@@ -749,6 +787,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             if (inputText) {
                 web.inputs.unshift({
                     time: new Date().toLocaleTimeString(),
+                    ...liveRow,
                     input: inputText,
                     count: details.length,
                     total: round2(lineTotal),

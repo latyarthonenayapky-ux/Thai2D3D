@@ -7,7 +7,6 @@ use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\HotNumber;
 use App\Models\Round;
-use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\SaleInput;
 use App\Models\User;
@@ -219,11 +218,7 @@ class SaleProcessorTest extends TestCase
         $round = $this->createRound(1);
         $operator = $this->createOperator();
         $session = $this->createSession($round, $operator, 'AMOUNT');
-        RoundNumberAmountLimit::query()->create([
-            'round_id' => $round->id,
-            'number' => '12',
-            'amount_limit' => '100.00',
-        ]);
+        $round->update(['amount_limit_all' => '100.00']);
 
         $this->assertSame('accepted', $this->processor->process('121000', $session)->status);
         $this->assertSame(1, SaleInput::query()->count());

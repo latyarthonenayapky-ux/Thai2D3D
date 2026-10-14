@@ -1,7 +1,25 @@
 @extends('layouts.app', ['title' => __('app.reports.title_2d')])
 
 @section('content')
-@php $currency = auth()->user()->currencyLabel(); @endphp
+@php
+    $currency = auth()->user()->currencyLabel();
+    $figureKeys = ['total_stake', 'winning_stake', 'winnings', 'commission', 'business_net'];
+    $figureLabels = [
+        'total_stake' => __('app.reports.col_accepted_stakes'),
+        'winning_stake' => __('app.reports.col_winning_stakes'),
+        'winnings' => __('app.reports.col_winnings'),
+        'commission' => __('app.reports.col_commission'),
+        'business_net' => __('app.reports.col_business_net'),
+    ];
+    // Clicking an Agent Total re-filters the report onto that Agent and scrolls
+    // to the Day/Round detail, so the page number must not travel with it.
+    $drillQuery = request()->query();
+    unset($drillQuery['page'], $drillQuery['figure']);
+@endphp
+<style>
+    .figure-link{display:block;text-align:right;color:inherit;text-decoration:underline;text-decoration-style:dotted}
+    .figure-focus{background:var(--gridline)}
+</style>
 <main class="main">
     @if($isAdmin)
         <a href="{{ route('admin.settlements.index') }}">{{ __('app.reports.back_settlements') }}</a>
@@ -72,11 +90,14 @@
                     <tr>
                         <td>{{ $agent['agent_code'] }} · {{ $agent['agent_name'] }}</td>
                         <td>{{ $agent['round_count'] }}</td>
-                        <td>{{ number_format($agent['total_stake'], 2) }}</td>
-                        <td>{{ number_format($agent['winning_stake'], 2) }}</td>
-                        <td>{{ number_format($agent['winnings'], 2) }}</td>
-                        <td>{{ number_format($agent['commission'], 2) }}</td>
-                        <td>{{ number_format($agent['business_net'], 2) }}</td>
+                        @foreach($figureKeys as $key)
+                            <td @if($selectedFigure === $key) class="figure-focus" @endif>
+                                <a class="figure-link" title="{{ __('app.reports.drill_hint') }}"
+                                   href="{{ route('reports.summary', array_merge($drillQuery, ['agent_id' => $agent['agent_id'], 'figure' => $key])) }}#report-detail">
+                                    {{ number_format($agent[$key], 2) }}
+                                </a>
+                            </td>
+                        @endforeach
                     </tr>
                 @empty
                     <tr><td colspan="7" class="muted">{{ __('app.reports.no_agent_sales') }}</td></tr>
@@ -118,11 +139,11 @@
         </div>
     </section>
 
-    <section class="card">
-        <h2>{{ __('app.reports.detail_2d') }}</h2>
+    <section class="card" id="report-detail">
+        <h2>{{ __('app.reports.detail_2d') }}@if($selectedFigure) · {{ $figureLabels[$selectedFigure] }}@endif</h2>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.common.date') }}</th><th>{{ __('app.common.round') }}</th><th>{{ __('app.reports.col_round_handler') }}</th><th>{{ __('app.rounds.col_result_2d') }}</th><th>{{ __('app.reports.col_accepted_stakes') }}</th><th>{{ __('app.reports.col_winning_stakes') }}</th><th>{{ __('app.reports.col_winnings') }}</th><th>{{ __('app.reports.col_commission') }}</th><th>{{ __('app.reports.col_business_net') }}</th><th></th></tr></thead>
+                <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.common.date') }}</th><th>{{ __('app.common.round') }}</th><th>{{ __('app.reports.col_round_handler') }}</th><th>{{ __('app.rounds.col_result_2d') }}</th>@foreach($figureKeys as $key)<th @if($selectedFigure === $key) class="figure-focus" @endif>{{ $figureLabels[$key] }}</th>@endforeach<th></th></tr></thead>
                 <tbody>
                 @forelse($detailRows as $row)
                     <tr>
@@ -131,11 +152,9 @@
                         <td>{{ $row['round_no'] }}</td>
                         <td>{{ $row['operator_name'] ?? '—' }}</td>
                         <td>{{ $row['result_2d'] ?? '—' }}</td>
-                        <td>{{ number_format($row['total_stake'], 2) }}</td>
-                        <td>{{ number_format($row['winning_stake'], 2) }}</td>
-                        <td>{{ number_format($row['winnings'], 2) }}</td>
-                        <td>{{ number_format($row['commission'], 2) }}</td>
-                        <td>{{ number_format($row['business_net'], 2) }}</td>
+                        @foreach($figureKeys as $key)
+                            <td @if($selectedFigure === $key) class="figure-focus" @endif>{{ number_format($row[$key], 2) }}</td>
+                        @endforeach
                         <td>
                             @if($isAdmin)
                                 <a href="{{ route('admin.rounds.settlement', $row['round_id']) }}">{{ __('app.rounds.col_settlement') }}</a>

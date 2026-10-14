@@ -67,7 +67,7 @@ class ActivityLogTest extends TestCase
     public function test_the_activity_log_page_filters_by_account_and_exports_a_csv(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'status' => true]);
-        $operator = User::factory()->create(['role' => 'operator', 'status' => true]);
+        $operator = User::factory()->create(['role' => 'operator', 'admin_id' => $admin->id, 'status' => true]);
         ActivityLog::query()->create([
             'user_id' => $operator->id,
             'action' => 'sale_entry.create',
@@ -109,6 +109,37 @@ class ActivityLogTest extends TestCase
 
         $this->actingAs($operator)->get(route('admin.activity-log.index'))->assertForbidden();
         $this->actingAs($operator)->get(route('admin.activity-log.export'))->assertForbidden();
+    }
+
+    public function test_an_owner_cannot_open_the_activity_log(): void
+    {
+        $owner = User::factory()->create(['role' => 'owner', 'status' => true]);
+
+        $this->actingAs($owner)->get(route('admin.activity-log.index'))->assertForbidden();
+        $this->actingAs($owner)->get(route('admin.activity-log.export'))->assertForbidden();
+    }
+
+    public function test_an_admin_reads_only_their_own_business_entries(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => true]);
+        $stranger = User::factory()->create(['role' => 'admin', 'status' => true]);
+        ActivityLog::query()->create(['user_id' => $admin->id, 'action' => 'settings.round.close']);
+        ActivityLog::query()->create(['user_id' => $stranger->id, 'action' => 'sale_entry.create']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.activity-log.index'))
+            ->assertOk()
+            ->assertSee('settings.round.close')
+            ->assertDontSee('sale_entry.create')
+            ->assertDontSee($stranger->name);
+
+        $csv = $this->actingAs($admin)
+            ->get(route('admin.activity-log.export'))
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertStringContainsString('settings.round.close', $csv);
+        $this->assertStringNotContainsString('sale_entry.create', $csv);
     }
 
     public function test_passwords_never_reach_the_activity_log(): void

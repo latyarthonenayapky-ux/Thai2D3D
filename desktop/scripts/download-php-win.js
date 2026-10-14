@@ -48,7 +48,12 @@ async function main() {
     fs.mkdirSync(runtimeRoot, { recursive: true });
     execFileSync('unzip', ['-q', archivePath, '-d', runtimeRoot], { stdio: 'inherit' });
 
-    for (const required of ['php.exe', path.join('ext', 'php_pdo_sqlite.dll'), path.join('ext', 'php_sqlite3.dll')]) {
+    for (const required of [
+        'php.exe',
+        path.join('ext', 'php_pdo_sqlite.dll'),
+        path.join('ext', 'php_sqlite3.dll'),
+        path.join('ext', 'php_sodium.dll'),
+    ]) {
         if (!fs.existsSync(path.join(runtimeRoot, required))) {
             throw new Error(`Downloaded PHP runtime is missing ${required}.`);
         }
@@ -66,6 +71,7 @@ async function main() {
         'extension=curl',
         'extension=pdo_sqlite',
         'extension=sqlite3',
+        'extension=sodium',
         'date.timezone=Asia/Yangon',
         'display_errors=Off',
         'log_errors=On',

@@ -4,6 +4,7 @@ use App\Http\Middleware\ApplyUserPreferences;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAgentAccessToken;
+use App\Http\Middleware\EnsureValidLicence;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +22,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // local proxy (Cloudflare Tunnel / nginx on the same host) has its
         // X-Forwarded-* headers trusted unless TRUSTED_PROXIES widens the list.
         $middleware->append(SecurityHeaders::class);
+
+        // Inert unless THAI2D3D_DESKTOP is on, so server installs are unchanged.
+        $middleware->web(append: [EnsureValidLicence::class]);
 
         $middleware->alias([
             'active' => EnsureActiveAccount::class,

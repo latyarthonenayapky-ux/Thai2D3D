@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Services\InstallKey;
+use App\Services\Licence\Licence;
+use App\Services\Licence\LicenceException;
+use App\Services\Licence\LicenceService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +29,7 @@ class DesktopOwnerSetupController extends Controller
         return view('desktop.owner-setup');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, LicenceService $licences): RedirectResponse
     {
         $this->ensureDesktopLoopbackRequest($request);
 
@@ -34,31 +37,60 @@ class DesktopOwnerSetupController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(6)->max(255)],
-            'install_key' => ['required', 'string', 'max:64'],
+            'licence_string' => ['required', 'string', 'max:8192'],
         ]);
 
-        if (! InstallKey::matches($validated['email'], $validated['install_key'])) {
-            throw ValidationException::withMessages([
-                'install_key' => 'The install pass key does not match this email.',
-            ]);
-        }
+        $licence = $this->verifiedLicence($validated['licence_string'], $validated['email']);
 
-        $owner = DB::transaction(function () use ($validated): User {
+        $owner = DB::transaction(function () use ($validated, $licence, $licences): User {
             abort_if(User::query()->exists(), 409);
 
-            return User::query()->create([
+            $licences->install($licence->licenceString);
+
+            $owner = User::query()->create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => 'owner',
                 'status' => true,
             ]);
+
+            return $owner;
         });
 
         Auth::login($owner);
         $request->session()->regenerate();
 
         return redirect()->route('dashboard');
+    }
+
+    /**
+     * The licence must be genuinely signed, addressed to this exact email, and
+     * still inside its grace window, or the copy is not licensed to start.
+     */
+    private function verifiedLicence(string $candidate, string $email): Licence
+    {
+        try {
+            $licence = Licence::parse($candidate);
+        } catch (LicenceException $exception) {
+            throw ValidationException::withMessages([
+                'licence_string' => __($exception->messageKey()),
+            ]);
+        }
+
+        if (! $licence->isEmail($email)) {
+            throw ValidationException::withMessages([
+                'licence_string' => __('app.licence.error_email_mismatch', ['email' => $licence->email]),
+            ]);
+        }
+
+        if ($licence->statusAt(CarbonImmutable::now('Asia/Yangon')) === Licence::STATE_EXPIRED) {
+            throw ValidationException::withMessages([
+                'licence_string' => __('app.licence.error_expired', ['date' => $licence->expiresAt]),
+            ]);
+        }
+
+        return $licence;
     }
 
     private function ensureDesktopLoopbackRequest(Request $request): void

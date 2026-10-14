@@ -7,9 +7,9 @@
     <link rel="icon" type="image/png" href="{{ asset('images/wya-logo.png') }}">
     <title>{{ $title ?? 'Winning Yields Always (WYA)' }} · Winning Yields Always (WYA)</title>
     <style>
-        :root{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-synthesis:none;color-scheme:light;--page:#f4f7f5;--surface:#fff;--surface-soft:#edf4f0;--text:#14211c;--muted:#5e7168;--border:#d9e3dd;--gridline:#e4ebe6;--accent:#087b59;--accent-hover:#066c4e;--accent-soft:#e3f2eb;--accent-text:#285343;--danger-bg:#fff0ed;--danger-text:#923723;--notice-bg:#eaf7ef;--notice-text:#17633d;--clock-yellow:#765300;--clock-orange:#96390e;--clock-red:#b4232c;--font-scale:1}
-        html[data-theme=dark]{color-scheme:dark;--page:#111916;--surface:#19231e;--surface-soft:#26342d;--text:#e7eee9;--muted:#aabbb0;--border:#37483e;--gridline:#344239;--accent:#54c59a;--accent-hover:#73d6ad;--accent-soft:#244b3a;--accent-text:#d5eee1;--danger-bg:#4b2923;--danger-text:#ffd0c2;--notice-bg:#204333;--notice-text:#c3f0d2;--clock-yellow:#f4ce67;--clock-orange:#ffad7a;--clock-red:#ff8585}
-        @media(prefers-color-scheme:dark){html[data-theme=system]{color-scheme:dark;--page:#111916;--surface:#19231e;--surface-soft:#26342d;--text:#e7eee9;--muted:#aabbb0;--border:#37483e;--gridline:#344239;--accent:#54c59a;--accent-hover:#73d6ad;--accent-soft:#244b3a;--accent-text:#d5eee1;--danger-bg:#4b2923;--danger-text:#ffd0c2;--notice-bg:#204333;--notice-text:#c3f0d2;--clock-yellow:#f4ce67;--clock-orange:#ffad7a;--clock-red:#ff8585}}
+        :root{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-synthesis:none;color-scheme:light;--page:#f4f7f5;--surface:#fff;--surface-soft:#edf4f0;--text:#14211c;--muted:#5e7168;--border:#d9e3dd;--gridline:#e4ebe6;--accent:#087b59;--accent-hover:#066c4e;--accent-soft:#e3f2eb;--accent-text:#285343;--danger-bg:#fff0ed;--danger-text:#923723;--notice-bg:#eaf7ef;--notice-text:#17633d;--clock-yellow:#765300;--clock-orange:#96390e;--clock-red:#b4232c;--warn-bg:#fff6e5;--warn-text:#8a5a00;--font-scale:1}
+        html[data-theme=dark]{color-scheme:dark;--page:#111916;--surface:#19231e;--surface-soft:#26342d;--text:#e7eee9;--muted:#aabbb0;--border:#37483e;--gridline:#344239;--accent:#54c59a;--accent-hover:#73d6ad;--accent-soft:#244b3a;--accent-text:#d5eee1;--danger-bg:#4b2923;--danger-text:#ffd0c2;--notice-bg:#204333;--notice-text:#c3f0d2;--clock-yellow:#f4ce67;--clock-orange:#ffad7a;--clock-red:#ff8585;--warn-bg:#4b3a12;--warn-text:#f4ce67}
+        @media(prefers-color-scheme:dark){html[data-theme=system]{color-scheme:dark;--page:#111916;--surface:#19231e;--surface-soft:#26342d;--text:#e7eee9;--muted:#aabbb0;--border:#37483e;--gridline:#344239;--accent:#54c59a;--accent-hover:#73d6ad;--accent-soft:#244b3a;--accent-text:#d5eee1;--danger-bg:#4b2923;--danger-text:#ffd0c2;--notice-bg:#204333;--notice-text:#c3f0d2;--clock-yellow:#f4ce67;--clock-orange:#ffad7a;--clock-red:#ff8585;--warn-bg:#4b3a12;--warn-text:#f4ce67}}
         *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--page);color:var(--text);font-size:calc(1rem * var(--font-scale))}a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
         .shell{min-height:100vh}.topbar{min-height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:7px max(20px,calc((100vw - 1480px)/2));-webkit-app-region:drag}.topbar a,.topbar button,.topbar input,.topbar select,.topbar summary,.topbar form,.topbar .top-actions,.topbar .primary-nav,.topbar .window-controls{-webkit-app-region:no-drag}
         .primary-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.primary-nav>a,.nav-menu>summary{display:inline-flex;align-items:center;min-height:38px;padding:7px 10px;border-radius:5px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;list-style:none}.primary-nav>a:hover,.nav-menu>summary:hover,.primary-nav>a[aria-current=page]{background:var(--accent-soft);color:var(--accent-text);text-decoration:none}.nav-menu{position:relative}.nav-menu>summary::-webkit-details-marker{display:none}.nav-popover{position:absolute;top:calc(100% + 7px);left:0;z-index:20;min-width:190px;padding:6px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 24px #0002;border-radius:7px}.nav-popover>a{display:block;padding:9px 10px;border-radius:4px;color:var(--text);font-size:13px}.nav-popover>a:hover{background:var(--surface-soft);text-decoration:none}.nav-popover{max-height:min(72vh,520px);overflow-y:auto}.nav-popover .nav-sep{display:block;height:1px;margin:6px 4px;background:var(--border)}.nav-popover form{margin:0}.nav-popover .language-form .button{width:100%;justify-content:space-between;gap:8px;margin-top:6px}.display-form{margin-top:12px}.display-form label{margin:8px 0 4px;font-size:12px}.display-form select,.display-form input{padding:8px}.display-form .button{width:100%;margin-top:10px}.nav-popover .display-settings{padding:8px 10px}.nav-popover .display-settings summary{color:var(--text);font-size:13px}.nav-popover .display-popover{position:static;width:auto;margin-top:8px;box-shadow:none;padding:8px}.header-tools{display:flex;align-items:center;justify-content:flex-end;gap:14px}.top-actions{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;flex-wrap:wrap}
@@ -32,6 +32,7 @@
         .mode-switch{display:flex;align-items:center;gap:6px}.mode-switch select{width:auto;min-width:80px;padding:7px 9px;font-size:13px}
         .mode-picker{max-width:620px}.mode-options{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);background:var(--surface);border-radius:10px;overflow:hidden}.mode-option{display:grid;gap:6px;text-align:left;padding:22px;background:transparent;color:var(--text);border:0;border-right:1px solid var(--border);cursor:pointer;font:inherit}.mode-option:last-child{border-right:0}.mode-option.is-selected{background:var(--accent-soft);box-shadow:inset 0 -3px var(--accent)}.mode-option-title{font-size:24px;font-weight:800}.mode-option-copy{color:var(--muted);font-size:13px}
         .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.clock-countdown{display:block;margin-top:3px;font-size:10px;font-weight:700}
+        .licence-banner{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:10px 16px;font-size:13px;font-weight:700;background:var(--surface-soft);color:var(--accent-text);border-bottom:1px solid var(--border)}.licence-banner.tier-7{background:var(--warn-bg);color:var(--warn-text)}.licence-banner.tier-1{background:var(--danger-bg);color:var(--danger-text)}.licence-banner a{color:inherit;text-decoration:underline}
         @media(max-width:760px){.topbar{padding:10px 12px;align-items:flex-start;flex-wrap:wrap}.primary-nav{width:100%;gap:2px}.primary-nav>a,.nav-menu>summary{padding:6px 8px;font-size:12px}.header-tools{width:100%;justify-content:space-between;align-items:center}.top-actions{gap:10px;font-size:12px;flex:1;justify-content:flex-end}.top-actions>span{flex-basis:100%;text-align:right}.round-clock{min-width:96px}.main{margin:24px auto;padding:0 16px}.narrow{margin:7vh auto}.card{padding:18px}.page-title{font-size:24px}}
         @media(max-width:430px){.header-tools{gap:12px}.top-actions{max-width:calc(100% - 108px)}.top-actions a{white-space:nowrap}.nav-popover{left:auto;right:0}.display-popover{position:static}}
     </style>
@@ -57,6 +58,11 @@
             ->count();
     }
     $layoutStatementUrl = route('operator.sales.workspace', ['view' => 'agent']);
+    $layoutLicenceBanner = null;
+    $layoutLicenceGated = \App\Services\Licence\LicenceService::enforcedHere();
+    if ($layoutLicenceGated && $layoutUser && ($layoutUser->isAdmin() || $layoutUser->isOwner())) {
+        $layoutLicenceBanner = app(\App\Services\Licence\LicenceService::class)->banner();
+    }
     if (isset($agentSession)) {
         $layoutStatementUrl = route('operator.sales.show', [$agentSession, 'mode' => $layoutMode, 'view' => 'agent']);
     } elseif (isset($selectedAgent) && $selectedAgent) {
@@ -128,6 +134,9 @@
                                 <a href="{{ route('admin.settings.index') }}#security">{{ __('app.nav.security') }}</a>
                             @endif
                             <a href="{{ route('admin.data-backup.index') }}" @if(request()->routeIs('admin.data-backup.*')) aria-current="page" @endif>{{ __('app.nav.data_backup') }}</a>
+                            @if(auth()->user()->isOwner() && $layoutLicenceGated)
+                                <a href="{{ route('desktop.licence') }}" @if(request()->routeIs('desktop.licence')) aria-current="page" @endif>{{ __('app.nav.licence') }}</a>
+                            @endif
                             @if(auth()->user()->isAdmin())
                                 <a href="{{ route('admin.activity-log.index') }}" @if(request()->routeIs('admin.activity-log.*')) aria-current="page" @endif>{{ __('app.nav.activity_log') }}</a>
                             @endif
@@ -209,6 +218,12 @@
             @endif
         </header>
     @endauth
+    @if($layoutLicenceBanner)
+        <div class="licence-banner tier-{{ $layoutLicenceBanner['tier'] }}" role="status">
+            <span>{{ __('app.licence.banner', ['days' => $layoutLicenceBanner['days']]) }}</span>
+            <a href="{{ route('desktop.licence') }}">{{ __('app.licence.banner_action') }}</a>
+        </div>
+    @endif
     @yield('content')
 </div>
 <script>

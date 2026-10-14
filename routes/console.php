@@ -17,3 +17,10 @@ Schedule::command('users:expire-temp')
     ->hourly()
     ->timezone('Asia/Yangon')
     ->withoutOverlapping();
+
+// Keeps the licence clock reference moving on a desktop that is left open, and
+// reports LICENCE-STATUS for the launcher log.
+Schedule::command('thai2d3d:licence-check')
+    ->daily()
+    ->timezone('Asia/Yangon')
+    ->withoutOverlapping();

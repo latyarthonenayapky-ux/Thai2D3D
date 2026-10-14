@@ -14,6 +14,8 @@
         label{display:block;margin:16px 0 7px;font-size:13px;font-weight:700}
         input{width:100%;min-height:46px;padding:10px 12px;border:1px solid #cbd8d0;border-radius:7px;font:inherit}
         input:focus{outline:3px solid #087b5933;border-color:#087b59}
+        textarea{width:100%;min-height:110px;padding:10px 12px;border:1px solid #cbd8d0;border-radius:7px;font:inherit;font-size:12px;word-break:break-all;resize:vertical}
+        textarea:focus{outline:3px solid #087b5933;border-color:#087b59}
         button{width:100%;min-height:46px;margin-top:22px;border:0;border-radius:7px;background:#087b59;color:#fff;font:inherit;font-weight:700;cursor:pointer}
         .error{margin-top:5px;color:#923723;font-size:13px}
         .hint{margin-top:12px;margin-bottom:0;font-size:12px}
@@ -51,11 +53,11 @@
         <div id="step-2" class="{{ $errors->any() ? '' : 'wizard-hidden' }}">
             <div class="step">{{ __('app.owner.step2') }}</div>
 
-            <label for="install_key">{{ __('app.owner.install_key_label') }}</label>
-            <input id="install_key" name="install_key" value="{{ old('install_key') }}" maxlength="64" autocomplete="off" spellcheck="false">
-            @error('install_key')<div class="error">{{ $message }}</div>@enderror
+            <label for="licence_string">{{ __('app.owner.licence_label') }}</label>
+            <textarea id="licence_string" name="licence_string" rows="5" maxlength="8192" autocomplete="off" spellcheck="false">{{ old('licence_string') }}</textarea>
+            @error('licence_string')<div class="error">{{ $message }}</div>@enderror
 
-            <p class="hint">{{ __('app.owner.install_key_help') }}</p>
+            <p class="hint">{{ __('app.owner.licence_help') }}</p>
             <button type="submit">{{ __('app.owner.create_owner') }}</button>
         </div>
     </form>
@@ -68,14 +70,14 @@
             var form = document.getElementById('setup-form');
             var stepOne = document.getElementById('step-1');
             var stepTwo = document.getElementById('step-2');
-            var keyField = document.getElementById('install_key');
+            var licenceField = document.getElementById('licence_string');
             var password = document.getElementById('password');
             var confirmation = document.getElementById('password_confirmation');
 
             // When the page reloads after a server error both steps are shown;
             // the key field then needs the same required flag the wizard sets.
             if (!stepTwo.classList.contains('wizard-hidden')) {
-                keyField.required = true;
+                licenceField.required = true;
             }
 
             form.addEventListener('submit', function (event) {
@@ -92,8 +94,8 @@
 
                 stepOne.classList.add('wizard-hidden');
                 stepTwo.classList.remove('wizard-hidden');
-                keyField.required = true;
-                keyField.focus();
+                licenceField.required = true;
+                licenceField.focus();
             });
         })();
     </script>

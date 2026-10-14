@@ -72,7 +72,9 @@ if (target === 'win') {
 
     // openssl is required for Laravel cookie/session encryption and is a dynamic
     // extension in the official Windows PHP build, so it must be enabled here.
-    const requiredExtensions = ['mbstring', 'fileinfo', 'curl', 'openssl', 'pdo_sqlite', 'sqlite3'];
+    // sodium is required for the Ed25519 licence check; a build without it cannot
+    // verify any licence, so the app would refuse to start.
+    const requiredExtensions = ['mbstring', 'fileinfo', 'curl', 'openssl', 'pdo_sqlite', 'sqlite3', 'sodium'];
     const iniPath = path.join(phpStage, 'php.ini');
     if (!fs.existsSync(iniPath)) {
         fs.writeFileSync(iniPath, [
@@ -127,6 +129,7 @@ if (target === 'win') {
         'pdo',
         'pdo_sqlite',
         'simplexml',
+        'sodium',
         'sqlite3',
         'tokenizer',
         'xml',

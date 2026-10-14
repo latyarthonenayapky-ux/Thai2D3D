@@ -35,6 +35,10 @@ Thumbs.db
 /desktop/ESSION_DRIVER=file
 /desktop/curl-win.err
 
+# Vendor-only: customer emails and payment references stay off the repository
+/desktop/keygen/issued-licences.csv
+/desktop/keygen/secret-key.txt
+
 # Local implementation backups
 /app/Services/SaleProcessor.php.backup
 /app/Services/SaleProcessor.php.number-limit-ok

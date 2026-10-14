@@ -130,10 +130,24 @@
             <div class="limit-block">
                 <h3>{{ __('app.setup.amount_limit_title') }}</h3>
                 <p>{{ __('app.setup.amount_limit_desc') }}</p>
-                <div class="limit-chips">
-                    <span class="limit-chip">{{ $numberAmountLimit === null ? __('app.setup.nothing_capped') : number_format($numberAmountLimit, 2) }}</span>
-                </div>
-                <p class="setup-note">{{ auth()->user()->isAdmin() ? __('app.setup.caps_admin_hint') : __('app.setup.caps_readonly_hint') }}</p>
+                @if(auth()->user()->isAdmin())
+                    <form method="POST" action="{{ route('admin.settings.rounds.amount-limits', $round) }}">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="amount_limit_all_3d" value="{{ $round->amount_limit_all_3d }}">
+                        <input type="hidden" name="amount_limit_all_mode" value="{{ $round->amount_limit_all_mode ?? 'warn' }}">
+                        <label for="setup-amount-limit">{{ __('app.settings.amount_limit_2d') }}</label>
+                        <input id="setup-amount-limit" type="number" name="amount_limit_all" min="0" step="0.01"
+                               placeholder="{{ __('app.common.not_set') }}" value="{{ old('amount_limit_all', $round->amount_limit_all) }}">
+                        <button class="button secondary" type="submit">{{ __('app.setup.save_amount_limit') }}</button>
+                    </form>
+                    <p class="setup-note">{{ __('app.setup.amount_limit_note') }}</p>
+                @else
+                    <div class="limit-chips">
+                        <span class="limit-chip">{{ $numberAmountLimit === null ? __('app.setup.nothing_capped') : number_format($numberAmountLimit, 2) }}</span>
+                    </div>
+                    <p class="setup-note">{{ __('app.setup.caps_readonly_hint') }}</p>
+                @endif
             </div>
         </div>
     </section>

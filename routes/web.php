@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AgentLedgerController;
+use App\Http\Controllers\Admin\BusinessMoveController;
 use App\Http\Controllers\Admin\DataBackupController;
 use App\Http\Controllers\Admin\MobileAppPackageController;
 use App\Http\Controllers\Admin\OfflineSyncReviewController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\DesktopLicenceController;
 use App\Http\Controllers\DesktopOwnerSetupController;
 use App\Http\Controllers\DrawModeController;
 use App\Http\Controllers\Operator\AgentSessionController;
@@ -36,6 +38,14 @@ Route::get('/desktop/owner-setup', [DesktopOwnerSetupController::class, 'show'])
 Route::post('/desktop/owner-setup', [DesktopOwnerSetupController::class, 'store'])
     ->middleware('throttle:6,1')
     ->name('desktop.owner-setup.store');
+
+// Reachable without a session on purpose: a locked copy blocks logins, so the
+// renewal box has to work for a signed-out owner too.
+Route::get('/desktop/licence', [DesktopLicenceController::class, 'show'])
+    ->name('desktop.licence');
+Route::post('/desktop/licence', [DesktopLicenceController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('desktop.licence.store');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [
@@ -365,8 +375,18 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
         Route::delete('/data-backup/{file}', [DataBackupController::class, 'destroy'])
             ->where('file', 'wya-backup-[0-9]{8}-[0-9]{6}-[a-f0-9]{6}\.sql')
             ->middleware('throttle:30,1')->name('data-backup.destroy');
+        // Every one of these carries its own limiter prefix: without one the
+        // throttler keys on the Admin's user id alone, so the whole admin area
+        // shares a single counter and a strict route 429s after two unrelated
+        // clicks.
         Route::post('/data-backup/restore', [DataBackupController::class, 'restore'])
-            ->middleware('throttle:2,1')->name('data-backup.restore');
+            ->middleware('throttle:2,1,backup-restore.')->name('data-backup.restore');
+        Route::get('/business-move/export', [BusinessMoveController::class, 'download'])
+            ->middleware('throttle:6,1,business-export.')->name('business-move.export');
+        Route::post('/business-move/import', [BusinessMoveController::class, 'preview'])
+            ->middleware('throttle:6,1,business-preview.')->name('business-move.import.preview');
+        Route::post('/business-move/import/apply', [BusinessMoveController::class, 'apply'])
+            ->middleware('throttle:3,1,business-apply.')->name('business-move.import.apply');
         Route::get('/activity-log', [ActivityLogController::class, 'index'])
             ->name('activity-log.index');
         Route::get('/activity-log/export', [ActivityLogController::class, 'export'])

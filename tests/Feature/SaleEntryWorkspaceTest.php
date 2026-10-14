@@ -38,7 +38,9 @@ class SaleEntryWorkspaceTest extends TestCase
             ->assertSee('Continue to Sale Input')
             ->assertSee('choose the Agent first')
             ->assertDontSee('Save Number Limit')
-            ->assertDontSee('Add Hot Numbers');
+            ->assertDontSee('Add Hot Numbers')
+            ->assertDontSee('Save Amount Limit')
+            ->assertDontSee('name="amount_limit_all"', false);
     }
 
     public function test_the_admin_round_setup_page_edits_limits_for_every_agent(): void
@@ -50,7 +52,43 @@ class SaleEntryWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Save Number Limit')
             ->assertSee('Add Hot Numbers')
+            ->assertSee('Save Amount Limit')
+            ->assertSee('name="amount_limit_all"', false)
             ->assertSee('07');
+    }
+
+    public function test_an_admin_can_save_the_round_wide_2d_cap_from_the_setup_page(): void
+    {
+        [$admin, , $round] = $this->business();
+        $round->update(['amount_limit_all_3d' => '5000.00', 'amount_limit_all_mode' => 'block']);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.settings.rounds.amount-limits', $round), [
+                'amount_limit_all' => '2500',
+                'amount_limit_all_3d' => '5000.00',
+                'amount_limit_all_mode' => 'block',
+            ])
+            ->assertRedirect();
+
+        $round->refresh();
+        $this->assertSame(2500.0, (float) $round->amount_limit_all);
+        $this->assertSame(5000.0, (float) $round->amount_limit_all_3d);
+        $this->assertSame('block', $round->amount_limit_all_mode);
+
+        $this->actingAs($admin)
+            ->get(route('operator.sales.setup', ['round_id' => $round->id]))
+            ->assertOk()
+            ->assertSee('value="2500.00"', false);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.settings.rounds.amount-limits', $round), [
+                'amount_limit_all' => '',
+                'amount_limit_all_3d' => '5000.00',
+                'amount_limit_all_mode' => 'block',
+            ])
+            ->assertRedirect();
+
+        $this->assertNull($round->refresh()->amount_limit_all);
     }
 
     public function test_sale_input_stays_locked_until_an_agent_is_chosen(): void

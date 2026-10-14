@@ -261,8 +261,8 @@ class OperatorAgentClaimTest extends TestCase
         $this->get(route('operator.sales.setup', ['round_id' => $round->id]))
             ->assertOk()
             ->assertSee('Amount Limit · every number 00–99')
-            ->assertSee('Round Limit — All Agents')
-            ->assertSee('1,250.00');
+            ->assertSee('Save Amount Limit')
+            ->assertSee('value="1250.00"', false);
 
         $this->get(route('operator.sales.show', [$adminSession, 'mode' => '2d']))
             ->assertOk()

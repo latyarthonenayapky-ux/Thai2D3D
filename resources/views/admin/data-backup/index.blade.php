@@ -74,6 +74,26 @@
         @endif
     </section>
 
+    <section class="card" id="business-move" style="margin-bottom:20px">
+        <h2>{{ __('app.move.title') }}</h2>
+        <p class="muted">{{ __('app.move.subtitle') }}</p>
+
+        <div style="margin-top:14px">
+            <a class="button secondary" href="{{ route('admin.business-move.export') }}">{{ __('app.move.export') }}</a>
+            <p class="muted" style="margin-top:8px">{{ __('app.move.export_help') }}</p>
+        </div>
+
+        <form method="POST" action="{{ route('admin.business-move.import.preview') }}" enctype="multipart/form-data" style="margin-top:16px">
+            @csrf
+            <div>
+                <label for="move-bundle">{{ __('app.move.pick') }}</label>
+                <input id="move-bundle" name="bundle" type="file" accept=".json,application/json">
+            </div>
+            <button class="button" type="submit" style="margin-top:12px">{{ __('app.move.preview') }}</button>
+            <p class="muted" style="margin-top:8px">{{ __('app.move.import_help') }}</p>
+        </form>
+    </section>
+
     <section class="card" id="backup-restore">
         <h2>{{ __('app.backup.restore_title') }}</h2>
         <p class="muted">{{ __('app.backup.restore_warning') }}</p>

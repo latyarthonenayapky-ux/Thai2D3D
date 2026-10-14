@@ -7,6 +7,7 @@ use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\HotNumber;
 use App\Models\Round;
+use App\Models\RoundNumberAmountLimit;
 use App\Models\User;
 use App\Services\InitializeAdminBusiness;
 use App\Services\SaleProcessor;
@@ -33,7 +34,7 @@ class SaleEntryWorkspaceTest extends TestCase
             ->assertSee('Round limits · all Agents')
             ->assertSee('blocked values (00–99)')
             ->assertSee('Hot Numbers')
-            ->assertSee('Amount Limit · every Agent')
+            ->assertSee('Amount Limit · each number 00–99')
             ->assertSee('1,000.00')
             ->assertSee('Continue to Sale Input')
             ->assertSee('choose the Agent first')
@@ -163,46 +164,30 @@ class SaleEntryWorkspaceTest extends TestCase
             ->assertSessionHasErrors('agent');
     }
 
-    public function test_above_amount_limit_covers_every_agent_except_in_the_agent_statement(): void
+    public function test_the_above_amount_limit_list_is_round_wide_in_every_view(): void
     {
         [, $operator, $round, $agentOne, $agentTwo] = $this->business();
         $oneSession = AgentSession::openSession($agentOne, $round, $operator->id);
         $twoSession = AgentSession::openSession($agentTwo, $round, $operator->id);
-        // Wide caps let these sales through so the caps can then be tightened below them.
-        AgentRoundSetting::query()
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => '100000.00']);
+        // The setup helper caps 12 at 1,000.00 and 34 at 2,500.00 for the whole Round.
 
         app(SaleProcessor::class)->process('121500', $oneSession);
         app(SaleProcessor::class)->process('343600', $twoSession);
-
-        // An Admin tightening a cap afterwards must still flag the sales already above it.
-        AgentRoundSetting::query()
-            ->where('round_id', $round->id)
-            ->where('agent_id', $agentOne->id)
-            ->update(['amount_limit' => '1000.00']);
-        AgentRoundSetting::query()
-            ->where('round_id', $round->id)
-            ->where('agent_id', $agentTwo->id)
-            ->update(['amount_limit' => '2500.00']);
 
         $this->actingAs($operator)
             ->get(route('operator.sales.show', [$oneSession, 'mode' => '2d']))
             ->assertOk()
             ->assertSee('Above Amount Limit · all Agents')
-            ->assertViewHas('overLimitAllAgents', true)
             ->assertViewHas('overLimitRows', fn (array $rows): bool => count($rows) === 2
-                && $rows[0]['agent_code'] === 'A2'
+                && $rows[0]['number'] === '34'
                 && (float) $rows[0]['excess'] === 1100.0
-                && $rows[1]['agent_code'] === 'A1'
+                && $rows[1]['number'] === '12'
                 && (float) $rows[1]['excess'] === 500.0);
 
         $this->get(route('operator.sales.show', [$oneSession, 'mode' => '2d', 'view' => 'agent']))
             ->assertOk()
-            ->assertSee('Above Amount Limit · A1')
-            ->assertViewHas('overLimitAllAgents', false)
-            ->assertViewHas('overLimitRows', fn (array $rows): bool => count($rows) === 1
-                && $rows[0]['agent_code'] === 'A1');
+            ->assertSee('Above Amount Limit · all Agents')
+            ->assertViewHas('overLimitRows', fn (array $rows): bool => count($rows) === 2);
     }
 
     public function test_the_agent_statement_entry_point_survives_the_sale_entry_redirect(): void
@@ -331,11 +316,19 @@ class SaleEntryWorkspaceTest extends TestCase
             'agent_id' => $agentOne->id,
             'round_id' => $round->id,
             'operator_id' => $operator->id,
-            'amount_limit' => '1000.00',
         ]);
         AgentRoundSetting::query()->create([
             'agent_id' => $agentTwo->id,
             'round_id' => $round->id,
+        ]);
+        RoundNumberAmountLimit::query()->create([
+            'round_id' => $round->id,
+            'number' => '12',
+            'amount_limit' => '1000.00',
+        ]);
+        RoundNumberAmountLimit::query()->create([
+            'round_id' => $round->id,
+            'number' => '34',
             'amount_limit' => '2500.00',
         ]);
         HotNumber::query()->create(['round_id' => $round->id, 'number' => '07']);

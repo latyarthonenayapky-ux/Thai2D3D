@@ -23,9 +23,9 @@ class ThreeDigitSaleProcessor
         protected AmountLimitPolicy $amountLimits
     ) {}
 
-    public function process(string $input, AgentSession $session, ?string $clientUuid = null): ThreeDigitSaleInput
+    public function process(string $input, AgentSession $session, ?string $clientUuid = null, string $source = 'web'): ThreeDigitSaleInput
     {
-        return DB::transaction(function () use ($input, $session, $clientUuid): ThreeDigitSaleInput {
+        return DB::transaction(function () use ($input, $session, $clientUuid, $source): ThreeDigitSaleInput {
             if ($clientUuid !== null) {
                 $existing = ThreeDigitSaleInput::query()
                     ->where('operator_id', $session->operator_id)
@@ -108,6 +108,7 @@ class ThreeDigitSaleProcessor
                 'agent_session_id' => $lockedSession->id,
                 'operator_id' => $lockedSession->operator_id,
                 'client_uuid' => $clientUuid,
+                'source' => $source,
                 'original_input' => $parsed['original_input'],
                 'normalized_input' => $parsed['normalized_input'],
                 'input_type' => $parsed['type'],
@@ -151,9 +152,10 @@ class ThreeDigitSaleProcessor
         ThreeDigitDraw $draw,
         Agent $agent,
         User $handler,
-        ?string $clientUuid = null
+        ?string $clientUuid = null,
+        string $source = 'web'
     ): ThreeDigitSaleInput {
-        return DB::transaction(function () use ($input, $draw, $agent, $handler, $clientUuid): ThreeDigitSaleInput {
+        return DB::transaction(function () use ($input, $draw, $agent, $handler, $clientUuid, $source): ThreeDigitSaleInput {
             $lockedDraw = ThreeDigitDraw::query()->whereKey($draw->id)->lockForUpdate()->firstOrFail();
             $lockedHandler = User::query()->whereKey($handler->id)->lockForUpdate()->firstOrFail();
             $lockedAgent = Agent::query()->whereKey($agent->id)->lockForUpdate()->firstOrFail();
@@ -231,6 +233,7 @@ class ThreeDigitSaleProcessor
                 'draw_agent_setting_id' => $setting->id,
                 'operator_id' => $lockedHandler->id,
                 'client_uuid' => $clientUuid,
+                'source' => $source,
                 'original_input' => $parsed['original_input'],
                 'normalized_input' => $parsed['normalized_input'],
                 'input_type' => $parsed['type'],

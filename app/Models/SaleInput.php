@@ -12,6 +12,7 @@ class SaleInput extends Model
         'agent_session_id',
         'operator_id',
         'client_uuid',
+        'source',
         'original_input',
         'normalized_input',
         'input_type',

@@ -274,6 +274,10 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
             SettingsController::class,
             'updateRoundAmountLimits',
         ])->middleware('throttle:120,1')->name('settings.rounds.amount-limits');
+        Route::patch('/settings/rounds/{round}/number-amount-limits', [
+            SettingsController::class,
+            'updateRoundNumberAmountLimits',
+        ])->middleware('throttle:120,1')->name('settings.rounds.number-amount-limits');
         Route::post('/settings/rounds/{round}/hot-numbers', [
             SettingsController::class,
             'storeHotNumbers',

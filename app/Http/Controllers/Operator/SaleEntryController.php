@@ -8,7 +8,9 @@ use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\Round;
 use App\Models\SaleDetail;
+use App\Models\SaleInput;
 use App\Models\ThreeDigitSaleDetail;
+use App\Models\ThreeDigitSaleInput;
 use App\Services\AmountLimitPolicy;
 use App\Services\RoundSettlementCalculator;
 use App\Services\SaleProcessor;
@@ -17,7 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use RuntimeException;
@@ -74,6 +76,7 @@ class SaleEntryController extends Controller
             'round' => $round,
             'agentOptions' => $options,
             'numberLimits' => $round->number_limits ?? [],
+            'numberAmountLimits' => $round->numberAmountLimits()->orderBy('number')->pluck('amount_limit', 'number'),
             'hotNumbers' => $round->hotNumbers()->orderBy('number')->get(),
             'activeSession' => $this->readySession($round, $request->user()->id),
             'selectableCount' => $options->where('selectable', true)->count(),
@@ -234,54 +237,149 @@ class SaleEntryController extends Controller
     }
 
     /**
-     * Per-Agent, per-number accepted amounts that exceed that Agent's own Amount Limit.
+     * Round-wide per-number Amount Limit breaches, in the shape the warning
+     * banner and the coloured amounts already read.
      *
-     * @return array<int, array{agent_code: string, number: string, limit: float, excess: float}>
+     * @return array<int, array{key: string, label: string, limit: float, used: float, over: float, mode: string}>
      */
-    private function aboveLimitRows(Round $round, ?int $agentId = null): array
+    private function bannerBreaches(Round $round, ?AgentSession $agentSession, bool $awaitingAgent, string $saleMode): array
     {
-        $limits = AgentRoundSetting::query()
-            ->where('round_id', $round->id)
-            ->get(['agent_id', 'amount_limit'])
-            ->keyBy('agent_id');
-        $agents = Agent::query()
-            ->where('admin_id', $round->admin_id)
-            ->get(['id', 'agent_code'])
-            ->keyBy('id');
+        if ($saleMode === '2d') {
+            return array_map(fn (array $row): array => [
+                'key' => 'number',
+                'label' => 'No. '.$row['number'],
+                'limit' => $row['limit'],
+                'used' => $row['sold'],
+                'over' => $row['excess'],
+                'mode' => AmountLimitPolicy::MODE_WARN,
+            ], $this->amountLimits->numberBreaches($round));
+        }
 
-        $totals = SaleDetail::query()
-            ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
-            ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
-            ->where('agent_sessions.round_id', $round->id)
-            ->where('sale_details.status', 'accepted')
-            ->where('sale_details.is_excluded', false)
-            ->select('agent_sessions.agent_id as agent_id', 'sale_details.number as number')
-            ->selectRaw('SUM(sale_details.amount) as total_amount')
-            ->groupBy('agent_sessions.agent_id', 'sale_details.number')
-            ->get();
+        return $awaitingAgent
+            ? $this->amountLimits->breaches($round, null, null, '3d')
+            : $this->amountLimits->breaches($round, $agentSession->agent_id, $agentSession->operator_id, '3d');
+    }
 
-        return $totals
-            ->filter(fn ($row): bool => $agentId === null || (int) $row->agent_id === $agentId)
-            ->map(function ($row) use ($limits, $agents): ?array {
-                $limit = $limits->get($row->agent_id)?->amount_limit;
-                if ($limit === null || (float) $row->total_amount <= (float) $limit) {
-                    return null;
-                }
+    /**
+     * What each sale channel has recorded in this view, and the number lists
+     * behind its figures. 'phone' is the Agent app's auto-upload, 'web' is this
+     * screen — the office needs the two apart because they arrive at different
+     * times and are keyed by different hands.
+     *
+     * @return array{phone: array<string, mixed>, web: array<string, mixed>}
+     */
+    private function channelBreakdown(Round $round, ?AgentSession $agentSession, bool $roundWide, string $saleMode): array
+    {
+        $threeDigit = $saleMode === '3d';
+        $scope = function ($query) use ($agentSession, $round, $roundWide): void {
+            if ($roundWide) {
+                $query->where('agent_sessions.round_id', $round->id);
+            } else {
+                $query->where('agent_sessions.id', $agentSession?->id ?? 0);
+            }
+        };
 
-                return [
-                    'agent_code' => $agents->get($row->agent_id)?->agent_code ?? '—',
+        $acceptedQuery = $threeDigit
+            ? ThreeDigitSaleDetail::query()
+                ->join('three_digit_sale_inputs', 'three_digit_sale_inputs.id', '=', 'three_digit_sale_details.three_digit_sale_input_id')
+                ->join('agent_sessions', 'agent_sessions.id', '=', 'three_digit_sale_inputs.agent_session_id')
+                ->where('three_digit_sale_details.status', 'accepted')
+                ->select('three_digit_sale_inputs.source as source', 'three_digit_sale_details.number as number')
+                ->selectRaw('COUNT(*) as number_count, SUM(three_digit_sale_details.amount) as total_amount')
+                ->groupBy('three_digit_sale_inputs.source', 'three_digit_sale_details.number')
+            : SaleDetail::query()
+                ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
+                ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
+                ->where('sale_details.status', 'accepted')
+                ->where('sale_details.is_excluded', false)
+                ->select('sale_inputs.source as source', 'sale_details.number as number')
+                ->selectRaw('COUNT(*) as number_count, SUM(sale_details.amount) as total_amount')
+                ->groupBy('sale_inputs.source', 'sale_details.number');
+        $scope($acceptedQuery);
+        $accepted = $acceptedQuery->get();
+
+        $rejectedQuery = $threeDigit
+            ? ThreeDigitSaleDetail::query()
+                ->join('three_digit_sale_inputs', 'three_digit_sale_inputs.id', '=', 'three_digit_sale_details.three_digit_sale_input_id')
+                ->join('agent_sessions', 'agent_sessions.id', '=', 'three_digit_sale_inputs.agent_session_id')
+                ->where('three_digit_sale_details.status', 'rejected')
+                ->select('three_digit_sale_inputs.source as source', 'three_digit_sale_details.number as number', 'three_digit_sale_details.reject_reason as reason')
+                ->selectRaw('COUNT(*) as number_count, SUM(three_digit_sale_details.amount) as total_amount')
+                ->groupBy('three_digit_sale_inputs.source', 'three_digit_sale_details.number', 'three_digit_sale_details.reject_reason')
+            : SaleDetail::query()
+                ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
+                ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
+                ->where('sale_details.status', 'rejected')
+                ->select('sale_inputs.source as source', 'sale_details.number as number', 'sale_details.reject_reason as reason')
+                ->selectRaw('COUNT(*) as number_count, SUM(sale_details.amount) as total_amount')
+                ->groupBy('sale_inputs.source', 'sale_details.number', 'sale_details.reject_reason');
+        $scope($rejectedQuery);
+        $rejected = $rejectedQuery->get();
+
+        $inputQuery = $threeDigit ? ThreeDigitSaleInput::query() : SaleInput::query();
+        $inputs = $inputQuery
+            ->whereHas('agentSession', fn ($session) => $session->where('round_id', $round->id))
+            ->when(! $roundWide && $agentSession !== null, fn ($query) => $query->where('agent_session_id', $agentSession->id))
+            ->where('status', 'accepted')
+            ->latest()
+            ->limit(50)
+            ->get(['id', 'agent_session_id', 'source', 'original_input', 'number_count', 'total_amount', 'created_at']);
+
+        $breakdown = [];
+        foreach (['phone', 'web'] as $source) {
+            $acceptedRows = $accepted
+                ->where('source', $source)
+                ->sortByDesc('total_amount')
+                ->map(fn ($row): array => [
                     'number' => (string) $row->number,
-                    'limit' => (float) $limit,
-                    'excess' => round((float) $row->total_amount - (float) $limit, 2),
-                ];
-            })
-            ->filter()
-            // stable chained sorts: excess high→low, then Agent code, then number
-            ->sortBy('number')
-            ->sortBy('agent_code')
-            ->sortByDesc('excess')
-            ->values()
-            ->all();
+                    'count' => (int) $row->number_count,
+                    'amount' => (float) $row->total_amount,
+                ])
+                ->values()
+                ->all();
+            $rejectedRows = $rejected
+                ->where('source', $source)
+                ->sortBy('number')
+                ->map(fn ($row): array => [
+                    'number' => (string) $row->number,
+                    'count' => (int) $row->number_count,
+                    'amount' => (float) $row->total_amount,
+                    'reason' => $this->rejectReasonLabel((string) ($row->reason ?? '')),
+                ])
+                ->values()
+                ->all();
+
+            $breakdown[$source] = [
+                'accepted_numbers' => (int) array_sum(array_column($acceptedRows, 'count')),
+                'accepted_amount' => round(array_sum(array_column($acceptedRows, 'amount')), 2),
+                'rejected_numbers' => (int) array_sum(array_column($rejectedRows, 'count')),
+                'numbers' => $acceptedRows,
+                'rejected' => $rejectedRows,
+                'inputs' => $inputs
+                    ->where('source', $source)
+                    ->map(fn ($input): array => [
+                        'time' => $input->created_at->timezone('Asia/Yangon')->format('M j, H:i:s'),
+                        'input' => (string) $input->original_input,
+                        'count' => (int) $input->number_count,
+                        'total' => (float) $input->total_amount,
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        }
+
+        return $breakdown;
+    }
+
+    private function rejectReasonLabel(string $reason): string
+    {
+        if ($reason === '') {
+            return __('app.sale.status_rejected');
+        }
+
+        $key = 'app.sale.reason_'.strtolower($reason);
+
+        return Lang::has($key) ? __($key) : str_replace('_', ' ', $reason);
     }
 
     public function show(Request $request, AgentSession $agentSession, RoundSettlementCalculator $calculator): View
@@ -379,22 +477,16 @@ class SaleEntryController extends Controller
             'soldItems' => $roundWide
                 ? $this->soldItemsForRound($round->id, $saleMode)
                 : $this->soldItemsForSession($agentSession->id, $saleMode),
-            'agentSoldItems' => $awaitingAgent ? [] : $this->soldItemsForSession($agentSession->id, $saleMode),
             'agentOptions' => $agentOptions,
             'selectableCount' => $agentOptions->where('selectable', true)->count(),
             'numberLimits' => $round->number_limits ?? [],
             'hotNumbers' => $round->hotNumbers()->orderBy('number')->get(),
-            'overLimitRows' => $saleMode === '2d'
-                ? $this->aboveLimitRows($round, $agentStatement ? $agentSession->agent_id : null)
+            'overLimitRows' => $saleMode === '2d' ? $this->amountLimits->numberBreaches($round) : [],
+            'numberAmountLimits' => $saleMode === '2d'
+                ? $round->numberAmountLimits()->pluck('amount_limit', 'number')->map(fn ($limit): float => (float) $limit)->all()
                 : [],
-            'overLimitAllAgents' => $saleMode === '2d' && ! $agentStatement,
-            'amountLimit' => $awaitingAgent ? null : AgentRoundSetting::query()
-                ->where('agent_id', $agentSession->agent_id)
-                ->where('round_id', $round->id)
-                ->value($saleMode === '3d' ? 'amount_limit_3d' : 'amount_limit'),
-            'amountLimitBreaches' => $awaitingAgent
-                ? $this->amountLimits->breaches($round, null, null, $saleMode)
-                : $this->amountLimits->breaches($round, $agentSession->agent_id, $agentSession->operator_id, $saleMode),
+            'channelBreakdown' => $this->channelBreakdown($round, $agentSession, $roundWide, $saleMode),
+            'amountLimitBreaches' => $this->bannerBreaches($round, $agentSession, $awaitingAgent, $saleMode),
             'threeDigitAmountLimit' => $awaitingAgent ? 0.0 : (float) (AgentRoundSetting::query()
                 ->where('agent_id', $agentSession->agent_id)
                 ->where('round_id', $round->id)
@@ -405,7 +497,6 @@ class SaleEntryController extends Controller
                 && $round->status === 'open'
                 && ! $round->isPastScheduledClose(),
             'roundPastCloseTime' => $round->isPastScheduledClose(),
-            'agentBreakdown' => $user->isAdmin() ? $this->agentBreakdown($round, $saleMode) : null,
             'ownSettlement' => $awaitingAgent ? null : $calculator->calculate($round, (int) $user->id)['agents']
                 ->first(fn (array $row): bool => $row['agent']->id === $agentSession->agent_id),
         ]);
@@ -413,11 +504,24 @@ class SaleEntryController extends Controller
 
     /**
      * "Accepted but over the Amount Limit" sentence for the alert bar and the
-     * save confirmation. Empty while every monitored tier is still inside its
-     * limit, so a warning tier never adds noise.
+     * save confirmation. 2D reads it from the Round's per-number caps, 3D from
+     * its tiers. Empty while nothing has passed a cap, so a warning never adds
+     * noise.
      */
     private function amountLimitNotice(Round $round, ?int $agentId, ?int $operatorId, string $saleMode): string
     {
+        if ($saleMode === '2d') {
+            $parts = array_map(fn (array $row): string => sprintf(
+                'No. %s · limit %s · sold %s · over %s',
+                $row['number'],
+                number_format($row['limit'], 2),
+                number_format($row['sold'], 2),
+                number_format($row['excess'], 2)
+            ), $this->amountLimits->numberBreaches($round));
+
+            return $parts === [] ? '' : ' · ABOVE AMOUNT LIMIT: '.implode(' | ', $parts);
+        }
+
         $breaches = $this->amountLimits->breaches($round, $agentId, $operatorId, $saleMode);
         if ($breaches === []) {
             return '';
@@ -589,12 +693,10 @@ class SaleEntryController extends Controller
 
         return response()->json([
             'results' => $results,
-            'amount_limit_breaches' => $this->amountLimits->breaches(
-                $agentSession->round,
-                $agentSession->agent_id,
-                $agentSession->operator_id,
-                $saleMode
-            ),
+            'amount_limit_breaches' => $this->bannerBreaches($agentSession->round, $agentSession, false, $saleMode),
+            'over_limit_rows' => $saleMode === '2d'
+                ? $this->amountLimits->numberBreaches($agentSession->round)
+                : [],
         ]);
     }
 
@@ -655,71 +757,6 @@ class SaleEntryController extends Controller
      * Admin's own Sale Entry. Writing stays with the handler only, so an Admin
      * can read another Operator's Agent but never enter sales into it.
      */
-    /**
-     * One row per Agent that has sold in this Round, so the Admin's Sale Entry
-     * reads as a list of Agent headings — the way an Operator sees the Agents
-     * they handle. Mobile/offline uploads land here because they are written
-     * against the Agent's own session.
-     *
-     * @return array<int, array{agent_id: int, agent_code: string, agent_name: string, handler: string, numbers: int, amount: float, url: string|null}>
-     */
-    private function agentBreakdown(Round $round, string $saleMode): array
-    {
-        $threeDigit = $saleMode === '3d';
-        $detailTable = $threeDigit ? 'three_digit_sale_details' : 'sale_details';
-        $inputTable = $threeDigit ? 'three_digit_sale_inputs' : 'sale_inputs';
-        $inputKey = $threeDigit ? 'three_digit_sale_input_id' : 'sale_input_id';
-
-        $totals = DB::table($detailTable)
-            ->join($inputTable, $inputTable.'.id', '=', $detailTable.'.'.$inputKey)
-            ->join('agent_sessions', 'agent_sessions.id', '=', $inputTable.'.agent_session_id')
-            ->where('agent_sessions.round_id', $round->id)
-            ->where($detailTable.'.status', 'accepted')
-            ->when(! $threeDigit, fn ($query) => $query->where($detailTable.'.is_excluded', false))
-            ->addSelect('agent_sessions.agent_id as agent_id')
-            ->selectRaw('COUNT(*) as accepted_count, SUM('.$detailTable.'.amount) as accepted_amount')
-            ->groupBy('agent_sessions.agent_id')
-            ->get()
-            ->keyBy('agent_id');
-
-        $sessions = AgentSession::query()
-            ->with(['agent', 'operator'])
-            ->where('round_id', $round->id)
-            ->orderBy('status')
-            ->orderByDesc('id')
-            ->get()
-            ->groupBy('agent_id')
-            ->map(fn ($group) => $group->first());
-
-        return Agent::query()
-            ->where('admin_id', $round->admin_id)
-            ->orderBy('agent_code')
-            ->get()
-            ->map(function (Agent $agent) use ($totals, $sessions, $saleMode): ?array {
-                $total = $totals->get($agent->id);
-                $session = $sessions->get($agent->id);
-                if ($total === null && $session === null) {
-                    return null;
-                }
-
-                return [
-                    'agent_id' => (int) $agent->id,
-                    'agent_code' => $agent->agent_code,
-                    'agent_name' => $agent->agent_name,
-                    'handler' => $session?->operator?->name ?? '—',
-                    'numbers' => (int) ($total?->accepted_count ?? 0),
-                    'amount' => (float) ($total?->accepted_amount ?? 0),
-                    'url' => $session === null ? null : route('operator.sales.show', [$session, 'mode' => $saleMode, 'view' => 'agent']),
-                ];
-            })
-            ->filter()
-            // stable chained sorts: Agent code first, then amount high→low wins
-            ->sortBy('agent_code')
-            ->sortByDesc('amount')
-            ->values()
-            ->all();
-    }
-
     private function authorizeSession(Request $request, AgentSession $agentSession, bool $canWrite = false): void
     {
         $user = $request->user();

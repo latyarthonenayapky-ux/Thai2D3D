@@ -23,7 +23,7 @@ class AdminAgentSalesViewTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_admin_sale_entry_lists_every_agent_with_its_own_totals(): void
+    public function test_the_admin_sale_entry_splits_the_round_totals_into_phone_and_inter_sheets(): void
     {
         [$admin, $operator, $round] = $this->business();
         $quiet = $this->claim($round, $operator, 'PH-01');
@@ -35,9 +35,15 @@ class AdminAgentSalesViewTest extends TestCase
         $this->actingAs($admin)
             ->get(route('operator.sales.entry', ['round_id' => $round->id]))
             ->assertOk()
-            ->assertSee('Sales by Agent · this Round')
-            ->assertSeeInOrder(['PH-02', '3,500.00', 'PH-01', '1,000.00'])
-            ->assertSee('view=agent');
+            ->assertSee('Phone · Agent app')
+            ->assertSee('Inter · web entry')
+            ->assertSee('data-source="web"', false)
+            ->assertSee('data-source="phone"', false)
+            ->assertDontSee('Sales by Agent')
+            ->assertViewHas('channelBreakdown', fn (array $channels): bool => $channels['web']['accepted_numbers'] === 3
+                && (float) $channels['web']['accepted_amount'] === 4500.0
+                && $channels['phone']['accepted_numbers'] === 0
+                && count($channels['web']['numbers']) === 2);
     }
 
     public function test_the_admin_opens_an_operators_agent_statement_read_only(): void

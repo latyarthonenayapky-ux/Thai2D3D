@@ -2,15 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Exceptions\AmountLimitExceededException;
 use App\Models\Agent;
 use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\HotNumber;
 use App\Models\Round;
+use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\SaleInput;
 use App\Models\User;
+use App\Services\AmountLimitPolicy;
 use App\Services\InitializeAdminBusiness;
 use App\Services\SaleProcessor;
 use Database\Seeders\CodeRuleSeeder;
@@ -213,47 +214,35 @@ class SaleProcessorTest extends TestCase
         $this->assertSame(2, SaleDetail::query()->where('status', 'excluded')->count());
     }
 
-    public function test_a_blocked_agent_amount_limit_rejects_a_sale_that_would_pass_the_cap(): void
+    public function test_a_per_number_amount_limit_accepts_an_over_cap_sale_and_flags_the_number(): void
     {
         $round = $this->createRound(1);
         $operator = $this->createOperator();
         $session = $this->createSession($round, $operator, 'AMOUNT');
-
-        AgentRoundSetting::query()
-            ->where('agent_id', $session->agent_id)
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => 100, 'amount_limit_mode' => 'block']);
-
-        try {
-            $this->processor->process('1210000', $session);
-            $this->fail('Expected the Agent Amount Limit to reject the sale.');
-        } catch (AmountLimitExceededException $exception) {
-            $this->assertSame('agent', $exception->tier);
-            $this->assertSame(100.0, $exception->limit);
-            $this->assertSame(10000.0, $exception->incoming);
-            $this->assertSame(100.0, $exception->headroom());
-        }
-
-        $this->assertSame(0, SaleInput::query()->count());
-        $this->assertSame(0, SaleDetail::query()->count());
-    }
-
-    public function test_amount_limit_allows_a_sale_that_uses_up_the_remaining_headroom(): void
-    {
-        $round = $this->createRound(2);
-        $operator = $this->createOperator();
-        $session = $this->createSession($round, $operator, 'HEADROOM');
-
-        AgentRoundSetting::query()
-            ->where('agent_id', $session->agent_id)
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => 2000]);
+        RoundNumberAmountLimit::query()->create([
+            'round_id' => $round->id,
+            'number' => '12',
+            'amount_limit' => '100.00',
+        ]);
 
         $this->assertSame('accepted', $this->processor->process('121000', $session)->status);
-        $result = $this->processor->process('131000', $session);
+        $this->assertSame(1, SaleInput::query()->count());
+        $this->assertSame(1000.0, (float) SaleDetail::query()->where('status', 'accepted')->sum('amount'));
 
-        $this->assertSame('accepted', $result->status);
-        $this->assertSame(2000.0, (float) SaleDetail::query()->where('status', 'accepted')->sum('amount'));
+        $breaches = app(AmountLimitPolicy::class)->numberBreaches($round);
+        $this->assertCount(1, $breaches);
+        $this->assertSame('12', $breaches[0]['number']);
+        $this->assertSame(100.0, $breaches[0]['limit']);
+        $this->assertSame(1000.0, $breaches[0]['sold']);
+        $this->assertSame(900.0, $breaches[0]['excess']);
+    }
+
+    public function test_an_office_sale_is_recorded_on_the_web_channel(): void
+    {
+        $round = $this->createRound(2);
+        $session = $this->createSession($round, $this->createOperator(), 'CHANNEL');
+
+        $this->assertSame('web', $this->processor->process('121000', $session)->source);
     }
 
     public function test_sale_input_is_rejected_when_the_session_operator_does_not_own_the_round_assignment(): void

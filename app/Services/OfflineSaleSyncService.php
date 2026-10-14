@@ -24,9 +24,9 @@ class OfflineSaleSyncService
         protected ThreeDigitInputParser $threeDigitParser,
     ) {}
 
-    public function sync(User $operator, array $record): array
+    public function sync(User $operator, array $record, string $source = 'web'): array
     {
-        return DB::transaction(function () use ($operator, $record): array {
+        return DB::transaction(function () use ($operator, $record, $source): array {
             $clientUuid = $record['client_uuid'];
             $saleType = $record['sale_type'];
             $session = AgentSession::query()
@@ -78,13 +78,14 @@ class OfflineSaleSyncService
                     $operator,
                     $session,
                     $record,
-                    'The Round or Agent session closed before this offline sale synchronized.'
+                    'The Round or Agent session closed before this offline sale synchronized.',
+                    $source
                 );
             }
 
             try {
                 if ($saleType === '2d') {
-                    $sale = $this->twoDigitProcessor->process($record['input'], $session, $clientUuid);
+                    $sale = $this->twoDigitProcessor->process($record['input'], $session, $clientUuid, $source);
                     $conflict = $sale->details()
                         ->whereIn('reject_reason', ['HOT_NUMBER', 'NUMBER_LIMIT'])
                         ->exists();
@@ -94,10 +95,10 @@ class OfflineSaleSyncService
                             : 'One or more 2D values are blocked by this Round’s Number Limit.';
                         $sale->delete();
 
-                        return $this->createReview($operator, $session, $record, $reason);
+                        return $this->createReview($operator, $session, $record, $reason, $source);
                     }
                 } else {
-                    $sale = $this->threeDigitProcessor->process($record['input'], $session, $clientUuid);
+                    $sale = $this->threeDigitProcessor->process($record['input'], $session, $clientUuid, $source);
                     $conflict = $sale->details()
                         ->whereIn('reject_reason', ['HOT_NUMBER_3D', 'NUMBER_LIMIT_3D'])
                         ->exists();
@@ -107,7 +108,7 @@ class OfflineSaleSyncService
                             : 'The Round-wide 3D Number Limit would be exceeded.';
                         $sale->delete();
 
-                        return $this->createReview($operator, $session, $record, $reason);
+                        return $this->createReview($operator, $session, $record, $reason, $source);
                     }
                 }
             } catch (InvalidArgumentException $exception) {
@@ -117,11 +118,11 @@ class OfflineSaleSyncService
                     'message' => $exception->getMessage(),
                 ];
             } catch (AmountLimitExceededException $exception) {
-                return $this->createReview($operator, $session, $record, $exception->getMessage());
+                return $this->createReview($operator, $session, $record, $exception->getMessage(), $source);
             } catch (RuntimeException $exception) {
                 if (str_contains($exception->getMessage(), 'Round is not open')
                     || str_contains($exception->getMessage(), 'session is not open')) {
-                    return $this->createReview($operator, $session, $record, $exception->getMessage());
+                    return $this->createReview($operator, $session, $record, $exception->getMessage(), $source);
                 }
 
                 return ['client_uuid' => $clientUuid, 'status' => 'error', 'message' => $exception->getMessage()];
@@ -149,6 +150,7 @@ class OfflineSaleSyncService
                     'agent_session_id' => $session->id,
                     'operator_id' => $locked->operator_id,
                     'client_uuid' => $locked->client_uuid,
+                    'source' => $locked->source,
                     'original_input' => $parsed['original_input'],
                     'normalized_input' => $parsed['normalized_input'],
                     'input_type' => $parsed['type'],
@@ -177,6 +179,7 @@ class OfflineSaleSyncService
                     'agent_session_id' => $session->id,
                     'operator_id' => $locked->operator_id,
                     'client_uuid' => $locked->client_uuid,
+                    'source' => $locked->source,
                     'original_input' => $parsed['original_input'],
                     'normalized_input' => $parsed['normalized_input'],
                     'input_type' => $parsed['type'],
@@ -223,7 +226,7 @@ class OfflineSaleSyncService
         });
     }
 
-    private function createReview(User $operator, AgentSession $session, array $record, string $reason): array
+    private function createReview(User $operator, AgentSession $session, array $record, string $reason, string $source): array
     {
         OfflineSyncReview::query()->create([
             'client_uuid' => $record['client_uuid'],
@@ -233,6 +236,7 @@ class OfflineSaleSyncService
             'round_id' => $session->round_id,
             'agent_id' => $session->agent_id,
             'original_input' => $record['input'],
+            'source' => $source,
             'recorded_at' => $record['recorded_at'] ?? null,
             'status' => 'pending',
             'conflict_reason' => $reason,

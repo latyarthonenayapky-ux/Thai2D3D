@@ -6,20 +6,26 @@ use App\Exceptions\AmountLimitExceededException;
 use App\Models\AgentRoundSetting;
 use App\Models\OperatorRoundSetting;
 use App\Models\Round;
+use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\ThreeDigitSaleDetail;
 
 /**
- * Amount Limit is monitored on three tiers for one Round:
- * - Agent    — agent_round_settings.amount_limit / amount_limit_3d
- * - Operator — operator_round_settings.amount_limit / amount_limit_3d
- * - Round    — rounds.amount_limit_all / amount_limit_all_3d (all Agents and Operators together)
+ * 2D Amount Limit is set per number (00–99) for one Round, and it counts every
+ * Agent and Operator under that Round's Admin together. Passing a cap is
+ * allowed — numberBreaches() lists the over-cap numbers for review, so 2D
+ * sales never call assertWithinLimits().
  *
- * A tier counts the money already accepted in that scope, so voided and
- * excluded numbers never consume the limit. An unset limit means the tier is
- * not monitored. Each tier has a mode: 'warn' accepts the sale and flags it
- * (the default — the limit is a pre-agreed credit ceiling), 'block' refuses a
- * sale that would pass it.
+ * 3D keeps the three scalar tiers:
+ * - Agent    — agent_round_settings.amount_limit_3d
+ * - Operator — operator_round_settings.amount_limit_3d
+ * - Round    — rounds.amount_limit_all_3d (all Agents and Operators together)
+ *
+ * A tier counts the money already accepted in that scope, so voided numbers
+ * never consume the limit. An unset limit means the tier is not monitored. Each
+ * tier has a mode: 'warn' accepts the sale and flags it (the default — the
+ * limit is a pre-agreed credit ceiling), 'block' refuses a sale that would pass
+ * it.
  */
 class AmountLimitPolicy
 {
@@ -43,13 +49,13 @@ class AmountLimitPolicy
         int $agentId,
         int $operatorId,
         float $incoming,
-        string $mode = '2d'
+        string $mode = '3d'
     ): void {
-        if ($incoming <= 0) {
+        if ($mode !== '3d' || $incoming <= 0) {
             return;
         }
 
-        foreach ($this->tiers($round, $agentId, $operatorId, $mode) as $tier) {
+        foreach ($this->tiers($round, $agentId, $operatorId) as $tier) {
             if ($tier['limit'] === null || $tier['mode'] !== self::MODE_BLOCK) {
                 continue;
             }
@@ -69,15 +75,20 @@ class AmountLimitPolicy
     }
 
     /**
-     * Tiers whose accepted total has already passed the limit, whatever the
+     * 3D tiers whose accepted total has already passed the limit, whatever the
      * mode — this is what the warning banner and the coloured amounts read.
+     * 2D has no scalar tiers any more, so it reports no tier breaches.
      *
      * @return array<int, array{key: string, label: string, limit: float, used: float, over: float, mode: string}>
      */
     public function breaches(Round $round, ?int $agentId, ?int $operatorId, string $mode = '2d'): array
     {
-        return collect($this->tiers($round, (int) $agentId, (int) $operatorId, $mode))
-            ->filter(fn (array $tier): bool => $tier['limit'] !== null && round($tier['used'], 2) > round($tier['limit'], 2))
+        if ($mode !== '3d') {
+            return [];
+        }
+
+        return collect($this->tiers($round, (int) $agentId, (int) $operatorId))
+            ->filter(fn (array $tier): bool => $tier['limit'] !== null && round($tier['used'], 2) > round((float) $tier['limit'], 2))
             ->map(function (array $tier): array {
                 $tier['over'] = round($tier['used'] - $tier['limit'], 2);
 
@@ -88,68 +99,93 @@ class AmountLimitPolicy
     }
 
     /**
-     * @return array<int, array{key: string, label: string, limit: float|null, used: float, mode: string}>
+     * Every capped number whose round-wide accepted total has passed its cap.
+     *
+     * @return array<int, array{number: string, limit: float, sold: float, excess: float}>
      */
-    public function tiers(Round $round, int $agentId, int $operatorId, string $mode = '2d'): array
+    public function numberBreaches(Round $round): array
     {
-        $threeDigit = $mode === '3d';
-        $column = $threeDigit ? 'amount_limit_3d' : 'amount_limit';
-        $modeWord = $threeDigit ? '3D ' : '';
-
-        $agentSetting = AgentRoundSetting::query()
+        $limits = RoundNumberAmountLimit::query()
             ->where('round_id', $round->id)
-            ->where('agent_id', $agentId)
-            ->first([$column, 'amount_limit_mode']);
+            ->pluck('amount_limit', 'number');
 
-        $operatorSetting = OperatorRoundSetting::query()
-            ->where('round_id', $round->id)
-            ->where('operator_id', $operatorId)
-            ->first([$column, 'amount_limit_mode']);
+        if ($limits->isEmpty()) {
+            return [];
+        }
 
-        return [
-            [
-                'key' => self::TIER_AGENT,
-                'label' => "{$modeWord}Agent Amount Limit",
-                'limit' => $agentSetting?->{$column} === null ? null : (float) $agentSetting->{$column},
-                'used' => $threeDigit
-                    ? $this->threeDigitTotal($round, $agentId, null)
-                    : $this->twoDigitTotal($round, $agentId, null),
-                'mode' => self::normalizeMode($agentSetting?->amount_limit_mode),
-            ],
-            [
-                'key' => self::TIER_OPERATOR,
-                'label' => "{$modeWord}Operator Amount Limit",
-                'limit' => $operatorSetting?->{$column} === null ? null : (float) $operatorSetting->{$column},
-                'used' => $threeDigit
-                    ? $this->threeDigitTotal($round, null, $operatorId)
-                    : $this->twoDigitTotal($round, null, $operatorId),
-                'mode' => self::normalizeMode($operatorSetting?->amount_limit_mode),
-            ],
-            [
-                'key' => self::TIER_ROUND,
-                'label' => "{$modeWord}Round Amount Limit (all Agents and Operators)",
-                'limit' => $round->{$threeDigit ? 'amount_limit_all_3d' : 'amount_limit_all'} === null
-                    ? null
-                    : (float) $round->{$threeDigit ? 'amount_limit_all_3d' : 'amount_limit_all'},
-                'used' => $threeDigit
-                    ? $this->threeDigitTotal($round, null, null)
-                    : $this->twoDigitTotal($round, null, null),
-                'mode' => self::normalizeMode($round->amount_limit_all_mode),
-            ],
-        ];
-    }
-
-    private function twoDigitTotal(Round $round, ?int $agentId, ?int $operatorId): float
-    {
-        return (float) SaleDetail::query()
+        $sold = SaleDetail::query()
             ->join('sale_inputs', 'sale_inputs.id', '=', 'sale_details.sale_input_id')
             ->join('agent_sessions', 'agent_sessions.id', '=', 'sale_inputs.agent_session_id')
             ->where('agent_sessions.round_id', $round->id)
             ->where('sale_details.status', 'accepted')
             ->where('sale_details.is_excluded', false)
-            ->when($agentId !== null, fn ($query) => $query->where('agent_sessions.agent_id', $agentId))
-            ->when($operatorId !== null, fn ($query) => $query->where('sale_inputs.operator_id', $operatorId))
-            ->sum('sale_details.amount');
+            ->select('sale_details.number as number')
+            ->selectRaw('SUM(sale_details.amount) as total_amount')
+            ->groupBy('sale_details.number')
+            ->get()
+            ->keyBy('number');
+
+        return $limits
+            ->map(function ($limit, string $number) use ($sold): ?array {
+                $total = round((float) ($sold->get($number)?->total_amount ?? 0), 2);
+                $cap = round((float) $limit, 2);
+                if ($total <= $cap) {
+                    return null;
+                }
+
+                return [
+                    'number' => $number,
+                    'limit' => $cap,
+                    'sold' => $total,
+                    'excess' => round($total - $cap, 2),
+                ];
+            })
+            ->filter()
+            // stable chained sorts: number first, then excess high→low wins
+            ->sortBy('number')
+            ->sortByDesc('excess')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{key: string, label: string, limit: float|null, used: float, mode: string}>
+     */
+    private function tiers(Round $round, int $agentId, int $operatorId): array
+    {
+        $agentSetting = AgentRoundSetting::query()
+            ->where('round_id', $round->id)
+            ->where('agent_id', $agentId)
+            ->first(['amount_limit_3d', 'amount_limit_mode']);
+
+        $operatorSetting = OperatorRoundSetting::query()
+            ->where('round_id', $round->id)
+            ->where('operator_id', $operatorId)
+            ->first(['amount_limit_3d', 'amount_limit_mode']);
+
+        return [
+            [
+                'key' => self::TIER_AGENT,
+                'label' => '3D Agent Amount Limit',
+                'limit' => $agentSetting?->amount_limit_3d === null ? null : (float) $agentSetting->amount_limit_3d,
+                'used' => $this->threeDigitTotal($round, $agentId, null),
+                'mode' => self::normalizeMode($agentSetting?->amount_limit_mode),
+            ],
+            [
+                'key' => self::TIER_OPERATOR,
+                'label' => '3D Operator Amount Limit',
+                'limit' => $operatorSetting?->amount_limit_3d === null ? null : (float) $operatorSetting->amount_limit_3d,
+                'used' => $this->threeDigitTotal($round, null, $operatorId),
+                'mode' => self::normalizeMode($operatorSetting?->amount_limit_mode),
+            ],
+            [
+                'key' => self::TIER_ROUND,
+                'label' => '3D Round Amount Limit (all Agents and Operators)',
+                'limit' => $round->amount_limit_all_3d === null ? null : (float) $round->amount_limit_all_3d,
+                'used' => $this->threeDigitTotal($round, null, null),
+                'mode' => self::normalizeMode($round->amount_limit_all_mode),
+            ],
+        ];
     }
 
     private function threeDigitTotal(Round $round, ?int $agentId, ?int $operatorId): float

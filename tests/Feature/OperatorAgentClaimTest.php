@@ -7,6 +7,7 @@ use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\HotNumber;
 use App\Models\Round;
+use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\SaleInput;
 use App\Models\User;
@@ -233,10 +234,11 @@ class OperatorAgentClaimTest extends TestCase
         $round = $this->openRound($admin, 1);
         AgentSession::openSession($agentOne, $round, $admin->id);
         AgentSession::openSession($agentFour, $round, $operator->id);
-        AgentRoundSetting::query()
-            ->where('agent_id', $agentOne->id)
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => '1250.00']);
+        RoundNumberAmountLimit::query()->create([
+            'round_id' => $round->id,
+            'number' => '12',
+            'amount_limit' => '1250.00',
+        ]);
 
         $adminSession = AgentSession::query()
             ->where('round_id', $round->id)
@@ -250,7 +252,7 @@ class OperatorAgentClaimTest extends TestCase
         $this->get(route('operator.sales.setup', ['round_id' => $round->id]))
             ->assertOk()
             ->assertSee('Round limits · all Agents')
-            ->assertSee('Amount Limit · every Agent')
+            ->assertSee('Amount Limit per number · 00–99')
             ->assertSee('1250.00');
 
         $this->get(route('operator.sales.show', [$adminSession, 'mode' => '2d']))
@@ -259,7 +261,7 @@ class OperatorAgentClaimTest extends TestCase
             ->assertSee('A2 · Available Agent Two')
             ->assertSee('A4 · Operator Agent Four')
             ->assertSee('In use by '.$operator->name)
-            ->assertSee('1,250.00')
+            ->assertViewHas('numberAmountLimits', fn (array $caps): bool => ($caps['12'] ?? null) === 1250.0)
             ->assertDontSee('Round limits · all Agents')
             ->assertViewHas('agentOptions', fn ($options): bool => $options->firstWhere('agent.id', $agentTwo->id)['selectable']
                 && ! $options->firstWhere('agent.id', $agentFour->id)['selectable']);

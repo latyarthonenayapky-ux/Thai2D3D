@@ -11,18 +11,13 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
     .sale-heading h1{margin:0;font-size:20px;letter-spacing:-.03em}
     .sale-meta{display:flex;gap:14px;align-items:center;color:var(--muted);font-size:13px}
-    .sale-grid{display:grid;grid-template-columns:minmax(210px,.66fr) minmax(440px,2.05fr) minmax(200px,.56fr);gap:12px;align-items:start}
+    .sale-grid{display:grid;grid-template-columns:minmax(430px,2.5fr) minmax(200px,.62fr);gap:12px;align-items:start}
     .sale-panel{min-width:0;background:var(--surface);border:1px solid var(--border)}
     .sale-panel-title{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 12px;background:var(--surface-soft);border-bottom:1px solid var(--border);font-size:13px;font-weight:800}
-    .sale-controls{padding:12px}
-    .sale-controls label{margin:0 0 5px;font-size:12px}
-    .sale-controls select,.sale-controls input{min-height:40px;padding:8px 10px;border-radius:4px}
-    .sale-agent-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
-    .sale-agent-row .button{min-height:40px;padding:8px 12px}
-    .sale-entry-form{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:14px}
-    .sale-entry-form .button{min-height:40px;padding:8px 12px}
-    .sale-shortcuts{display:flex;gap:10px;margin-top:8px;color:var(--muted);font-size:11px}
-    .sale-shortcuts kbd{font:inherit;font-weight:800;color:var(--text)}
+    .sale-agent-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;min-width:0}
+    .sale-agent-row .button{min-height:36px;padding:7px 12px}
+    .sale-entry-form{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;min-width:0}
+    .sale-entry-form .button{min-height:36px;padding:7px 12px}
     .draft-list{max-height:280px;overflow:auto}
     .draft-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px dashed var(--gridline);font-size:13px}
     .draft-row small{display:block;color:var(--muted);margin-top:3px}
@@ -54,7 +49,6 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sold-rank-table td:last-child{text-align:right}
     .sale-agent-row form,.sale-agent-row>div{min-width:0}
     .sale-agent-row select{width:100%;min-width:0}
-    .sale-limit-readout{display:flex;align-items:baseline;gap:8px;margin-top:8px;font-size:12px}
     .rank-wrap{max-height:240px;overflow:auto;margin-top:6px;scrollbar-gutter:stable}
     .sale-rank{table-layout:fixed;width:100%}
     .sale-rank th:first-child,.sale-rank td:first-child{width:34%}
@@ -69,7 +63,32 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-summary .sale-stat-value{display:inline;margin:0;font-size:16px}
     .sale-copy{display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}
     .sale-copy .button{min-height:32px;padding:6px 10px;font-size:12px;white-space:nowrap}
-    .sale-save{margin:12px;width:calc(100% - 24px);min-height:44px}
+    /* Phone / Inter rows: one row per channel, every figure opens its sheet. */
+    .sale-sources{width:100%;border-collapse:collapse;margin:-6px 0 12px;font-size:12px}
+    .sale-sources th,.sale-sources td{padding:0;border:1px solid var(--border);background:var(--surface)}
+    .sale-sources thead th{background:var(--surface-soft);color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;text-align:right}
+    .sale-sources thead th:first-child{text-align:left}
+    .sale-sources tbody th{text-align:left;padding:5px 8px;font-size:11px;font-weight:800}
+    .sale-sources .source-cell{display:block;width:100%;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;padding:5px 8px;cursor:pointer}
+    .sale-sources .source-cell:hover,.sale-sources .source-cell[aria-expanded=true]{background:var(--accent-soft);color:var(--accent-text)}
+    .sale-sources .source-cell.over-limit{color:var(--clock-red)}
+    .sale-sheet{background:var(--surface);border:1px solid var(--border);border-top:0;margin:-12px 0 12px}
+    .sale-sheet table{width:100%;border-collapse:collapse;font-size:12px}
+    .sale-sheet th,.sale-sheet td{padding:5px 8px;border-bottom:1px solid var(--gridline);text-align:right;font-variant-numeric:tabular-nums}
+    .sale-sheet th:first-child,.sale-sheet td:first-child{text-align:left}
+    .sale-sheet-body{max-height:260px;overflow:auto}
+    /* Sale input bar: agent, input, save and the staged queue on one line. */
+    .sale-bar{margin-bottom:12px}
+    .sale-bar-row{display:grid;grid-template-columns:minmax(190px,.75fr) minmax(230px,1.5fr) auto;gap:10px;align-items:end;padding:10px 12px}
+    .sale-bar-row label{margin:0 0 4px;font-size:11px}
+    .sale-bar-row select,.sale-bar-row input{width:100%;min-height:36px;padding:6px 8px;border-radius:4px;font-size:13px}
+    .sale-bar-row .button{min-height:36px;padding:7px 12px;white-space:nowrap}
+    .sale-bar-entry{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+    .draft-strip{max-height:130px;overflow:auto;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1px;background:var(--gridline)}
+    .draft-strip .draft-row{background:var(--surface);border-bottom:0;padding:6px 8px}
+    .sale-bar-note{padding:0 12px 8px;color:var(--muted);font-size:11px;display:flex;gap:12px;flex-wrap:wrap}
+    .sale-bar-note kbd{font:inherit;font-weight:800;color:var(--text)}
+    .sale-save{min-height:36px}
     .sale-history{margin-top:14px}
     .sale-history table{font-size:12px}
     .sale-history th,.sale-history td{padding:8px}
@@ -77,13 +96,12 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
     .sale-alert{margin:0;padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px}
     .amount-limit-alert{background:var(--danger-bg);color:var(--danger-text);border-left:4px solid var(--clock-red);font-size:13px;font-weight:800}
     .over-limit{color:var(--clock-red);font-weight:900}
-    .agent-breakdown{margin:0 0 12px}
     .sale-number-chips{display:flex;gap:4px;flex-wrap:wrap;max-width:470px}
     .sale-number-chip{padding:2px 5px;border:1px solid var(--gridline);font-variant-numeric:tabular-nums}
     .sale-number-chip.rejected{color:var(--danger-text);background:var(--danger-bg)}
     .sale-number-chip.excluded{color:var(--muted);background:var(--surface-soft);text-decoration:line-through}
     .sale-number-chip.voided{color:var(--muted);background:var(--surface-soft);text-decoration:line-through}
-    @media(max-width:1060px){.sale-grid{grid-template-columns:minmax(230px,.85fr) minmax(360px,1.4fr)}.sale-stats{grid-column:1/-1}}
+    @media(max-width:1060px){.sale-grid{grid-template-columns:1fr}.sale-stats{grid-column:auto}}
     @media(max-width:700px){.sale-workspace{margin:12px auto;padding:0 10px}.sale-heading{align-items:flex-start;flex-direction:column}.sale-meta{flex-wrap:wrap;gap:6px 12px}.sale-summary .sale-stat{padding:8px 10px;flex:1 1 100%}.sale-summary .sale-stat-value{font-size:16px}.sale-copy{flex:1 1 100%;justify-content:flex-start}.sale-grid{grid-template-columns:1fr}.sale-ledger{grid-row:2}.sale-stats{grid-column:auto}.ledger-wrap{max-height:420px}.ledger-grid{font-size:11px}.ledger-grid th,.ledger-grid td{padding:4px 3px}.ledger-wrap-full{max-height:none}.ledger-wrap-full .ledger-grid{font-size:11px}.ledger-wrap-full .ledger-grid th,.ledger-wrap-full .ledger-grid td{padding:1px 2px}.sale-history{margin-top:10px}}
 </style>
 <main class="sale-workspace" data-sale-workspace
@@ -91,8 +109,6 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
       data-sale-action="{{ $agentSession ? route('operator.sales.store', $agentSession) : '' }}"
       data-batch-action="{{ $agentSession ? route('operator.sales.store-batch', $agentSession) : '' }}"
       data-csrf="{{ csrf_token() }}"
-      data-over-limit-all="{{ $overLimitAllAgents ? 1 : 0 }}"
-      data-agent-code="{{ $agentSession?->agent->agent_code ?? '' }}"
       data-storage-key="thai2d3d-sale-drafts-{{ auth()->id() }}-{{ $agentSession?->id ?? 'round-'.$round->id.'-unassigned' }}-{{ $saleMode }}">
     <div class="sale-heading">
         <div>
@@ -173,146 +189,101 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         @endif
     </section>
 
-    @if(! empty($agentBreakdown))
-        <section class="sale-panel agent-breakdown" aria-label="{{ __('app.sale.agent_breakdown_title') }}">
-            <div class="sale-panel-title">
-                <span>{{ __('app.sale.agent_breakdown_title') }}</span>
-                <span>{{ __('app.sale.agent_breakdown_help') }}</span>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr>
-                        <th>{{ __('app.sale.agent') }}</th>
-                        <th>{{ __('app.settings.col_handler') }}</th>
-                        <th>{{ __('app.sale.accepted_numbers') }}</th>
-                        <th>{{ __('app.sale.accepted_amount') }}</th>
-                        <th>{{ __('app.common.action') }}</th>
-                    </tr></thead>
-                    <tbody>
-                    @foreach($agentBreakdown as $agentRow)
-                        <tr>
-                            <td><strong>{{ $agentRow['agent_code'] }}</strong> · {{ $agentRow['agent_name'] }}</td>
-                            <td>{{ $agentRow['handler'] }}</td>
-                            <td>{{ number_format($agentRow['numbers']) }}</td>
-                            <td>{{ number_format($agentRow['amount'], 2) }}</td>
-                            <td>
-                                @if($agentRow['url'])
-                                    <a class="button secondary" href="{{ $agentRow['url'] }}">{{ __('app.sale.open_agent_statement') }}</a>
-                                @else
-                                    <span class="muted">{{ __('app.common.not_set') }}</span>
-                                @endif
-                            </td>
-                        </tr>
+    <table class="sale-sources" aria-label="{{ __('app.sale.sources_aria') }}">
+        <thead>
+            <tr>
+                <th>{{ __('app.sale.sources_head') }}</th>
+                <th>{{ __('app.sale.accepted_numbers') }}</th>
+                <th>{{ __('app.sale.rejected_numbers') }}</th>
+                <th>{{ __('app.sale.accepted_amount') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($channelBreakdown as $channel => $channelRow)
+                <tr>
+                    <th scope="row">{{ __('app.sale.source_'.$channel) }}</th>
+                    @foreach(['numbers' => $channelRow['accepted_numbers'], 'rejected' => $channelRow['rejected_numbers'], 'inputs' => $channelRow['accepted_amount']] as $sheet => $figure)
+                        <td>
+                            <button class="source-cell" type="button" data-source="{{ $channel }}" data-sheet="{{ $sheet }}" aria-expanded="false"
+                                    title="{{ __('app.sale.source_open_aria', ['sheet' => __('app.sale.sheet_'.$sheet), 'source' => __('app.sale.source_'.$channel)]) }}">
+                                {{ $sheet === 'inputs' ? number_format((float) $figure, 2) : number_format((int) $figure) }}
+                            </button>
+                        </td>
                     @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    @endif
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    <div class="sale-sheet" data-source-sheet hidden></div>
 
-    @if(! empty($agentBreakdown))
-        <section class="sale-panel agent-breakdown" aria-label="{{ __('app.sale.agent_breakdown_title') }}">
-            <div class="sale-panel-title">
-                <span>{{ __('app.sale.agent_breakdown_title') }}</span>
-                <span>{{ count($agentBreakdown) }}</span>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>{{ __('app.sale.agent') }}</th>
-                            <th>{{ __('app.sale.agent_breakdown_handler') }}</th>
-                            <th>{{ __('app.sale.accepted_numbers') }}</th>
-                            <th>{{ __('app.sale.accepted_amount') }}</th>
-                            <th>{{ __('app.common.action') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($agentBreakdown as $agentRow)
-                            <tr>
-                                <td><strong>{{ $agentRow['agent_code'] }}</strong> · {{ $agentRow['agent_name'] }}</td>
-                                <td>{{ $agentRow['handler'] }}</td>
-                                <td>{{ number_format($agentRow['numbers']) }}</td>
-                                <td>{{ number_format($agentRow['amount'], 2) }}</td>
-                                <td>
-                                    @if($agentRow['url'] !== null)
-                                        <a class="button secondary" href="{{ $agentRow['url'] }}">{{ __('app.sale.agent_breakdown_open') }}</a>
-                                    @else
-                                        <span class="muted">—</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    @endif
+    <section class="sale-panel sale-bar" aria-label="{{ __('app.sale.input_panel') }}">
+        <div class="sale-panel-title">
+            <span>{{ __('app.sale.input_panel') }} · {{ strtoupper($saleMode) }}</span>
+            <span>{{ __('app.sale.recent_sales') }} · <span data-draft-count>0</span></span>
+        </div>
+        <div class="sale-bar-row">
+            @if($saleMode === '2d')
+                @php $agentState = $agentSession === null ? '' : ($agentOptions->firstWhere('agent.id', $agentSession->agent_id)['state'] ?? ''); @endphp
+                <form class="sale-agent-row" method="POST" action="{{ route('operator.sales.select') }}">
+                    @csrf
+                    <input type="hidden" name="round_id" value="{{ $round->id }}">
+                    @if($agentStatement)<input type="hidden" name="view" value="agent">@endif
+                    <div>
+                        <label for="sale-agent">{{ __('app.sale.agent_choose') }}</label>
+                        <select id="sale-agent" name="agent_id" onchange="this.form.requestSubmit()">
+                            @if($agentSession === null)
+                                <option value="" selected disabled>{{ __('app.sale.agent_placeholder') }}</option>
+                            @endif
+                            @foreach($agentOptions as $option)
+                                <option value="{{ $option['agent']->id }}" @selected($option['session']?->id === $agentSession?->id) @disabled(! $option['selectable'])>
+                                    {{ $option['agent']->agent_code }} · {{ $option['agent']->agent_name }}@if(! $option['selectable']) — {{ $option['state'] }}@endif
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button class="button secondary" type="submit">{{ __('app.sale.select') }}</button>
+                </form>
+            @else
+                <div class="sale-agent-row">
+                    <div>
+                        <label for="sale-agent">{{ __('app.sale.agent') }}</label>
+                        <select id="sale-agent">
+                            @foreach($availableSessions as $availableSession)
+                                <option value="{{ $availableSession->id }}" data-url="{{ route('operator.sales.show', [$availableSession, 'mode' => $saleMode, 'view' => $agentStatement ? 'agent' : null]) }}" @selected($availableSession->id === $agentSession->id)>
+                                    {{ $availableSession->agent->agent_code }} · {{ $availableSession->agent->agent_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button class="button secondary" type="button" data-focus-agent title="{{ __('app.sale.focus_agent_title') }}">F2</button>
+                </div>
+            @endif
+            <form class="sale-entry-form" data-draft-form>
+                <div>
+                    <label for="sale-input">{{ __('app.sale.mode_input', ['mode' => strtoupper($saleMode)]) }}</label>
+                    <input id="sale-input" type="text" maxlength="255" autocomplete="off" autocapitalize="characters" spellcheck="false" @disabled(! $canEnterSales) autofocus>
+                </div>
+                <button class="button secondary" type="submit" @disabled(! $canEnterSales)>{{ __('app.sale.add') }}</button>
+            </form>
+            <button class="button sale-save" type="button" data-save-sales @disabled(! $canEnterSales)>{{ __('app.sale.save_button') }}</button>
+        </div>
+        <div class="sale-bar-note">
+            <span><kbd>Enter</kbd> {{ __('app.sale.shortcut_add') }}</span>
+            <span><kbd>F3</kbd> {{ __('app.sale.shortcut_input') }}</span>
+            <span><kbd>F1</kbd> {{ __('app.sale.shortcut_save') }}</span>
+            @if($saleMode === '2d')
+                <span>{{ $agentState ?: ($selectableCount === 0 ? __('app.sale.all_agents_in_use') : __('app.sale.no_agent_chosen')) }}</span>
+            @endif
+        </div>
+        @if($saleMode === '2d')
+            <div class="sale-bar-note">{{ __('app.sale.hint_2d') }}</div>
+        @endif
+        <div class="draft-list draft-strip" data-draft-list>
+            <div class="draft-empty">{{ __('app.sale.draft_empty') }}</div>
+        </div>
+    </section>
 
     <div class="sale-grid">
-        <section class="sale-panel">
-            <div class="sale-panel-title"><span>{{ __('app.sale.input_panel') }}</span><span>{{ strtoupper($saleMode) }}</span></div>
-            <div class="sale-controls">
-                @if($saleMode === '2d')
-                    @php $agentState = $agentSession === null ? '' : ($agentOptions->firstWhere('agent.id', $agentSession->agent_id)['state'] ?? ''); @endphp
-                    <form class="sale-agent-row" method="POST" action="{{ route('operator.sales.select') }}">
-                        @csrf
-                        <input type="hidden" name="round_id" value="{{ $round->id }}">
-                        @if($agentStatement)<input type="hidden" name="view" value="agent">@endif
-                        <div>
-                            <label for="sale-agent">{{ __('app.sale.agent_choose') }}</label>
-                            <select id="sale-agent" name="agent_id" onchange="this.form.requestSubmit()">
-                                @if($agentSession === null)
-                                    <option value="" selected disabled>{{ __('app.sale.agent_placeholder') }}</option>
-                                @endif
-                                @foreach($agentOptions as $option)
-                                    <option value="{{ $option['agent']->id }}" @selected($option['session']?->id === $agentSession?->id) @disabled(! $option['selectable'])>
-                                        {{ $option['agent']->agent_code }} · {{ $option['agent']->agent_name }}@if(! $option['selectable']) — {{ $option['state'] }}@endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <button class="button secondary" type="submit">{{ __('app.sale.select') }}</button>
-                    </form>
-                    <div class="sale-agent-row sale-limit-readout">
-                        <span class="sale-stat-label">{{ __('app.sale.amount_limit') }}</span>
-                        <strong data-agent-limit class="{{ collect($amountLimitBreaches ?? [])->contains('key', 'agent') ? 'over-limit' : '' }}">{{ $amountLimit === null ? __('app.sale.not_set') : number_format((float) $amountLimit, 2) }}</strong>
-                        <span class="muted">{{ $agentState ?: ($selectableCount === 0 ? __('app.sale.all_agents_in_use') : __('app.sale.no_agent_chosen')) }}</span>
-                    </div>
-                @else
-                    <div class="sale-agent-row">
-                        <div>
-                            <label for="sale-agent">{{ __('app.sale.agent') }}</label>
-                            <select id="sale-agent">
-                                @foreach($availableSessions as $availableSession)
-                                    <option value="{{ $availableSession->id }}" data-url="{{ route('operator.sales.show', [$availableSession, 'mode' => $saleMode, 'view' => $agentStatement ? 'agent' : null]) }}" @selected($availableSession->id === $agentSession->id)>
-                                        {{ $availableSession->agent->agent_code }} · {{ $availableSession->agent->agent_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <button class="button secondary" type="button" data-focus-agent title="{{ __('app.sale.focus_agent_title') }}">F2</button>
-                    </div>
-                @endif
-                <form class="sale-entry-form" data-draft-form>
-                    <div>
-                        <label for="sale-input">{{ __('app.sale.mode_input', ['mode' => strtoupper($saleMode)]) }}</label>
-                        <input id="sale-input" type="text" maxlength="255" autocomplete="off" autocapitalize="characters" spellcheck="false" @disabled(! $canEnterSales) autofocus>
-                    </div>
-                    <button class="button secondary" type="submit" @disabled(! $canEnterSales)>{{ __('app.sale.add') }}</button>
-                </form>
-                <div class="sale-shortcuts"><span><kbd>Enter</kbd> {{ __('app.sale.shortcut_add') }}</span><span><kbd>F3</kbd> {{ __('app.sale.shortcut_input') }}</span><span><kbd>F1</kbd> {{ __('app.sale.shortcut_save') }}</span></div>
-                @if($saleMode === '2d')
-                    <div class="muted">{{ __('app.sale.hint_2d') }}</div>
-                @endif
-            </div>
-            <div class="sale-panel-title"><span>{{ __('app.sale.recent_sales') }}</span><span data-draft-count>0</span></div>
-            <div class="draft-list" data-draft-list>
-                <div class="draft-empty">{{ __('app.sale.draft_empty') }}</div>
-            </div>
-            <button class="button sale-save" type="button" data-save-sales @disabled(! $canEnterSales)>{{ __('app.sale.save_button') }}</button>
-        </section>
-
         <section class="sale-panel sale-ledger">
             <div class="sale-panel-title">
                 <span>
@@ -366,13 +337,11 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             @endif
             @if($saleMode === '2d')
                 <div class="sale-stat">
-                    <span class="sale-stat-label">{{ __('app.sale.above_limit', ['who' => $overLimitAllAgents ? __('app.sale.all_agents') : $agentSession->agent->agent_code]) }}</span>
-                    <p class="muted" style="margin:5px 0 0">{{ $overLimitAllAgents
-                        ? __('app.sale.above_limit_all_desc')
-                        : __('app.sale.above_limit_agent_desc', ['limit' => $amountLimit === null ? __('app.sale.no_limit_set') : number_format((float) $amountLimit, 2)]) }}</p>
+                    <span class="sale-stat-label">{{ __('app.sale.above_limit', ['who' => __('app.sale.all_agents')]) }}</span>
+                    <p class="muted" style="margin:5px 0 0">{{ __('app.sale.above_limit_round_desc') }}</p>
                     <div class="rank-wrap">
                         <table class="sold-rank-table sale-rank">
-                            <thead><tr><th>{{ __('app.sale.number') }}</th>@if($overLimitAllAgents)<th>{{ __('app.sale.agent') }}</th>@endif<th>{{ __('app.sale.excess') }}</th></tr></thead>
+                            <thead><tr><th>{{ __('app.sale.number') }}</th><th>{{ __('app.sale.col_limit') }}</th><th>{{ __('app.sale.col_sold') }}</th><th>{{ __('app.sale.excess') }}</th></tr></thead>
                             <tbody data-over-limit></tbody>
                         </table>
                     </div>
@@ -492,6 +461,9 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         const limitBanner = document.querySelector('[data-limit-banner]');
         const limitBannerBody = document.querySelector('[data-limit-banner-body]');
         const money = value => Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const t = @json(__('app.sale.js'));
+        const fmt = (text, vars = {}) => text.replace(/:(\w+)/g, (token, key) =>
+            Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : token);
         let limitBreaches = @json($amountLimitBreaches ?? []);
         const renderLimitBanner = () => {
             if (!limitBreaches.length) return;
@@ -505,19 +477,13 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 limitBanner.hidden = false;
             }
             document.querySelector('[data-accepted-amount]')?.classList.add('over-limit');
-            if (limitBreaches.some(row => row.key === 'agent')) {
-                document.querySelector('[data-agent-limit]')?.classList.add('over-limit');
-            }
         };
         renderLimitBanner();
         const saveButton = document.querySelector('[data-save-sales]');
         const storageKey = workspace.dataset.storageKey;
         const mode = workspace.dataset.saleMode;
-        const t = @json(__('app.sale.js'));
-        const fmt = (text, vars = {}) => text.replace(/:(\w+)/g, (token, key) =>
-            Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : token);
-        const amountLimitValue = @json($amountLimit);
-        const amountLimit = Number(amountLimitValue);
+        const numberCaps = @json($numberAmountLimits);
+        const channels = @json($channelBreakdown);
         const draftId = () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         const typingNormalization = @json(auth()->user()->prefers('sale_typing_normalization', 'on'));
         if (mode === '2d' && typingNormalization && window.Thai2D3DSaleEntryKeyboard) {
@@ -543,8 +509,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
         }
         let drafts = [];
         let sold = new Map(@json($soldItems).map(item => [item.number, Number(item.amount)]));
-        let agentSold = new Map(@json($agentSoldItems).map(item => [item.number, Number(item.amount)]));
-        const overLimitRows = @json($overLimitRows);
+        let overLimitRows = @json($overLimitRows);
         let acceptedCount = Number(document.querySelector('[data-accepted-count]').textContent.replaceAll(',', ''));
         let acceptedAmount = Number(document.querySelector('[data-accepted-amount]').textContent.replaceAll(',', ''));
         let rejectedCount = Number(document.querySelector('[data-rejected-count]').textContent.replaceAll(',', ''));
@@ -593,8 +558,10 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             if (mode === '2d') {
                 document.querySelectorAll('[data-amount-for]').forEach(cell => {
                     const amount = sold.get(cell.dataset.amountFor) || 0;
+                    const cap = numberCaps[cell.dataset.amountFor];
                     cell.textContent = amount ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
                     cell.classList.toggle('has-sales', amount > 0);
+                    cell.classList.toggle('over-limit', cap !== undefined && amount > Number(cap));
                     document.querySelector(`[data-number="${cell.dataset.amountFor}"]`).classList.toggle('has-sales', amount > 0);
                 });
                 return;
@@ -636,47 +603,157 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                 row.insertCell().textContent = amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             });
         };
-        const overLimitEntries = () => {
-            const agentCode = workspace.dataset.agentCode;
-            const otherRows = overLimitRows.filter(row => row.agent_code !== agentCode);
-            const liveRows = amountLimitValue === null ? [] : [...agentSold.entries()]
-                .filter(([, amount]) => amount > amountLimit)
-                .map(([number, amount]) => ({agent_code: agentCode, number, excess: amount - amountLimit}));
-            return [...otherRows, ...liveRows]
-                .sort((a, b) => b.excess - a.excess || a.agent_code.localeCompare(b.agent_code) || a.number.localeCompare(b.number));
-        };
+        const overLimitEntries = () => [...overLimitRows]
+            .sort((a, b) => b.excess - a.excess || a.number.localeCompare(b.number));
         const renderOverLimit = () => {
             const body = document.querySelector('[data-over-limit]');
             if (!body) return;
-            const allAgents = workspace.dataset.overLimitAll === '1';
             const rows = overLimitEntries();
             body.replaceChildren();
             if (!rows.length) {
                 const row = body.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = allAgents ? 3 : 2;
+                cell.colSpan = 4;
                 cell.className = 'muted';
-                cell.textContent = allAgents ? t.no_over_limit_all : t.no_over_limit_agent;
+                cell.textContent = t.no_over_limit_round;
                 return;
             }
             rows.forEach(row => {
                 const tr = body.insertRow();
                 tr.insertCell().textContent = row.number;
-                if (allAgents) tr.insertCell().textContent = row.agent_code;
-                tr.insertCell().textContent = row.excess.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                tr.insertCell().textContent = money(row.limit);
+                tr.insertCell().textContent = money(row.sold);
+                tr.insertCell().textContent = money(row.excess);
             });
         };
-        const addAcceptedDetails = details => {
+        const sourceSheet = document.querySelector('[data-source-sheet]');
+        const sheetHeadings = {
+            numbers: [t.sheet_number, t.sheet_count, t.sheet_amount],
+            rejected: [t.sheet_number, t.sheet_count, t.sheet_amount, t.sheet_reason],
+            inputs: [t.sheet_time, t.sheet_input, t.sheet_count, t.sheet_total],
+        };
+        const sheetCells = {
+            numbers: row => [row.number, row.count, money(row.amount)],
+            rejected: row => [row.number, row.count, money(row.amount), row.reason],
+            inputs: row => [row.time, row.input, row.count, money(row.total)],
+        };
+        let openSheet = null;
+        const markSourceCells = () => {
+            document.querySelectorAll('.source-cell').forEach(cell => {
+                const active = openSheet !== null
+                    && cell.dataset.source === openSheet.source
+                    && cell.dataset.sheet === openSheet.kind;
+                cell.setAttribute('aria-expanded', active ? 'true' : 'false');
+            });
+        };
+        const renderSourceSheet = () => {
+            sourceSheet.replaceChildren();
+            if (openSheet === null) {
+                sourceSheet.hidden = true;
+                return;
+            }
+            const headings = sheetHeadings[openSheet.kind];
+            const rows = channels[openSheet.source][openSheet.kind];
+            const title = document.createElement('div');
+            title.className = 'sale-panel-title';
+            const label = document.createElement('span');
+            label.textContent = openSheet.title;
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'button secondary';
+            close.textContent = t.sheet_close;
+            close.addEventListener('click', () => toggleSourceSheet(openSheet.source, openSheet.kind, openSheet.title));
+            title.append(label, close);
+            const table = document.createElement('table');
+            const head = document.createElement('thead');
+            const headRow = head.insertRow();
+            headings.forEach(text => {
+                headRow.insertCell().textContent = text;
+            });
+            const body = document.createElement('tbody');
+            if (!rows.length) {
+                const empty = body.insertRow();
+                const cell = empty.insertCell();
+                cell.colSpan = headings.length;
+                cell.className = 'muted';
+                cell.textContent = t.sheet_empty;
+            }
+            rows.forEach(row => {
+                const tr = body.insertRow();
+                sheetCells[openSheet.kind](row).forEach(value => {
+                    tr.insertCell().textContent = value;
+                });
+            });
+            table.append(head, body);
+            const scroll = document.createElement('div');
+            scroll.className = 'sale-sheet-body';
+            scroll.append(table);
+            sourceSheet.append(title, scroll);
+            sourceSheet.hidden = false;
+        };
+        const toggleSourceSheet = (source, kind, title) => {
+            openSheet = openSheet !== null && openSheet.source === source && openSheet.kind === kind
+                ? null
+                : {source, kind, title};
+            markSourceCells();
+            renderSourceSheet();
+        };
+        document.querySelectorAll('.source-cell').forEach(cell => {
+            cell.addEventListener('click', () => toggleSourceSheet(cell.dataset.source, cell.dataset.sheet, cell.title));
+        });
+        const round2 = value => Math.round(Number(value) * 100) / 100;
+        const mergeChannelNumber = (rows, number, amount, reason) => {
+            const row = rows.find(entry => entry.number === number && (reason === undefined || entry.reason === reason));
+            if (row) {
+                row.count += 1;
+                row.amount = round2(row.amount + amount);
+            } else {
+                rows.push({number, count: 1, amount: round2(amount), ...(reason === undefined ? {} : {reason})});
+            }
+            rows.sort((a, b) => b.amount - a.amount || String(a.number).localeCompare(String(b.number)));
+        };
+        const writeSourceCells = () => {
+            document.querySelectorAll('.source-cell').forEach(cell => {
+                const row = channels[cell.dataset.source];
+                const figure = cell.dataset.sheet === 'inputs'
+                    ? money(row.accepted_amount)
+                    : String(row[cell.dataset.sheet === 'numbers' ? 'accepted_numbers' : 'rejected_numbers']).toLocaleString();
+                cell.textContent = figure;
+            });
+        };
+        const addAcceptedDetails = (details, inputText) => {
+            const web = channels.web;
+            let lineTotal = 0;
             for (const detail of details) {
                 if (detail.is_excluded) continue;
+                const amount = Number(detail.amount);
                 if (detail.status !== 'accepted') {
                     rejectedCount++;
+                    web.rejected_numbers += 1;
+                    mergeChannelNumber(
+                        web.rejected,
+                        String(detail.number),
+                        amount,
+                        detail.reject_reason ? detail.reject_reason.replaceAll('_', ' ') : t.status_rejected
+                    );
                     continue;
                 }
-                sold.set(detail.number, (sold.get(detail.number) || 0) + Number(detail.amount));
-                agentSold.set(detail.number, (agentSold.get(detail.number) || 0) + Number(detail.amount));
+                sold.set(detail.number, (sold.get(detail.number) || 0) + amount);
                 acceptedCount++;
-                acceptedAmount += Number(detail.amount);
+                acceptedAmount += amount;
+                lineTotal += amount;
+                web.accepted_numbers += 1;
+                web.accepted_amount = round2(web.accepted_amount + amount);
+                mergeChannelNumber(web.numbers, String(detail.number), amount);
+            }
+            if (inputText) {
+                web.inputs.unshift({
+                    time: new Date().toLocaleTimeString(),
+                    input: inputText,
+                    count: details.length,
+                    total: round2(lineTotal),
+                });
+                web.inputs.splice(50);
             }
             document.querySelector('[data-accepted-count]').textContent = acceptedCount.toLocaleString();
             document.querySelector('[data-accepted-amount]').textContent = acceptedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -684,6 +761,8 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
             renderSold();
             renderTopSales();
             renderOverLimit();
+            writeSourceCells();
+            if (openSheet !== null && openSheet.source === 'web') renderSourceSheet();
         };
         try {
             const storedDrafts = localStorage.getItem(storageKey);
@@ -782,7 +861,7 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                             draft.error = t.no_response;
                             failed++;
                         } else if (item.status === 'saved') {
-                            addAcceptedDetails(item.details || []);
+                            addAcceptedDetails(item.details || [], draft.input);
                             drafts = drafts.filter(row => row.id !== draft.id);
                             saved++;
                         } else {
@@ -791,9 +870,11 @@ FORM: Operator ledger, grounded in the supplied worksheet reference; 2D cells pr
                         }
                     }
                     if (Array.isArray(result.amount_limit_breaches)) limitBreaches = result.amount_limit_breaches;
+                    if (Array.isArray(result.over_limit_rows)) overLimitRows = result.over_limit_rows;
                     renderLimitBanner();
                     persist();
                     renderDrafts();
+                    renderOverLimit();
                 } catch (error) {
                     for (const draft of chunk) {
                         draft.error = t.connection_failed;

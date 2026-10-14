@@ -380,7 +380,11 @@ class SettingsController extends Controller
         ]);
         $setting = $round->agentRoundSettings()->where('agent_id', $agent->id)->first();
 
-        $twoDigit = $this->limitOrNull($validated['amount_limit'] ?? null);
+        // The 2D box left this screen with the per-number caps, so a form that
+        // does not submit amount_limit must keep the stored value untouched.
+        $twoDigit = array_key_exists('amount_limit', $validated)
+            ? $this->limitOrNull($validated['amount_limit'])
+            : ($setting?->amount_limit === null ? null : (float) $setting->amount_limit);
         $threeDigit = array_key_exists('amount_limit_3d', $validated)
             ? $this->limitOrNull($validated['amount_limit_3d'])
             : ($setting?->amount_limit_3d === null ? null : (float) $setting->amount_limit_3d);
@@ -443,10 +447,16 @@ class SettingsController extends Controller
             'amount_limit_mode' => ['nullable', 'in:warn,block'],
         ]);
 
-        $twoDigit = $this->limitOrNull($validated['amount_limit'] ?? null);
-        $threeDigit = $this->limitOrNull($validated['amount_limit_3d'] ?? null);
-        $mode = AmountLimitPolicy::normalizeMode($validated['amount_limit_mode'] ?? null);
         $setting = $round->operatorRoundSettings()->where('operator_id', $operator->id)->first();
+
+        // A field the retired 2D form no longer posts keeps its stored value.
+        $twoDigit = array_key_exists('amount_limit', $validated)
+            ? $this->limitOrNull($validated['amount_limit'])
+            : ($setting?->amount_limit === null ? null : (float) $setting->amount_limit);
+        $threeDigit = array_key_exists('amount_limit_3d', $validated)
+            ? $this->limitOrNull($validated['amount_limit_3d'])
+            : ($setting?->amount_limit_3d === null ? null : (float) $setting->amount_limit_3d);
+        $mode = AmountLimitPolicy::normalizeMode($validated['amount_limit_mode'] ?? null);
 
         if ($twoDigit === null && $threeDigit === null) {
             $setting?->delete();
@@ -473,12 +483,53 @@ class SettingsController extends Controller
 
         $mode = AmountLimitPolicy::normalizeMode($validated['amount_limit_all_mode'] ?? null);
         $round->update([
-            'amount_limit_all' => $this->limitOrNull($validated['amount_limit_all'] ?? null),
+            // 2D no longer posts this box; keep the stored value when absent.
+            'amount_limit_all' => array_key_exists('amount_limit_all', $validated)
+                ? $this->limitOrNull($validated['amount_limit_all'])
+                : $round->amount_limit_all,
             'amount_limit_all_3d' => $this->limitOrNull($validated['amount_limit_all_3d'] ?? null),
             'amount_limit_all_mode' => $mode,
         ]);
 
-        return back()->with('status', 'Round-wide Amount Limits saved. They count every Agent and Operator in this Round. '.$this->modeExplain($mode));
+        return back()->with('status', 'Round-wide 3D Amount Limits saved. They count every Agent and Operator in this Round. '.$this->modeExplain($mode));
+    }
+
+    /**
+     * Save the Round's 2D Amount Limit for each number 00–99. A blank box
+     * uncaps that number; passing a cap never blocks a sale.
+     */
+    public function updateRoundNumberAmountLimits(Request $request, Round $round): RedirectResponse
+    {
+        $this->authorizeBusinessAdmin($request);
+        $this->authorizeRound($request, $round);
+
+        $validated = $request->validate([
+            'limits' => ['nullable', 'array'],
+            'limits.*' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+        ]);
+
+        $caps = [];
+        foreach (($validated['limits'] ?? []) as $number => $value) {
+            if (! preg_match('/^\d{1,2}$/', (string) $number)) {
+                continue;
+            }
+            $cap = $this->limitOrNull($value);
+            if ($cap !== null) {
+                $caps[str_pad((string) $number, 2, '0', STR_PAD_LEFT)] = $cap;
+            }
+        }
+
+        $capped = array_keys($caps);
+        $round->numberAmountLimits()
+            ->when($capped !== [], fn ($query) => $query->whereNotIn('number', $capped))
+            ->delete();
+        foreach ($caps as $number => $cap) {
+            $round->numberAmountLimits()->updateOrCreate(['number' => $number], ['amount_limit' => $cap]);
+        }
+
+        return back()->with('status', $caps === []
+            ? 'Every number in this Round is uncapped again.'
+            : 'Amount Limits saved for '.count($caps).' number(s). A sale that passes a cap is still accepted and listed in Above Amount Limit.');
     }
 
     private function modeExplain(string $mode): string

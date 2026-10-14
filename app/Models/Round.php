@@ -66,6 +66,11 @@ class Round extends Model
         return $this->hasMany(OperatorRoundSetting::class);
     }
 
+    public function numberAmountLimits(): HasMany
+    {
+        return $this->hasMany(RoundNumberAmountLimit::class);
+    }
+
     public function result(): HasOne
     {
         return $this->hasOne(RoundResult::class);

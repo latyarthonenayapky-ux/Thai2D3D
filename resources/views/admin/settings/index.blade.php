@@ -314,9 +314,6 @@
             <form method="POST" action="{{ route('admin.settings.rounds.amount-limits', $selectedRound) }}" class="grid">
                 @csrf
                 @method('PATCH')
-                <label>{{ __('app.settings.amount_limit_2d') }}
-                    <input type="number" name="amount_limit_all" min="0" step="0.01" value="{{ old('amount_limit_all', $selectedRound->amount_limit_all) }}" placeholder="{{ __('app.common.not_set') }}">
-                </label>
                 <label>{{ __('app.settings.amount_limit_3d') }}
                     <input type="number" name="amount_limit_all_3d" min="0" step="0.01" value="{{ old('amount_limit_all_3d', $selectedRound->amount_limit_all_3d) }}" placeholder="{{ __('app.common.not_set') }}">
                 </label>
@@ -333,7 +330,7 @@
             <h4 style="margin-top:20px">{{ __('app.settings.agent_limits_title') }}</h4>
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.settings.col_handler') }}</th><th>{{ __('app.settings.amount_limit_2d') }}</th><th>{{ __('app.settings.amount_limit_3d') }}</th><th>{{ __('app.settings.limit_mode_label') }}</th><th>{{ __('app.common.action') }}</th></tr></thead>
+                    <thead><tr><th>{{ __('app.common.agent') }}</th><th>{{ __('app.settings.col_handler') }}</th><th>{{ __('app.settings.amount_limit_3d') }}</th><th>{{ __('app.settings.limit_mode_label') }}</th><th>{{ __('app.common.action') }}</th></tr></thead>
                     <tbody>
                     @forelse($agents as $agent)
                         @php $agentLimitMode = old('amount_limit_mode', $agentRoundSettings->get($agent->id)?->amount_limit_mode ?? 'warn'); @endphp
@@ -344,11 +341,8 @@
                                 <form id="agent-amount-limit-{{ $agent->id }}" method="POST" action="{{ route('admin.settings.rounds.agents.amount-limit', [$selectedRound, $agent]) }}">
                                     @csrf
                                     @method('PATCH')
-                                    <input aria-label="{{ __('app.settings.amount_limit_2d') }} · {{ $agent->agent_name }}" type="number" min="0" step="0.01" name="amount_limit" value="{{ old('amount_limit', $agentRoundSettings->get($agent->id)?->amount_limit) }}" placeholder="{{ __('app.common.not_set') }}">
+                                    <input aria-label="{{ __('app.settings.amount_limit_3d') }} · {{ $agent->agent_name }}" type="number" min="0" step="0.01" name="amount_limit_3d" value="{{ old('amount_limit_3d', $agentRoundSettings->get($agent->id)?->amount_limit_3d) }}" placeholder="{{ __('app.common.not_set') }}">
                                 </form>
-                            </td>
-                            <td>
-                                <input form="agent-amount-limit-{{ $agent->id }}" aria-label="{{ __('app.settings.amount_limit_3d') }} · {{ $agent->agent_name }}" type="number" min="0" step="0.01" name="amount_limit_3d" value="{{ old('amount_limit_3d', $agentRoundSettings->get($agent->id)?->amount_limit_3d) }}" placeholder="{{ __('app.common.not_set') }}">
                             </td>
                             <td>
                                 <select form="agent-amount-limit-{{ $agent->id }}" name="amount_limit_mode" aria-label="{{ __('app.settings.limit_mode_label') }} · {{ $agent->agent_name }}">
@@ -360,7 +354,7 @@
                             <td><button class="button secondary" type="submit" form="agent-amount-limit-{{ $agent->id }}">{{ __('app.settings.save_limit') }}</button></td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="muted">{{ __('app.settings.create_agent_first') }}</td></tr>
+                        <tr><td colspan="5" class="muted">{{ __('app.settings.create_agent_first') }}</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -370,7 +364,7 @@
             <p>{{ __('app.settings.operator_limits_help') }}</p>
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>{{ __('app.roles.operator') }}</th><th>{{ __('app.settings.amount_limit_2d') }}</th><th>{{ __('app.settings.amount_limit_3d') }}</th><th>{{ __('app.settings.limit_mode_label') }}</th><th>{{ __('app.common.action') }}</th></tr></thead>
+                    <thead><tr><th>{{ __('app.roles.operator') }}</th><th>{{ __('app.settings.amount_limit_3d') }}</th><th>{{ __('app.settings.limit_mode_label') }}</th><th>{{ __('app.common.action') }}</th></tr></thead>
                     <tbody>
                     @forelse($operators as $operator)
                         @php $operatorLimitMode = old('operator_amount_limit_mode.'.$operator->id, $operatorRoundSettings->get($operator->id)?->amount_limit_mode ?? 'warn'); @endphp
@@ -380,11 +374,8 @@
                                 <form id="operator-amount-limit-{{ $operator->id }}" method="POST" action="{{ route('admin.settings.rounds.operators.amount-limits', [$selectedRound, $operator]) }}">
                                     @csrf
                                     @method('PATCH')
-                                    <input aria-label="{{ __('app.settings.amount_limit_2d') }} · {{ $operator->name }}" type="number" min="0" step="0.01" name="amount_limit" value="{{ old('operator_amount_limit.'.$operator->id, $operatorRoundSettings->get($operator->id)?->amount_limit) }}" placeholder="{{ __('app.common.not_set') }}">
+                                    <input aria-label="{{ __('app.settings.amount_limit_3d') }} · {{ $operator->name }}" type="number" min="0" step="0.01" name="amount_limit_3d" value="{{ old('operator_amount_limit_3d.'.$operator->id, $operatorRoundSettings->get($operator->id)?->amount_limit_3d) }}" placeholder="{{ __('app.common.not_set') }}">
                                 </form>
-                            </td>
-                            <td>
-                                <input form="operator-amount-limit-{{ $operator->id }}" aria-label="{{ __('app.settings.amount_limit_3d') }} · {{ $operator->name }}" type="number" min="0" step="0.01" name="amount_limit_3d" value="{{ old('operator_amount_limit_3d.'.$operator->id, $operatorRoundSettings->get($operator->id)?->amount_limit_3d) }}" placeholder="{{ __('app.common.not_set') }}">
                             </td>
                             <td>
                                 <select form="operator-amount-limit-{{ $operator->id }}" name="amount_limit_mode" aria-label="{{ __('app.settings.limit_mode_label') }} · {{ $operator->name }}">
@@ -396,7 +387,7 @@
                             <td><button class="button secondary" type="submit" form="operator-amount-limit-{{ $operator->id }}">{{ __('app.settings.save_limit') }}</button></td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="muted">{{ __('app.settings.no_operators') }}</td></tr>
+                        <tr><td colspan="4" class="muted">{{ __('app.settings.no_operators') }}</td></tr>
                     @endforelse
                     </tbody>
                 </table>

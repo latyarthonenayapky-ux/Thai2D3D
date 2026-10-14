@@ -13,8 +13,7 @@ use Illuminate\Support\Facades\DB;
 class SaleProcessor
 {
     public function __construct(
-        protected SaleInputParser $parser,
-        protected AmountLimitPolicy $amountLimits
+        protected SaleInputParser $parser
     ) {}
 
     /**
@@ -25,9 +24,9 @@ class SaleProcessor
      * - Shared by all Agents in the same Round.
      *
      * Amount Limit:
-     * - Blocks the whole input when it would take the Agent, the Operator, or
-     *   the Round past the Admin's Amount Limit. Nothing is saved for a blocked
-     *   input; see AmountLimitExceededException.
+     * - Never stops a 2D sale. The Admin caps each number 00–99 for the whole
+     *   Round, and a sale that passes the cap is accepted and listed in
+     *   "Above Amount Limit – All Agents"; see AmountLimitPolicy::numberBreaches().
      *
      * Hot Number:
      * - Rejects matching numbers.
@@ -35,9 +34,9 @@ class SaleProcessor
      * Exclusion:
      * - Explicitly excluded numbers are saved as excluded rather than rejected.
      */
-    public function process(string $input, AgentSession $session, ?string $clientUuid = null): SaleInput
+    public function process(string $input, AgentSession $session, ?string $clientUuid = null, string $source = 'web'): SaleInput
     {
-        return DB::transaction(function () use ($input, $session, $clientUuid) {
+        return DB::transaction(function () use ($input, $session, $clientUuid, $source) {
             $round = Round::query()
                 ->whereKey($session->round_id)
                 ->lockForUpdate()
@@ -174,44 +173,11 @@ class SaleProcessor
             $hotNumbers = array_fill_keys($hotNumbers, true);
             $numberLimits = array_fill_keys($round->number_limits ?? [], true);
 
-            /*
-             * --------------------------------------------------------
-             * 4.1 AMOUNT LIMIT
-             * --------------------------------------------------------
-             *
-             * Only the numbers that would actually be accepted consume the
-             * limit, so excluded, Hot and Number-Limit values are not counted.
-             * A blocked input writes nothing at all.
-             */
-
-            $billableNumbers = 0;
-
-            foreach ($generatedNumbers as $number) {
-                $number = str_pad((string) $number, 2, '0', STR_PAD_LEFT);
-
-                if (in_array($number, $excludedNumbers, true)) {
-                    continue;
-                }
-
-                if (isset($hotNumbers[$number]) || isset($numberLimits[$number])) {
-                    continue;
-                }
-
-                $billableNumbers++;
-            }
-
-            $this->amountLimits->assertWithinLimits(
-                $round,
-                (int) $session->agent_id,
-                (int) $session->operator_id,
-                round($billableNumbers * $amount, 2),
-                '2d'
-            );
-
             $saleInput = SaleInput::create([
                 'agent_session_id' => $session->id,
                 'operator_id' => $session->operator_id,
                 'client_uuid' => $clientUuid,
+                'source' => $source,
 
                 'original_input' => $parsed['original_input'] ?? $input,
 

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Exceptions\AmountLimitExceededException;
 use App\Models\Agent;
 use App\Models\AgentRoundSetting;
 use App\Models\AgentSession;
 use App\Models\OfflineSyncReview;
 use App\Models\OperatorRoundSetting;
 use App\Models\Round;
+use App\Models\RoundNumberAmountLimit;
 use App\Models\SaleDetail;
 use App\Models\SaleInput;
 use App\Models\User;
@@ -24,61 +24,7 @@ class AmountLimitEnforcementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_operator_amount_limit_blocks_the_second_agent_of_the_same_operator(): void
-    {
-        [, $operator, $round] = $this->business();
-        $first = $this->openAgentSession($round, $operator, 'OP-A');
-        $second = $this->openAgentSession($round, $operator, 'OP-B');
-
-        OperatorRoundSetting::query()->create([
-            'round_id' => $round->id,
-            'operator_id' => $operator->id,
-            'amount_limit' => '2000.00',
-            'amount_limit_mode' => 'block',
-        ]);
-
-        $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $first)->status);
-
-        try {
-            app(SaleProcessor::class)->process('131500', $second);
-            $this->fail('Expected the Operator Amount Limit to block the second Agent.');
-        } catch (AmountLimitExceededException $exception) {
-            $this->assertSame('operator', $exception->tier);
-            $this->assertSame(1000.0, $exception->used);
-            $this->assertSame(1000.0, $exception->headroom());
-        }
-
-        $this->assertSame(1, SaleInput::query()->count());
-        $this->assertSame(1, SaleDetail::query()->count());
-    }
-
-    public function test_warn_mode_keeps_accepting_past_the_limit_and_flags_the_round(): void
-    {
-        [, $operator, $round] = $this->business();
-        $session = $this->openAgentSession($round, $operator, 'WARN-A');
-        AgentRoundSetting::query()
-            ->where('agent_id', $session->agent_id)
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => '1000.00']);
-
-        $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $session)->status);
-        $this->assertSame('accepted', app(SaleProcessor::class)->process('131000', $session)->status);
-        $this->assertSame(2, SaleDetail::query()->count());
-
-        $breaches = app(AmountLimitPolicy::class)->breaches($round, $session->agent_id, $session->operator_id, '2d');
-        $this->assertCount(1, $breaches);
-        $this->assertSame('agent', $breaches[0]['key']);
-        $this->assertSame(1000.0, $breaches[0]['over']);
-
-        $this->actingAs($operator)
-            ->get(route('operator.sales.show', $session))
-            ->assertOk()
-            ->assertSee('ABOVE AMOUNT LIMIT')
-            ->assertSee('data-limit-banner')
-            ->assertSee('over-limit');
-    }
-
-    public function test_round_amount_limit_counts_every_agent_and_operator_together(): void
+    public function test_a_number_cap_counts_every_agent_and_operator_of_the_round_together(): void
     {
         [$admin, $operator, $round] = $this->business();
         $secondOperator = User::factory()->create([
@@ -88,54 +34,104 @@ class AmountLimitEnforcementTest extends TestCase
         ]);
         $first = $this->openAgentSession($round, $operator, 'ALL-A');
         $second = $this->openAgentSession($round, $secondOperator, 'ALL-B');
+        $this->cap($round, '12', '1500.00');
 
-        $round->update(['amount_limit_all' => '3000.00', 'amount_limit_all_mode' => 'block']);
+        $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $first)->status);
+        $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $second)->status);
+        $this->assertSame(2, SaleInput::query()->count());
 
-        $this->assertSame('accepted', app(SaleProcessor::class)->process('122000', $first)->status);
-
-        try {
-            app(SaleProcessor::class)->process('131500', $second);
-            $this->fail('Expected the whole-Round Amount Limit to block the second Operator.');
-        } catch (AmountLimitExceededException $exception) {
-            $this->assertSame('round', $exception->tier);
-            $this->assertSame(2000.0, $exception->used);
-            $this->assertSame(1000.0, $exception->headroom());
-        }
-
-        $this->assertSame(1, SaleInput::query()->count());
+        $breaches = app(AmountLimitPolicy::class)->numberBreaches($round);
+        $this->assertCount(1, $breaches);
+        $this->assertSame('12', $breaches[0]['number']);
+        $this->assertSame(1500.0, $breaches[0]['limit']);
+        $this->assertSame(2000.0, $breaches[0]['sold']);
+        $this->assertSame(500.0, $breaches[0]['excess']);
     }
 
-    public function test_a_voided_sale_gives_the_amount_limit_back(): void
+    public function test_sale_input_flags_the_over_cap_number_and_keeps_selling(): void
+    {
+        [, $operator, $round] = $this->business();
+        $session = $this->openAgentSession($round, $operator, 'WARN-A');
+        $this->cap($round, '12', '1000.00');
+        $this->cap($round, '13', '9000.00');
+
+        $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $session)->status);
+        $this->assertSame('accepted', app(SaleProcessor::class)->process('121500', $session)->status);
+        $this->assertSame('accepted', app(SaleProcessor::class)->process('131000', $session)->status);
+        $this->assertSame(3, SaleDetail::query()->count());
+
+        $this->actingAs($operator)
+            ->get(route('operator.sales.show', [$session, 'mode' => '2d']))
+            ->assertOk()
+            ->assertSee('ABOVE AMOUNT LIMIT')
+            ->assertSee('data-limit-banner')
+            ->assertSee('over-limit')
+            ->assertViewHas('overLimitRows', fn (array $rows): bool => count($rows) === 1
+                && $rows[0]['number'] === '12'
+                && (float) $rows[0]['sold'] === 2500.0
+                && (float) $rows[0]['excess'] === 1500.0);
+    }
+
+    public function test_a_voided_sale_stops_flagging_the_number(): void
     {
         [, $operator, $round] = $this->business();
         $session = $this->openAgentSession($round, $operator, 'VOID-CAP');
-        AgentRoundSetting::query()
-            ->where('agent_id', $session->agent_id)
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => '1000.00', 'amount_limit_mode' => 'block']);
+        $this->cap($round, '12', '1000.00');
 
-        app(SaleProcessor::class)->process('121000', $session);
+        $sale = app(SaleProcessor::class)->process('121500', $session);
+        $this->assertCount(1, app(AmountLimitPolicy::class)->numberBreaches($round));
 
-        $this->expectException(AmountLimitExceededException::class);
-        app(SaleProcessor::class)->process('131000', $session);
-    }
-
-    public function test_voiding_a_sale_frees_the_headroom_for_the_next_one(): void
-    {
-        [, $operator, $round] = $this->business();
-        $session = $this->openAgentSession($round, $operator, 'VOID-FREE');
-        AgentRoundSetting::query()
-            ->where('agent_id', $session->agent_id)
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => '1000.00', 'amount_limit_mode' => 'block']);
-
-        $sale = app(SaleProcessor::class)->process('121000', $session);
         $this->actingAs($operator)
             ->post(route('operator.sales.void', [$session, $sale]), ['reason' => 'customer cancelled'])
             ->assertRedirect();
 
-        $this->assertSame('accepted', app(SaleProcessor::class)->process('131000', $session)->status);
-        $this->assertSame(1000.0, (float) SaleDetail::query()->where('status', 'accepted')->sum('amount'));
+        $this->assertSame([], app(AmountLimitPolicy::class)->numberBreaches($round));
+        $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $session)->status);
+    }
+
+    public function test_the_retired_2d_scalar_tiers_never_block_or_flag_a_sale(): void
+    {
+        [, $operator, $round] = $this->business();
+        $session = $this->openAgentSession($round, $operator, 'LEGACY');
+        AgentRoundSetting::query()->updateOrCreate(
+            ['agent_id' => $session->agent_id, 'round_id' => $round->id],
+            ['amount_limit' => '100.00', 'amount_limit_mode' => 'block']
+        );
+        OperatorRoundSetting::query()->updateOrCreate(
+            ['operator_id' => $operator->id, 'round_id' => $round->id],
+            ['amount_limit' => '100.00', 'amount_limit_mode' => 'block']
+        );
+        $round->update(['amount_limit_all' => '100.00', 'amount_limit_all_mode' => 'block']);
+
+        $this->assertSame('accepted', app(SaleProcessor::class)->process('121000', $session)->status);
+        $this->assertSame([], app(AmountLimitPolicy::class)->breaches($round, $session->agent_id, $session->operator_id, '2d'));
+    }
+
+    public function test_admin_saves_and_clears_the_per_number_caps(): void
+    {
+        [$admin, , $round] = $this->business();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.settings.rounds.number-amount-limits', $round), [
+                'limits' => ['12' => '1500', '7' => '2000', '99' => '', '00' => '0'],
+            ])
+            ->assertRedirect();
+
+        $caps = $round->numberAmountLimits()->orderBy('number')->pluck('amount_limit', 'number');
+        $this->assertSame(['00', '07', '12'], $caps->keys()->map(fn ($number): string => (string) $number)->values()->all());
+        $this->assertSame('1500.00', (string) $caps['12']);
+        $this->assertSame('2000.00', (string) $caps['07']);
+        $this->assertSame('0.00', (string) $caps['00']);
+
+        $this->patch(route('admin.settings.rounds.number-amount-limits', $round), ['limits' => ['12' => '']])
+            ->assertRedirect();
+        $this->assertSame(0, $round->numberAmountLimits()->count());
+
+        $stranger = User::factory()->create(['role' => 'admin', 'status' => true]);
+        app(InitializeAdminBusiness::class)->initialize($stranger);
+        $this->actingAs($stranger)
+            ->patch(route('admin.settings.rounds.number-amount-limits', $round), ['limits' => ['12' => '1']])
+            ->assertNotFound();
     }
 
     public function test_admin_saves_and_clears_operator_and_round_wide_limits(): void
@@ -202,14 +198,11 @@ class AmountLimitEnforcementTest extends TestCase
         $this->assertSame(0, OperatorRoundSetting::query()->count());
     }
 
-    public function test_a_blocked_offline_sale_above_the_limit_waits_for_admin_review(): void
+    public function test_an_offline_sale_above_a_number_cap_syncs_and_is_flagged(): void
     {
         [, $operator, $round] = $this->business();
         $session = $this->openAgentSession($round, $operator, 'OFFLINE-CAP');
-        AgentRoundSetting::query()
-            ->where('agent_id', $session->agent_id)
-            ->where('round_id', $round->id)
-            ->update(['amount_limit' => '500.00', 'amount_limit_mode' => 'block']);
+        $this->cap($round, '12', '500.00');
 
         $record = [
             'client_uuid' => (string) Str::uuid(),
@@ -222,11 +215,22 @@ class AmountLimitEnforcementTest extends TestCase
         $this->actingAs($operator)
             ->postJson(route('operator.offline-sync.store'), ['records' => [$record]])
             ->assertOk()
-            ->assertJsonPath('results.0.status', 'pending_review');
+            ->assertJsonPath('results.0.status', 'synced');
 
-        $review = OfflineSyncReview::query()->firstOrFail();
-        $this->assertStringContainsString('Amount Limit', $review->conflict_reason);
-        $this->assertSame(0, SaleInput::query()->count());
+        $this->assertSame(0, OfflineSyncReview::query()->count());
+        $this->assertSame('web', SaleInput::query()->value('source'));
+        $breaches = app(AmountLimitPolicy::class)->numberBreaches($round);
+        $this->assertCount(1, $breaches);
+        $this->assertSame(500.0, $breaches[0]['excess']);
+    }
+
+    private function cap(Round $round, string $number, string $amount): RoundNumberAmountLimit
+    {
+        return RoundNumberAmountLimit::query()->create([
+            'round_id' => $round->id,
+            'number' => $number,
+            'amount_limit' => $amount,
+        ]);
     }
 
     private function business(): array

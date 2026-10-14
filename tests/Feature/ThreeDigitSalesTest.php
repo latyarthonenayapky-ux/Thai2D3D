@@ -200,6 +200,27 @@ class ThreeDigitSalesTest extends TestCase
         $this->assertEquals(-499550.0, $settlement['totals']['three_digit_business_net']);
     }
 
+    public function test_the_3d_sale_page_shows_channel_sheets_and_flags_an_over_limit_3d_sale(): void
+    {
+        [$admin, $operator, $round, $agent, $session] = $this->createBusiness();
+        $round->update(['amount_limit_all_3d' => '3000.00', 'amount_limit_all_mode' => 'warn']);
+        $this->actingAs($operator)
+            ->post(route('operator.sales.store', $session), ['sale_type' => '3d', 'input' => '1235000'])
+            ->assertRedirect();
+
+        $this->assertSame('accepted', ThreeDigitSaleInput::query()->firstOrFail()->status);
+
+        $this->actingAs($operator)
+            ->get(route('operator.sales.show', [$session, 'mode' => '3d']))
+            ->assertOk()
+            ->assertSee('ABOVE AMOUNT LIMIT')
+            ->assertSee('3D Round Amount Limit (all Agents and Operators) · limit 3,000.00 · sold 5,000.00 · over 2,000.00')
+            ->assertSee('Phone · Agent app')
+            ->assertSee('Inter · web entry')
+            ->assertDontSee('00–24')
+            ->assertViewHas('numberAmountLimits', fn (array $caps): bool => $caps === []);
+    }
+
     private function createBusiness(): array
     {
         $admin = User::factory()->create(['role' => 'admin', 'status' => true]);

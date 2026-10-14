@@ -15,6 +15,7 @@ class OfflineSyncReview extends Model
         'round_id',
         'agent_id',
         'original_input',
+        'source',
         'recorded_at',
         'status',
         'conflict_reason',

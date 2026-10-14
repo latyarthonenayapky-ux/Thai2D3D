@@ -45,7 +45,7 @@ class AgentSaleUploadController extends AgentApiController
                     'message' => 'This Agent session is not available to your account.',
                 ];
             } else {
-                $results[] = $sync->sync($handler, $record);
+                $results[] = $sync->sync($handler, $record, 'phone');
             }
         }
 

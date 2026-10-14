@@ -15,6 +15,7 @@ class ThreeDigitSaleInput extends Model
         'draw_agent_setting_id',
         'operator_id',
         'client_uuid',
+        'source',
         'original_input',
         'normalized_input',
         'input_type',

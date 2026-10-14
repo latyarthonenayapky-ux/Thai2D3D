@@ -1,17 +1,47 @@
-# Round scheduling operations
+# Round ဇယားချထားသည့် လုပ်ငန်းစဉ် (Round scheduling operations)
 
-Daily Round schedules are configured by an Owner or Admin in **Setting → Daily Round schedule**. Only the **close time** is required for each Round; the **start time is optional**. The schedule no longer requires a 2D Number Limit. Times are interpreted in `Asia/Yangon`; the three periods must be ordered and non-overlapping by close time.
+နေ့စဉ် Round များ၏ ဇယားကို Owner သို့မဟုတ် Admin က **Setting → Daily Round
+schedule** တွင် သတ်မှတ်သည်။ Round တစ်ခုစီအတွက် **close time (ပိတ်ချိန်) သာ
+မဖြစ်မနေ လိုအပ်ပြီး start time (ဖွင့်ချိန်) မှာ ထည့်ရန် မလိုအပ်ပါ**။ ဇယားတွင်
+2D Number Limit လိုအပ်တော့မည် မဟုတ်ပါ။ အချိန်များကို `Asia/Yangon` timezone
+ဖြင့် သတ်မှတ်သည်; သတ်မှတ်ထားသော သုံးခုသော period များသည် close time
+အလိုက် အစဉ်လိုက်ဖြစ်ပြီး တစ်ခုနှင့်တစ်ခု အချိန်မထပ်ပါနှင့်။
 
-When a Round's start time is left blank, it opens automatically the moment the previous Round on the same date closes (the first Round opens at the start of the day). This keeps Sale Entry continuously open through the day, controlled only by the configured close times. A Round with an explicit start time opens at that start time instead.
+Round တစ်ခု၏ start time ကို ဗလာထားလျှင် တစ်ရက်တည်းအတွင်း အရင်ဖွင့်ထားသော
+Round ပိတ်သွားသည့် အခိုက်အတန့်တွင် အလိုအလျောက် ဖွင့်သည် (ပထမဆုံး
+Round မှာ ရက်၏အစ ၀၀:၀၀ တွင် ဖွင့်သည်)။ ထို့ကြောင့် Sale Entry သည်
+တစ်နေ့လုံးလျှောက် ဆက်တိုက် ဖွင့်နေပြီး သတ်မှတ်ထားသော close
+time များကသာ ထိန်းချုပ်သည်။ start time ကို ရိုက်ထည့်ထားသော Round မှာ
+ထိုအချိန်တွင် ဖွင့်သည်။
 
-The Laravel scheduler must run every minute on the production server. Configure the server cron to invoke:
+Production server တွင် Laravel scheduler ကို တစ်မိနစ်လျှင် တစ်ကြိမ်
+သေချာစွာ run လုပ်ရပါမည်။ Server cron ကို အောက်ပါအတိုင်း ချိတ်ဆက်ပါ။
 
 ```cron
 * * * * * cd /path/to/Thai2D3D && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-The scheduled `rounds:sync-schedule` command creates today's and tomorrow's Round records for configured schedules, opens Rounds when they become due (at their start time, or at the previous Round's close time when no start time is set), and closes them at their configured close time. Closing a Round also closes its open Agent Sessions, and sale processing independently checks that the Round is open. An Admin can manually close a Round at any time; the scheduler keeps that Round closed. A manually reopened Round remains open after its regular close time and closes when a later Round automatically opens.
+schedule အရ run သည့် `rounds:sync-schedule` command သည် ဇယားချထားပြီးသား
+schedule များအတွက် ယနေ့နှင့် မနက်ဖြန် ဖွင့်မည့် Round များ၏ မှတ်တမ်းများကို ဖန်တီးပြီး အချိန်ရောက်လာသော
+Round များကို ဖွင့်ပေးသည် (start time ရှိလျှင် ၎င်းအချိန်တွင်, မရှိလျှင်
+ယခင် Round ၏ close time တွင်)။ ထို့အတူ သတ်မှတ်ထားသော close
+time ရောက်လျှင် ပိတ်ပေးသည်။ Round တစ်ခုကို ပိတ်လိုက်လျှင် ၎င်းနှင့်ဆက်စပ်နေသော
+ပွင့်လျက်ရှိသည့် Agent Session များကို ပိတ်သည်။ Sale လုပ်ဆောင်ချက်များသည်
+Round ပွင့်လျက်ရှိမရှိ ကို သီးခြားစစ်ဆေးသည်။ Admin သည် မည်သည့်အချိန်တွင်မဆို
+Round ကို လက်လုပ်ပိတ်နိုင်သည်; scheduler က ထို Round ပိတ်နေစေရန် ဆက်ထိန်းထား
+ပေးသည်။ လက်လုပ်ပြန်ဖွင့်ထားသော Round ကို ပုံမှန် close
+time ကျော်လွန်ပြီး နောက် Round အလိုအလျောက်ဖွင့်မှသာ ပြန်ပိတ်သည်။
 
-Changing the schedule updates future and unopened current-day Rounds. A Round that has opened, or has Agent Session history, keeps its saved time. Configure 2D Number Limit values in Sale Entry: only exact listed values from `00` to `99` are blocked. The separate 3D number-count limit is configured in 3D settings.
+ဇယားကို ပြင်ဆင်လိုက်လျှင် နောင်လာမည့် Round များနှင့် ယနေ့
+မပွင့်သေးသော Round များကို ပြင်သည်။ အဖွင့်ခံထားရပြီးသား Round သို့မဟုတ်
+Agent Session မှတဆင့် ဖွင့်ထားဖူးသည့် Round တွင်
+မူလချထားသည့် အချိန်ကို ဆက်ထားသည်။ 2D Number Limit တန်ဖိုးများကို Sale Entry
+တွင် ချထားရန်: စာရင်းထဲ `00` မှ `99` ထိ တိကျစွာ ပါဝင်သော တန်ဖိုးများကိုသာ
+ပိတ်ထားသည်။ 3D အတွက် သီးသန့်သတ်မှတ်ထားသော number count limit ကို
+3D settings တွင် ချိန်ညှိသည်။
 
-The lifecycle migration adds unique constraints for one Round per date/number and one Agent per Operator. If an existing database contains duplicate records under either rule, resolve those duplicates before retrying the migration.
+Lifecycle migration တွင် ရက်စွဲ/number အလိုက် Round တစ်ခုနှင့် Agent
+တစ်ဦးကို Operator တစ်ဦးသာ ဟူသည့် unique constraints များကို ထည့်သွင်းသည်။
+အကယ်၍ လက်ရှိ database တွင် ဤစည်းမျဉ်းနှစ်ခုအောက်တွင် ထပ်တူကျသော
+မှတ်တမ်းများပါဝင်နေပါက migration ပြန် run မတိုင်မီ ထပ်တူများကို
+ဖြေရှင်းရန်လိုအပ်ပါသည်။

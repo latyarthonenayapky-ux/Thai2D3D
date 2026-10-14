@@ -1,78 +1,82 @@
-# Agent mobile sales (auto-upload)
+# Agent မိုဘိုင်း sale (အလိုအလျောက် တင်ပို့ခြင်း)
 
-Agents record 2D/3D sales in the Android app under `mobile/`. Each entry is
-uploaded to the office VPS the moment it is saved; entries recorded without
-signal stay in a phone-local queue and upload themselves when the connection
-returns. The office webapp, dashboard and offline-review screen need no changes
-to see them.
+Agent များသည် `mobile/` အောက်ရှိ Android app တွင် 2D/3D sale များကို
+ရိုက်ထည့်သည်။ Entry တစ်ခုစီသည် သိမ်းလိုက်သည့် အခိုက်အတန့်တွင် office VPS သို့
+တင်ပို့သည်; signal မရှိဘဲ ရိုက်ထည့်ထားသော entry များသည် ဖုန်းအတွင်း queue တွင်
+နေပြီး connection ပြန်ရလျှင် အလိုအလျောက် တင်ပို့သည်။ Office webapp, dashboard
+နှင့် offline-review screen တို့တွင် ဘာမှ ပြင်စရာမလိုဘဲ ထို sale များကို မြင်နိုင်သည်။
 
 ```
 Agent phone (Flutter)  --HTTPS-->  VPS Laravel  /api/v1/*  -->  sale_inputs / sale_details
                                             \--> offline_sync_reviews (conflicts)
 ```
 
-## 1. Credentials
+## 1. အသုံးပြုရန် အချက်အလက်များ (Credentials)
 
-Agents have no web login. The office issues mobile credentials:
+Agent များတွင် web login မရှိပါ။ Mobile credentials ကို office မှ ချထားပေးသည်။
 
 **Settings → Agents → Mobile app access** (`admin/settings` page)
 
-| Action | Route |
+| လုပ်ဆောင်ချက် | Route |
 | --- | --- |
-| Issue credentials automatically | `POST /admin/settings/agents/{agent}/mobile-access/issue` |
-| Issue for every Agent without access | `POST /admin/settings/agents/mobile-access/issue-all` |
-| Set login code + password by hand | `PATCH /admin/settings/agents/{agent}/mobile-access` |
-| Sign out every phone | `DELETE /admin/settings/agents/{agent}/mobile-access/devices` |
-| Disable mobile access | `DELETE /admin/settings/agents/{agent}/mobile-access` |
+| Credentials ကို အလိုအလျောက် ထုတ်ပေးခြင်း | `POST /admin/settings/agents/{agent}/mobile-access/issue` |
+| အခွင့်မရှိသော Agent အားလုံးအတွက် ထုတ်ပေးခြင်း | `POST /admin/settings/agents/mobile-access/issue-all` |
+| Login code + password ကို လက်လုပ် သတ်မှတ်ခြင်း | `PATCH /admin/settings/agents/{agent}/mobile-access` |
+| ဖုန်းအားလုံး logout လုပ်ခြင်း | `DELETE /admin/settings/agents/{agent}/mobile-access/devices` |
+| Mobile access ကို ပိတ်ခြင်း | `DELETE /admin/settings/agents/{agent}/mobile-access` |
 
-**Issue credentials** is the normal path when handing a phone to an Agent: the
-login code becomes `AGT-0001` (the Agent's id, zero-padded; a suffix is added if
-that code is already taken somewhere) and a random six-digit PIN is generated.
-The Settings page then shows a one-time handover card with the sign-in URL from
-`APP_URL`, the login code and the PIN in a copyable text block. Flash data ages
-after that page load, so the PIN can never be read again — issue again to
-replace a lost one. Re-issuing keeps the login code the Agent already knows and
-only replaces the PIN, which signs every phone out.
+**Issue credentials** သည် ဖုန်းတစ်လုံးကို Agent လက်ထဲပေးသည့် အခါ ပုံမှန်လမ်းဖြစ်သည်။
+Login code သည် `AGT-0001` ပုံစံဖြစ်ပြီး (Agent id ကို သုညပြည့်အောင် ရေးထားသည်;
+ထို code တစ်နေရာရာတွင် အသုံးပြုပြီးဖြစ်လျှင် suffix ထပ်ထည့်သည်) ကျပန်း
+ခြောက်လုံးပါတဲ့ PIN ကို generate လုပ်ပေးသည်။
+Settings page သည် တစ်ကြိမ်တည်း ပြသသည့် handover card ကို ပြသည် —
+`APP_URL` မှ sign-in URL, login code နှင့် PIN တို့ကို copy လုပ်နိုင်သော
+text block ထဲတွင်။ Flash data သည် ထို page တစ်ကြိမ်တင်ပြီးနောက် ပျောက်သွားသဖြင့်
+PIN ကို နောက်တစ်ကြိမ် ပြန်ဖတ်၍ မရတော့ပါ — မေ့သွားလျှင် ပြန်ထုတ်ပေး၍
+အစားထိုးပါ။ ပြန်ထုတ်ပေးလျှင် Agent သိထားပြီးသော login code ကို ဆက်ထားပြီး
+PIN ကိုသာ ပြောင်းပေးသည်; ၎င်းသည် ဖုန်းအားလုံးကို logout ဖြစ်စေသည်။
 
-`Issue for every Agent without access` does the same for every **active** Agent
-in the business that is missing a code or a password, skips Agents that already
-have credentials (their phones stay signed in), and lists all of the new PINs in
-one handover card.
+`Issue for every Agent without access` သည် business အတွင်း **active** ဖြစ်ပြီး
+code သို့မဟုတ် password မရှိသော Agent အားလုံးအတွက် အတူတူလုပ်ပေးသည်။ Credentials
+ရှိပြီးသား Agent များကို ကျော်သွားသည် (၎င်းတို့၏ ဖုန်းများသည် login ဆက်ဝင်ထားသည်)၊
+ထွက်လာသော PIN အားလုံးကို handover card တစ်ခုတည်းတွင် စာရင်းပြပေးသည်။
 
-- Login code: 4–32 characters from `A-Z 0-9 . _ -`, stored uppercase, unique
-  across every business.
-- Password: 6–64 characters, bcrypt hashed, never shown again.
-- Rotating the password, re-issuing, or disabling access revokes all bearer
-  tokens at once.
+- Login code: 4–32 characters၊ `A-Z 0-9 . _ -` မှသာ၊ uppercase အဖြစ် သိမ်းပြီး
+  business အားလုံးတွင် ထပ်တူမရှိရ (unique)။
+- Password: 6–64 characters၊ bcrypt hash ဖြင့် သိမ်းပြီး ဘယ်တော့မှ ပြန်မပြပါ။
+- Password ကို ပြောင်းလိုက်ခြင်း, ပြန်ထုတ်ပေးခြင်း သို့မဟုတ် access ကို ပိတ်လိုက်ခြင်းသည်
+  bearer token အားလုံးကို ချက်ချင်း revoke လုပ်လိုက်သည်။
 
-The install file those phones need is published from the same Settings page —
-see §5.
+ထိုဖုန်းများ လိုအပ်သော install file ကို ဒီ Settings page မှပင် ဖြန့်ဝေသည် —
+§5 ကို ကြည့်ပါ။
 
-## 2. Token model
+## 2. Token ပုံစံ
 
-`POST /api/v1/auth/login` returns a 64-character bearer token. Only its
-SHA-256 digest is stored (`agent_access_tokens`). Tokens expire after
-`AGENT_TOKEN_TTL_DAYS` (default 180, see `config/mobileapi.php`) and are
-recorded with device name and last-used time. Send it as
-`Authorization: Bearer <token>`.
+`POST /api/v1/auth/login` သည် 64-character bearer token ကို ပြန်ပေးသည်။
+၎င်း၏ SHA-256 digest ကိုသာ သိမ်းထားသည် (`agent_access_tokens`)။ Token များသည်
+`AGENT_TOKEN_TTL_DAYS` (ပုံသေ 180, `config/mobileapi.php` ကို ကြည့်ပါ) ကျော်လျှင်
+သက်တမ်းကုန်ပြီး device name နှင့် နောက်ဆုံးအသုံးပြုခဲ့သည့် အချိန်ကို မှတ်တမ်းတင်ထားသည်။
+`Authorization: Bearer <token>` ပုံစံဖြင့် ပို့ပါ။
 
-A sale uploaded from a phone is attributed to the Operator who holds that
-Agent session (`agent_sessions.operator_id`), so reports, settlement and the
-Sale Entry ledger keep working exactly as they do for operator-entered sales.
+ဖုန်းမှ တင်ပို့သော sale သည် ထို Agent session ကို ကိုင်ဆောင်ထားသည့် Operator
+အမည်အောက်တွင် မှတ်သားသည် (`agent_sessions.operator_id`)၊ ထို့ကြောင့် report,
+settlement နှင့် Sale Entry ledger တို့သည် operator ဖြင့် ရိုက်ထည့်သော sale
+များအတွက် လုပ်သကဲ့သို့ အတိအကျ ဆက်လုပ်နိုင်သည်။
 
 ## 3. Endpoints
 
-Base path `/api/v1`. All responses are JSON. Wrong password, missing, expired,
-revoked or disabled tokens give `401`; a disabled Agent gives `403`.
+Base path မှာ `/api/v1` ဖြစ်ပြီး response အားလုံး JSON ဖြစ်သည်။ Password
+မှားခြင်း, token မရှိ/သက်တမ်းကုန်/revoked/access ပိတ်ထားခြင်း တို့သည် `401`;
+Agent ကို disable လုပ်ထားလျှင် `403`။
 
-| Method | Path | Purpose |
+| Method | Path | ရည်ရွယ်ချက် |
 | --- | --- | --- |
-| `POST` | `/auth/login` | Exchange login code + password for a token (throttled 10/min) |
-| `GET` | `/me` | Agent profile, open rounds, open sessions, review count |
-| `POST` | `/auth/logout` | Revoke the token of the calling phone |
-| `POST` | `/sessions/open` | Open/claim this Agent's session for a Round |
-| `GET` | `/sessions/{session}/state` | Session totals and the last 20 entries |
-| `POST` | `/sales/upload` | Auto-upload: 1 record for a live entry, up to 100 for a backlog |
+| `POST` | `/auth/login` | Login code + password ဖြင့် token လဲလှယ်ခြင်း (throttle 10/min) |
+| `GET` | `/me` | Agent profile, ပွင့်လျက် Round, session, review count |
+| `POST` | `/auth/logout` | ခေါ်ဆိုလိုက်သော ဖုန်း၏ token ကို revoke လုပ်ခြင်း |
+| `POST` | `/sessions/open` | Round တစ်ခုအတွက် ဤ Agent ၏ session ကို ဖွင့်/claim လုပ်ခြင်း |
+| `GET` | `/sessions/{session}/state` | Session စုစုပေါင်းနှင့် နောက်ဆုံး entry 20 ခု |
+| `POST` | `/sales/upload` | အလိုအလျောက် တင်ပို့ခြင်း: live entry အတွက် 1 မှတ်တမ်း, backlog အတွက် အများဆုံး 100 |
 
 `POST /api/v1/sales/upload` request:
 
@@ -90,7 +94,7 @@ revoked or disabled tokens give `401`; a disabled Agent gives `403`.
 }
 ```
 
-Response (HTTP 200, one outcome per record):
+Response (HTTP 200, record တစ်ခုလျှင် ရလဒ်တစ်ခု):
 
 ```json
 {
@@ -101,22 +105,23 @@ Response (HTTP 200, one outcome per record):
 }
 ```
 
-| `status` | Meaning | Phone behaviour |
+| `status` | အဓိပ္ပာယ် | ဖုန်း ပြုမူပုံ |
 | --- | --- | --- |
-| `synced` | Booked into the ledger (or already booked before) | Remove from queue |
-| `pending_review` | Round/session closed, or a Hot Number / Number Limit conflict | Remove from queue, show "waiting for office review" |
-| `invalid` | Parser could not read the entry | Move to **Needs attention** for editing |
-| `error` | Session not available to this account | Retry, then give up after 8 attempts |
+| `synced` | Ledger ထဲ book ဝင်သွားပြီ (သို့မဟုတ် အရင်က ဝင်ထားပြီး) | Queue မှ ဖယ်သည် |
+| `pending_review` | Round/session ပိတ်နေ၊ Hot Number သို့မဟုတ် Number Limit conflict | Queue မှ ဖယ်ပြီး "office သုံးသပ်နေဆဲ" ဟု ပြသည် |
+| `invalid` | Parser က entry ကို ဖတ်၍ မရ | **Needs attention** ထဲ ပို့ပြီး ပြင်ဆင်ရန် |
+| `error` | Session သည် ဤ account အတွက် မရနိုင် | Retry လုပ်ပြီး 8 ကြိမ်အထိ သုံးပြီးနောက် ရပ်တန့်သည် |
 
-`client_uuid` is the idempotency key (`agents` → `sale_inputs.operator_id +
-client_uuid` unique index). Re-sending the same record never double-books a
-sale, which is why the app can retry freely. This is the same contract the
-browser offline page uses at `POST /operator/offline-sync`, and conflicts land
-in the same **Offline sync reviews** screen for the Admin.
+`client_uuid` သည် idempotency key ဖြစ်သည် (`agents` → `sale_inputs.operator_id +
+client_uuid` unique index)။ Record အတူတူကို ပြန်ပို့လျှင် sale ကို နှစ်ကြိမ်
+book မဖြစ်စေပါ — ထို့ကြောင့် app သည် လွယ်လွယ်ကူကူ retry လုပ်နိုင်သည်။ ဤ contract
+သည် browser offline page သည် `POST /operator/offline-sync` တွင် သုံးသည်နှင့်
+အတူတူပင် ဖြစ်ပြီး conflict များသည် Admin အတွက် **Offline sync reviews** screen
+တစ်ခုတည်းထဲ ရောက်သည်။
 
-## 4. Building the APK
+## 4. APK ဆောက်နည်း
 
-See `mobile/README.md`. Summary:
+`mobile/README.md` ကို ကြည့်ပါ။ အနှစ်ချုပ်:
 
 ```bash
 cd mobile
@@ -125,78 +130,85 @@ flutter create --platforms=android --org com.wya --project-name wya_agent_mobile
 flutter build apk --release --dart-define=WYA_SERVER_URL=https://your-vps-address
 ```
 
-GitHub Actions does the same build for you: `android-apk.yml` runs on any push
-that touches `mobile/**` (or on **Run workflow**, where the VPS address can be
-typed in) and uploads `wya-agent-debug-apk` plus `wya-agent-release-apk`. The
-workflow labels the app **WYA Agent** and enables cleartext so a VPS without
-HTTPS yet can still be reached. Take `app-release.apk` from the run page and
-publish it under **Settings → Agent mobile app (APK)** in §5 — that page is the
-only way Agents can obtain the file. See `mobile/README.md` for the details.
+GitHub Actions သည် အတူတူကို အလိုအလျောက် ဆောက်ပေးသည်: `android-apk.yml` သည်
+`mobile/**` ကို ထိသည့် push တိုင်းတွင် run ဖြစ်ပြီး (သို့မဟုတ် **Run workflow** တွင်
+VPS address ကို ရိုက်ထည့်နိုင်သည်) `wya-agent-debug-apk` နှင့်
+`wya-agent-release-apk` တို့ကို upload ဖြစ်သည်။ Workflow သည် app ကို
+**WYA Agent** ဟု အညွှန်းတပ်ပြီး cleartext ကို ဖွင့်ပေးသည် — HTTPS မရှိသေးသော
+VPS သို့ပင် ဝင်နိုင်ရေးအတွက် ဖြစ်သည်။ Run page မှ `app-release.apk` ကိုယူပြီး
+§5 ရှိ **Settings → Agent mobile app (APK)** အောက်တွင် publish လုပ်ပါ — ထို page
+သည် Agent များ ဖိုင်ရယူနိုင်သည့် တစ်ခုတည်းသော လမ်းဖြစ်သည်။ အသေးစိတ်ကို
+`mobile/README.md` တွင်။
 
-## 5. Handing the APK to Agents (admin-only)
+## 5. APK ကို Agent များလက်ထဲ ရောက်အောင် ပို့ခြင်း (admin-only)
 
-The install file is distributed from the webapp, not from a public folder.
-**Settings → Agent mobile app** (`admin/settings` page) lets the business admin
-upload the APK built in §4 and give Agents a download link they cannot share.
+Install ဖိုင်ကို webapp မှ ဖြန့်ဝေပြီး public folder မှ မဟုတ်ပါ။
+**Settings → Agent mobile app** (`admin/settings` page) သည် business admin ကို
+§4 တွင် ဆောက်ထားသော APK upload လုပ်ခွင့်ပေးပြီး Agent များအတွက်
+share မပြုနိုင်သော download link ကို ပေးနိုင်သည်။
 
-| Action | Route |
+| လုပ်ဆောင်ချက် | Route |
 | --- | --- |
-| Publish an APK | `POST /admin/settings/mobile-app` |
-| Download it | `GET /admin/settings/mobile-app/download` |
-| Remove it | `DELETE /admin/settings/mobile-app` |
+| APK publish | `POST /admin/settings/mobile-app` |
+| ဒေါင်းလုဒ် | `GET /admin/settings/mobile-app/download` |
+| ဖျက်ခြင်း | `DELETE /admin/settings/mobile-app` |
 
-- One row per business (`mobile_app_packages` is unique on `admin_id`), so
-  publishing again replaces the previous build instead of accumulating versions.
-  Each business keeps its own file under `mobile-apps/{admin}/`.
-- The download is saved as **`{business-name}-agent-app-{version}.apk`** (the
-  admin's own account name, or `admin-{id}` when that name is not ASCII, e.g.
-  Burmese) so a phone holding builds handed out by two offices can tell them
-  apart before installing one.
-- The file lands on the **private** `local` disk at
-  `storage/app/private/mobile-apps/{admin}/agent-app.apk`. Nothing is ever
-  written to `storage/app/public`, so the only way to fetch it is the download
-  route, which streams it with `Content-Type: application/vnd.android.package-archive`.
-- Every route sits behind the `admin` middleware, so Operators, Agents and
-  guests get 403 (guests are redirected to the login page). Downloading is
-  therefore limited to the signed-in admin's own session — hand the file to a
-  phone over USB/Share, or open the Settings page on that phone once.
-- Uploads are validated as `extensions:apk`, capped at 120 MB, and are throttled
-  to 10/min. The optional version field (32 characters) is only a label shown
-  next to the file name and size.
-- Removing the app deletes both the stored file and the row.
-- Nothing crosses between businesses: the download and remove routes only ever
-  look up `admin_id = the signed-in admin`, and every mobile API call resolves
-  through the signed-in Agent's own `admin_id` — a Round of another business 404s
-  on `POST /sessions/open`, another business' session is refused by
-  `POST /sales/upload` and 404s on `GET /sessions/{id}/state`, and login codes are
-  unique across the whole install. `AgentMobileBusinessIsolationTest` and
+- Business တစ်ခုလျှင် row တစ်ခုသာ (`mobile_app_packages` သည် `admin_id` ပေါ် unique)၊
+  ထို့ကြောင့် ပြန် publish လျှင် ယခင် build ကို အစားထိုးပြီး version များ
+  စုပုံနေမှာ မဟုတ်ပါ။ Business တစ်ခုချင်းစီ၏ ဖိုင်ကို `mobile-apps/{admin}/`
+  အောက်တွင် သိမ်းသည်။
+- Download ဖိုင်နာမည်သည် **`{business-name}-agent-app-{version}.apk`** (admin ၏
+  ကိုယ်ပိုင် account name, ထိုနာမည် ASCII မဟုတ်လျှင် — ဥပမာ မြန်မာစာ — `admin-{id}`)
+  ဖြစ်ပြီး သိမ်းထားသည်။ ထို့ကြောင့် office နှစ်ခုမှ ပေးထားသော build များကို
+  install မတိုင်မီ ခွဲခြားသိနိုင်သည်။
+- ဖိုင်သည် **private** `local` disk ၏
+  `storage/app/private/mobile-apps/{admin}/agent-app.apk` တွင် ရှိသည်။
+  `storage/app/public` ထဲသို့ ဘယ်တော့မှ မရေးသဖြင့် ရယူနိုင်သည့် တစ်ခုတည်းသော
+  လမ်းမှာ download route ဖြစ်ပြီး `Content-Type: application/vnd.android.package-archive`
+  ဖြင့် stream ပို့သည်။
+- Route အားလုံးသည် `admin` middleware နောက်တွင် ရှိသဖြင့် Operator, Agent နှင့်
+  guest များသည် 403 ရသည် (guest များကို login page သို့ redirect)။ ထို့ကြောင့်
+  download သည် login ဝင်ထားသော admin ၏ session တွင်သာ ကန့်သတ်ထားသည် — ဖုန်းသို့
+  USB/Share ဖြင့် ပို့ပါ၊ သို့မဟုတ် ဖုန်းတွင် Settings page ကို တစ်ကြိမ် ဖွင့်ပါ။
+- Upload များကို `extensions:apk` ဖြင့် စစ်ဆေးပြီး 120 MB ဖြင့် ကန့်သတ်ကာ
+  throttle 10/min သတ်မှတ်သည်။ Version ကွက် (32 characters) မှာ ဖိုင်နာမည်နှင့်
+  ဆိုက် (အရွယ်အစား) အနီးတွင် ပြသရန် label သာ ဖြစ်သည်။
+- App ကို ဖျက်လျှင် သိမ်းထားသော ဖိုင်နှင့် row နှစ်ခုလုံး ဖျက်သည်။
+- Business အချင်းချင်း ဘာမှ မကူးမည်: download နှင့် remove route များသည်
+  `admin_id = login ဝင်ထားသော admin` ကိုသာ ရှာဖွေပြီး mobile API call အားလုံးသည်
+  login ဝင်ထားသော Agent ၏ ကိုယ်ပိုင် `admin_id` မှတဆင့်သာ ဖြေရှင်းသည် — အခြား
+  business ၏ Round တစ်ခု `POST /sessions/open` တွင် 404 ဖြစ်ပြီး၊ အခြား business
+  ၏ session ကို `POST /sales/upload` က ငြင်းဆိုကာ `GET /sessions/{id}/state` တွင်
+  404 ဖြစ်သည်။ Login code များသည် install တစ်ခုလုံးတွင် unique ဖြစ်သည်။
+  `AgentMobileBusinessIsolationTest` နှင့်
   `MobileAppPackageTest::test_each_admin_only_reaches_their_own_published_app`
-  pin this down.
+  တို့သည် ဤအချက်ကို သေချာစေသည်။
 
 ## 6. CI/CD
 
 `.github/workflows/`:
 
-| Workflow | Trigger | What it does |
+| Workflow | Trigger | လုပ်ဆောင်ချက် |
 | --- | --- | --- |
-| `laravel-ci.yml` | push/PR to `master`, `VPS2D3D`, `MasterW` | `composer install` + full PHPUnit suite on PHP 8.3 (SQLite) |
-| `deploy-vps.yml` | after CI succeeds on `master`, or manually | rsync app files (never `storage/`, `.env`, `vendor`), then `composer install --no-dev`, `migrate --force`, `db:seed --force`, `optimize`, health check `/up` |
-| `android-apk.yml` | changes under `mobile/**`, or manually | labels the app `WYA Agent`, `flutter analyze`, then debug and release APK artifacts |
+| `laravel-ci.yml` | `master`, `VPS2D3D`, `MasterW` သို့ push/PR | `composer install` + PHPUnit suite အပြည့်အစုံ (PHP 8.3, SQLite) |
+| `deploy-vps.yml` | `master` တွင် CI အောင်မြင်ပြီးနောက် သို့မဟုတ် လက်လုပ် | app files rsync (ဘယ်တော့မှ `storage/`, `.env`, `vendor` မပါ), နောက် `composer install --no-dev`, `migrate --force`, `db:seed --force`, `optimize`, health check `/up` |
+| `android-apk.yml` | `mobile/**` အောက် ပြောင်းလဲမှု သို့မဟုတ် လက်လုပ် | app ကို `WYA Agent` ဟု အညွှန်းတပ်, `flutter analyze`, နောက် debug နှင့် release APK artifacts |
 
-Required repository secrets for deployment: `VPS_HOST`, `VPS_USER`,
-`VPS_SSH_PRIVATE_KEY`, `VPS_PATH`, optional `VPS_SSH_PORT`. Optional variables:
-`VPS_HEALTH_URL` and `WYA_SERVER_URL` (baked into CI-built APKs). For this
-deployment both point at the Z.com domain registered against the VPS at
-`118.27.150.3`: `VPS_HOST=118.27.150.3`, `VPS_HEALTH_URL=https://wya2d3d.site/up`
-and `WYA_SERVER_URL=https://wya2d3d.site`. `WYA_SERVER_URL` is only the
-build-time default — the workflow falls back to the same address, and each Agent
-can still change it on the sign-in screen. The deploy SSH key must be able to write
-`VPS_PATH`, and `VPS_PATH` should be the non-public application directory
-described in `docs/production-deployment.md`.
+Deploy အတွက် လိုအပ်သော repository secrets: `VPS_HOST`, `VPS_USER`,
+`VPS_SSH_PRIVATE_KEY`, `VPS_PATH`, ရွေးချယ်ခွင့်ရှိသော `VPS_SSH_PORT`။ Optional
+variables: `VPS_HEALTH_URL` နှင့် `WYA_SERVER_URL` (CI တွင် ဆောက်သော APK များထဲ
+ထိုးသွင်းသည်)။ ဤ deployment အတွင် နှစ်ခုလုံးသည် `118.27.150.3` VPS တွင် မှတ်ပုံတင်ထားသော
+Z.com domain ဆီ ညွှန်သည်: `VPS_HOST=118.27.150.3`,
+`VPS_HEALTH_URL=https://wya2d3d.site/up` နှင့် `WYA_SERVER_URL=https://wya2d3d.site`။
+`WYA_SERVER_URL` သည် build-time default သာ ဖြစ်ပြီး workflow သည် အတူတူ
+address သို့ ပြန်သွားသည်; Agent တစ်ဦးချင်းစီသည် ၎င်းကို sign-in screen တွင်
+ဆက်ပြောင်းလဲနိုင်သည်။ Deploy SSH key သည် `VPS_PATH` ကို ရေးချနိုင်ရမည် နှင့်
+`VPS_PATH` သည် `docs/production-deployment.md` တွင် ဖော်ပြထားသည့် public မဟုတ်သော
+application directory ဖြစ်ရမည်။
 
-Two GitHub branches created earlier by Copilot
+Copilot က ယခင်က ဖန်တီးထားသော GitHub branch နှစ်ခု
 (`latyarthonenayapky-ux-mobile-agent-sale-entry`,
-`latyarthonenayapky-ux-sale-entry-workflows`) contain only a Symfony test
-workflow and an SLSA release workflow generated from a template. They do not
-match this Laravel app, hold no mobile code, and should be deleted; the
-workflows above replace them.
+`latyarthonenayapky-ux-sale-entry-workflows`) တွင် template မှ generate လုပ်ထားသော
+Symfony test workflow နှင့် SLSA release workflow သာ ပါဝင်သည်။ ၎င်းတို့သည် ဤ
+Laravel app နှင့် ကိုက်ညီမှု မရှိ၊ mobile code လုံးဝ မပါ၊ ထို့ကြောင့် ဖျက်သင့်ပြီး
+အထက်ပါ workflow များက ၎င်းတို့နေရာကို အစားထိုးသည်။

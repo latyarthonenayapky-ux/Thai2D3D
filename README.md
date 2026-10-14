@@ -13,8 +13,8 @@ Linux x86-64 အတွက် standalone AppImage ကို `release/Linux/` fold
 double-click နှိပ်ပါ။**
 ဖိုင်ကို executable အဖြစ်ပြင်ဆင်ထားပြီး PHP သို့မဟုတ် Composer ကို သီးခြား
 install လုပ်ရန်မလိုပါ။ ပထမဆုံးဖွင့်ချိန်တွင် Owner အမည်၊ email၊ အနည်းဆုံး
-6 လုံးရှိသော password နှင့် ထို email အတွက် ရယူထားသော Install pass key တို့ဖြင့်
-local Owner account တည်ဆောက်ပါ။ နောက်တစ်ကြိမ်ဖွင့်လျှင် အဲဒီ account ဖြင့်
+6 လုံးရှိသော password နှင့် ထို email အတွက် ဆော့ဖ်ဝဲပေးသူထံ ရယူထားသော
+Licence string တို့ဖြင့် local Owner account တည်ဆောက်ပါ။ နောက်တစ်ကြိမ်ဖွင့်လျှင် အဲဒီ account ဖြင့်
 login ဝင်ပါ။
 
 File Manager က launch ခွင့်မပေးလျှင် ဖိုင်ပေါ် right-click → **Properties** →
@@ -36,7 +36,7 @@ VPS/online server သို့ အလိုအလျောက် sync မလု�
 Thai2D3D.cmd` ကို double-click နှိပ်ပါ (သို့မဟုတ် `Thai2D3D\Thai2D3D.exe` ကို
 တိုက်ရိုက် double-click)။ Folder ကို ကူးယူသွားလျှင်လည်း အလုပ်လုပ်ပါသည်။
 ပထမဆုံးအကြိမ်တွင် Owner email၊ အနည်းဆုံး 6 လုံး password နှင့် ထို email
-အတွက် ရယူထားသော Install pass key တို့ဖြင့် local Owner account တည်ဆောက်ပါ။
+အတွက် ဆော့ဖ်ဝဲပေးသူထံ ရယူထားသော Licence string တို့ဖြင့် local Owner account တည်ဆောက်ပါ။
 PHP/Composer ကို သီးခြား install လုပ်စရာမလိုပါ။ PHP runtime အတွက်
 Microsoft Visual C++ 2015–2022 Redistributable (x64) မရှိသေးသော Windows
 ကွန်ပျူတာတွင် ၎င်းကို ထပ်မံတပ်ဆင်ရန် လိုနိုင်သည်။ ဤ app တွင် code-signing
@@ -57,7 +57,9 @@ certificate မပါသောကြောင့် Windows SmartScreen သတ�
   အသုံးပြုပါ။
 
 `release/Windows/Thai2D3D/` ကို 2026-10-11 တွင် လက်ရှိ source မှ ပြန်လည်
-တည်ဆောက်ထားသည် (openssl fix၊ Install pass key အပါအဝင်)။ `release/Linux/`
+တည်ဆောက်ထားသည် (openssl fix အပါအဝင်)။ ထို build သည် Licence စနစ်
+([docs/LICENCE_MM.md](docs/LICENCE_MM.md)) မတိုင်မီ ကာလဖြစ်သဖြင့် desktop licence
+ပါဝင်စေရန် ပြန်တည်ဆောက်ရပါမည်။ `release/Linux/`
 AppImage သည် ယခင် build အတိုင်း ဖြစ်သည်။ Source ပြောင်းလဲမှုများ ပါဝင်စေရန်
 Node.js ရှိသော computer တွင် `cd desktop && npm run dist` ဖြင့် ပြန်တည်ဆောက်ပြီး
 ထွက်လာသည့် ဖိုင်များကို `release/` folder များထဲ အစားထိုးပါ။ `release/VPS/`
@@ -120,14 +122,42 @@ certbot၊ §7 scheduler။ Mobile API/APK အတွက်:
 
 ## စာရွက်စာတမ်း
 
+အားလုံး၏ အညွှန်း - [docs/README.md](docs/README.md)
+
+**သုံးစွဲသူ / တပ်ဆင်သူ**
+
 - [Burmese User Manual](docs/USER_MANUAL_MM.md) — login, role, 2D/3D sales,
   settings, results, settlement နှင့် offline queue
 - [VPS Setup Guide](docs/VPS_SETUP_MM.md) — Ubuntu, MySQL, PHP, HTTPS,
   scheduler, Owner စတင်ဖန်တီးခြင်း၊ backup နှင့် update
 - [Production Go-live Checklist](docs/production-deployment.md)
+- [Troubleshooting](docs/TROUBLESHOOTING_MM.md) — 413 upload limit, HTTPS ပျောက်ခြင်း,
+  SmartScreen/MSVC, AppImage exec bit, password reset, mobile sign-in
+- [Round Scheduling](docs/round-scheduling.md)
+
+**လုပ်ငန်းစည်းမျဉ်း (business rules)**
+
+- [Amount Limit နှင့် Number Limit](docs/AMOUNT_LIMITS_MM.md) — 2D round-wide cap,
+  3D tier ၃ ဆင့်, warn vs block
+- [Agent Cash Ledger](docs/AGENT_CASH_LEDGER_MM.md) — deposit/credit/repayment/withdrawal
+  နှင့် balance တွက်နည်း
+- [Business Logic](docs/BUSINESS_LOGIC_MM.md) — sale processing, settlement math,
+  void/restore, offline sync review, reports
+- [Licence](docs/LICENCE_MM.md) — Desktop licence string, vendor signer နှင့် known-answer vectors
+- [Roles and Access](docs/ROLES_AND_ACCESS_MM.md) — owner/admin/temp_admin/operator,
+  middleware, owner 403 quirk
+- [Data Model](docs/DATA_MODEL_MM.md) — ဇယားများ၊ columns၊ relations
+- [Localization](docs/LOCALIZATION_MM.md) — en/my key parity နှင့် language switch
+
+**Developer / release**
+
+- [Local Development](docs/DEVELOPMENT_MM.md) — PHP runtime, tests, CI, code layout
+- [Release and Build](docs/RELEASE_BUILD_MM.md) — release folders, sync/smoke scripts,
+  desktop build, APK build, VPS deploy tooling
 - [Agent Mobile Sales](docs/mobile-agent-sales.md) — Agent မိုဘိုင်း login code၊
   `/api/v1` auto-upload API၊ APK ဆောက်နည်း နှင့် GitHub Actions deploy
 - [Desktop App Guide](desktop/README.md)
+- [Mobile App Guide](mobile/README.md)
 
 ## VPS နှင့် Desktop အကြား အရေးကြီးသော ကွာခြားချက်
 

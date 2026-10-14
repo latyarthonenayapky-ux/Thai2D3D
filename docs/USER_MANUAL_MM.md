@@ -19,9 +19,9 @@ AppImage နှင့် VPS database များ **သီးခြားစီ
 1. `release/Linux/` folder ထဲရှိ `Thai2D3D-1.1.0.AppImage` ကို double-click နှိပ်ပါ။
 2. ပထမဆုံးစတင်ချိန်တွင် Owner အမည်၊ email နှင့် အနည်းဆုံး 6 လုံးရှိသော
    password ဖြည့်ပါ (Step 1)။ ထို့နောက် မိမိထည့်သွင်းလိုသော email ကို
-   ဆော့ဖ်ဝဲပေးသူထံ ပေးပို့၍ ရယူထားသော Install pass key — ထို email
-   အတွက် ထုတ်ပေးထားသည့် key — ကို Step 2 တွင် ဖြည့်ပြီး local Owner
-   account ဖန်တီးပါ။ Key မမှန်လျှင် account ဖန်တီးမည်မဟုတ်ပါ။
+   ဆော့ဖ်ဝဲပေးသူထံ ပေးပို့၍ ရယူထားသော **licence string** (vendor ပေးသော
+   စာတန်းအရှည်) ကို Step 2 တွင် paste လုပ်ပြီး local Owner account ဖန်တီးပါ။
+   Licence မှန်လျှင်သာ account ဖန်တီးမည် ဖြစ်သည်။
 3. နောက်တစ်ကြိမ်ဖွင့်ရာတွင် အဲဒီ email/password ဖြင့် login ဝင်ပါ။
 4. App ပိတ်ချိန် window ကိုပိတ်ပါ။ Data ကို `~/.config/Thai2D3D/` အောက်တွင်
    ထိန်းသိမ်းထားသည်။
@@ -32,8 +32,9 @@ AppImage နှင့် VPS database များ **သီးခြားစီ
    (သို့မဟုတ် အတွင်းရှိ `Thai2D3D\Thai2D3D.exe` ကို တိုက်ရိုက် double-click)။
    Folder ကို အခြား computer သို့ ကူးယူသွားလျှင်လည်း အလုပ်လုပ်ပါသည်။
 2. ပထမဆုံးစတင်ချိန်တွင် Owner အမည်၊ email နှင့် အနည်းဆုံး 6 လုံး password
-   ဖြည့်ပါ (Step 1)။ ထို့နောက် ထို email အတွက် ရယူထားသော Install pass key
-   ကို Step 2 တွင် ဖြည့်ပါ။ Key မမှန်လျှင် account ဖန်တီးမည်မဟုတ်ပါ။
+   ဖြည့်ပါ (Step 1)။ ထို့နောက် ထို email အတွက် ဆော့ဖ်ဝဲပေးသူထံမှ ရယူထားသော
+   **licence string** ကို Step 2 တွင် paste လုပ်ပါ။ Licence မမှန်လျှင်
+   account ဖန်တီးမည်မဟုတ်ပါ။
 3. Data ကို `%APPDATA%\Thai2D3D\` အောက်တွင် ထိန်းသိမ်းထားသည်။ Backup
    မလုပ်မီ app ကို အရင်ပိတ်ပါ။
 
@@ -82,11 +83,31 @@ Password မေ့သွားလျှင် app ထဲရှိ **account စ�
 Password ပြင်ပြီးနောက် အဲဒီ account ဖြင့် အရင်က "Keep me signed in" ရွေးထားသော
 device များ အလိုအလျောက် logout သွားပါမည်။
 
+### Licence သက်တမ်းနှင့် read-only အခြေအနေ
+
+Desktop app (Windows/Linux) တစ်ခုစီတွင် licence သက်တမ်းရှိသည် (ပုံမှန် ၁ နှစ်)။
+
+- သက်တမ်း ၃၀/၇/၁ ရက် ကျန်ချိန်တွင် dashboard အပေါ် banner ပေါ်လာပြီး
+  Settings ထဲ Licence လင့်ခ်ပါသည်။
+- သက်တမ်းကုန်လျှင် ၇ ရက် **grace** ထပ်ရရှိသည်။ ထို ၇ ရက်တွင် ပုံမှန်အတိုင်း
+  အလုပ်လုပ်နိုင်သည်။
+- grace ပြီးလျှင် app သည် **read-only** ဖြစ်သွားသည်။ Sales ထည့်ခြင်း၊ setting
+  ပြင်ခြင်း၊ agent အသစ်ထုတ်ခြင်းနှင့် login ဝင်ခြင်းတို့ ပိတ်သွားသည်။
+- Read-only တွင်ပင် data များကို ဆက်ကြည့်နိုင်သည်၊ Data Backup ထုတ်နှင့် ပြန်သွင်း
+  နိုင်သည်၊ ထို့အပြင် Licence page (`/desktop/licence`) တွင် licence string အသစ်
+  paste ၍ ချက်ချင်း ပြန်လုပ်ဆောင်နိုင်သည်။ Data ကို ချုပ်ထားခြင်း မလုပ်ပါ။
+- Login ပိတ်ထားသောကြောင့် Licence page ကို login မလိုဘဲ ဖွင့်နိုင်သည်။
+- ကွန်ပျူတာနာရီကို ၂၄ နာရီထက် ပိုနောက်ဆွဲထားကြောင်း တွေ့လျှင် app သည် read-only
+  ဖြစ်သွားသည်။ Date/time ကို မှန်ကန်အောင် ပြင်ဆင်ပါ။
+- Licence အသစ်တောင်းရန် app တွင် သုံးလိုသော email တစ်ခုတည်းကို ဆော့ဖ်ဝဲပေးသူထံ
+  ပို့ပါ။ Email မတူလျှင် licence မမှန်ပါ။
+
 ## 2. Role နှင့် အကောင့်တာဝန်
 
 - **Owner** — Admin account ဖန်တီး/စီမံသည်။ Controlled testing အတွက် 7 ရက်
   သက်တမ်းရှိ Temp Admin ဖန်တီးနိုင်သည်။ Setting မီနူးတွင် Account users၊ Display၊
-  Language၊ Data Backup နှင့် Activity Log တို့ကိုသာ ဖွင့်ထားပြီး business
+  Language၊ Data Backup၊ Licence (desktop app ဖြစ်လျှင်သာ) နှင့် Activity Log တို့ကိုသာ
+  ဖွင့်ထားပြီး business
   settings (Round/Draw/Agent/payout) များကို ဝင်ရောက်၍ မရပါ။
 - **Admin** — မိမိ business အတွင်း Operator နှင့် Agent၊ Round/Draw settings,
   Hot Numbers, results, settlements နှင့် reports ကို စီမံသည်။

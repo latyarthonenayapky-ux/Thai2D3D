@@ -22,6 +22,7 @@
 | Local development, tests, CI | [DEVELOPMENT_MM.md](DEVELOPMENT_MM.md) |
 | Release folder များ၊ sync/smoke scripts, APK နှင့် desktop build | [RELEASE_BUILD_MM.md](RELEASE_BUILD_MM.md) |
 | ပြဿနာ ဖြစ်လျှင် (413, HTTPS ပျောက်, SmartScreen, ...) | [TROUBLESHOOTING_MM.md](TROUBLESHOOTING_MM.md) |
+| Help drawer assistant (web သက်သက်၊ docs မှဖြေသည်) | [HELP_ASSISTANT_MM.md](HELP_ASSISTANT_MM.md) |
 | အရင် launch သုံးသပ်ချက် (2026-10-10) | [LAUNCH_REVIEW_MM_2026-10-10.md](LAUNCH_REVIEW_MM_2026-10-10.md) |
 
 ## ထပ်မံဖတ်ရန် (folder အလိုက်)

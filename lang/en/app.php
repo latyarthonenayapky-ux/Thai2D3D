@@ -1052,4 +1052,20 @@ return [
         'create_owner' => 'Create Owner account',
         'password_mismatch' => 'Passwords do not match.',
     ],
+
+    'help' => [
+        'launcher' => 'Ask for help',
+        'title' => 'Help assistant',
+        'close' => 'Close',
+        'intro' => 'Ask how to do something, or let the assistant read the error shown on this page. Answers come from the built-in guide.',
+        'placeholder' => 'Type your question in your own words',
+        'ask' => 'Ask',
+        'explain_error' => 'Explain this error',
+        'full_manual' => 'Read the full manual',
+        'busy' => 'Looking it up…',
+        'failed' => 'The assistant could not answer just now. Try again in a moment, or read the manual.',
+        'source_model' => 'Guide answer',
+        'source_docs' => 'From the guide',
+        'no_match' => 'No guide section matches this yet. Describe the exact message you saw, or ask the person who set up this account.',
+    ],
 ];

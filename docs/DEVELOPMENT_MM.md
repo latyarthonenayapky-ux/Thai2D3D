@@ -82,6 +82,7 @@ bash scripts/smoke-release.sh                     # release payload checks
 | Auth / roles / security | `AuthenticationTest`, `NavigationTest`, `TempAdminAccountTest`, `SecurityHardeningTest`, `UserPreferenceTest`, `BurmeseLocaleUiTest` |
 | Licence / desktop | `LicenceSignatureTest`, `LicenceEnforcementTest`, `DesktopOwnerSetupTest` |
 | Data move / backup | `DataBackupTest`, `DatabaseBackupRestoreTest`, `BusinessDataMoveTest` |
+| Help drawer (web only) | `HelpAssistantTest` |
 | Admin UX | `AdminFirstRunChecklistTest`, `AdminAgentSalesViewTest`, `ActivityLogTest` |
 
 - Test အသစ်ရေးလျှင် `RefreshDatabase` သုံးပါ၊ Factory များ (`database/factories/`) ရှိသည်။

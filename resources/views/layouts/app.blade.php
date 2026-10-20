@@ -33,6 +33,9 @@
         .mode-picker{max-width:620px}.mode-options{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);background:var(--surface);border-radius:10px;overflow:hidden}.mode-option{display:grid;gap:6px;text-align:left;padding:22px;background:transparent;color:var(--text);border:0;border-right:1px solid var(--border);cursor:pointer;font:inherit}.mode-option:last-child{border-right:0}.mode-option.is-selected{background:var(--accent-soft);box-shadow:inset 0 -3px var(--accent)}.mode-option-title{font-size:24px;font-weight:800}.mode-option-copy{color:var(--muted);font-size:13px}
         .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.clock-countdown{display:block;margin-top:3px;font-size:10px;font-weight:700}
         .licence-banner{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:10px 16px;font-size:13px;font-weight:700;background:var(--surface-soft);color:var(--accent-text);border-bottom:1px solid var(--border)}.licence-banner.tier-7{background:var(--warn-bg);color:var(--warn-text)}.licence-banner.tier-1{background:var(--danger-bg);color:var(--danger-text)}.licence-banner a{color:inherit;text-decoration:underline}
+        .help-launcher{position:fixed;right:20px;bottom:20px;z-index:40;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--accent);font:inherit;font-size:19px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px #0002}.help-launcher:hover{background:var(--accent-soft);text-decoration:none}
+        .help-drawer{position:fixed;right:20px;bottom:76px;z-index:41;width:min(420px,calc(100vw - 32px));max-height:min(70vh,560px);overflow-y:auto;padding:14px 16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 40px #0003}.help-drawer[hidden]{display:none}.help-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.help-head h2{margin:0;font-size:16px}.help-close{border:0;background:transparent;color:var(--muted);font:inherit;font-size:20px;line-height:1;cursor:pointer}.help-drawer label{margin:10px 0 5px}.help-drawer textarea{min-height:74px}.help-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}.help-actions [hidden]{display:none}.help-busy{opacity:.6}
+        .help-answer{margin-top:14px;padding:12px 14px;border-radius:8px;background:var(--surface-soft);color:var(--text);font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}.help-answer[hidden]{display:none}.help-meta{margin:8px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
         @media(max-width:760px){.topbar{padding:10px 12px;align-items:flex-start;flex-wrap:wrap}.primary-nav{width:100%;gap:2px}.primary-nav>a,.nav-menu>summary{padding:6px 8px;font-size:12px}.header-tools{width:100%;justify-content:space-between;align-items:center}.top-actions{gap:10px;font-size:12px;flex:1;justify-content:flex-end}.top-actions>span{flex-basis:100%;text-align:right}.round-clock{min-width:96px}.main{margin:24px auto;padding:0 16px}.narrow{margin:7vh auto}.card{padding:18px}.page-title{font-size:24px}}
         @media(max-width:430px){.header-tools{gap:12px}.top-actions{max-width:calc(100% - 108px)}.top-actions a{white-space:nowrap}.nav-popover{left:auto;right:0}.display-popover{position:static}}
     </style>
@@ -63,6 +66,7 @@
     if ($layoutLicenceGated && $layoutUser && ($layoutUser->isAdmin() || $layoutUser->isOwner())) {
         $layoutLicenceBanner = app(\App\Services\Licence\LicenceService::class)->banner();
     }
+    $layoutHelpDrawer = $layoutUser !== null && ! config('app.desktop_mode');
     if (isset($agentSession)) {
         $layoutStatementUrl = route('operator.sales.show', [$agentSession, 'mode' => $layoutMode, 'view' => 'agent']);
     } elseif (isset($selectedAgent) && $selectedAgent) {
@@ -225,6 +229,34 @@
         </div>
     @endif
     @yield('content')
+    @if($layoutHelpDrawer)
+        <button type="button" class="help-launcher" data-help-open aria-label="{{ __('app.help.launcher') }}" aria-expanded="false" aria-controls="help-drawer">?</button>
+        <div class="help-drawer" id="help-drawer" role="dialog" aria-labelledby="help-drawer-title" hidden
+            data-action="{{ route('help.assistant') }}"
+            data-csrf="{{ csrf_token() }}"
+            data-page="{{ request()->path() }}"
+            data-busy="{{ __('app.help.busy') }}"
+            data-failed="{{ __('app.help.failed') }}"
+            data-source-model="{{ __('app.help.source_model') }}"
+            data-source-docs="{{ __('app.help.source_docs') }}">
+            <div class="help-head">
+                <h2 id="help-drawer-title">{{ __('app.help.title') }}</h2>
+                <button type="button" class="help-close" data-help-close aria-label="{{ __('app.help.close') }}">&times;</button>
+            </div>
+            <p class="muted">{{ __('app.help.intro') }}</p>
+            <form data-help-form>
+                <label class="sr-only" for="help-question">{{ __('app.help.placeholder') }}</label>
+                <textarea id="help-question" name="question" rows="3" maxlength="{{ config('help.question_limit', 400) }}" placeholder="{{ __('app.help.placeholder') }}" required></textarea>
+                <div class="help-actions">
+                    <button type="submit" class="button">{{ __('app.help.ask') }}</button>
+                    <button type="button" class="button secondary" data-help-error hidden>{{ __('app.help.explain_error') }}</button>
+                    <a href="{{ route('manual') }}">{{ __('app.help.full_manual') }}</a>
+                </div>
+            </form>
+            <div class="help-answer" data-help-answer role="status" hidden></div>
+            <p class="help-meta" data-help-meta hidden></p>
+        </div>
+    @endif
 </div>
 <script>
     (() => {
@@ -293,5 +325,75 @@
         window.setInterval(tick, 1000);
     })();
 </script>
+@if($layoutHelpDrawer)
+<script>
+    (() => {
+        const drawer = document.getElementById('help-drawer');
+        const launcher = document.querySelector('[data-help-open]');
+        if (!drawer || !launcher) return;
+        const form = drawer.querySelector('[data-help-form]');
+        const input = document.getElementById('help-question');
+        const answer = drawer.querySelector('[data-help-answer]');
+        const meta = drawer.querySelector('[data-help-meta]');
+        const errorButton = drawer.querySelector('[data-help-error]');
+        const pageError = () => {
+            const block = document.querySelector('.error');
+            return block ? (block.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 220) : '';
+        };
+        const setOpen = (open) => {
+            drawer.hidden = !open;
+            launcher.setAttribute('aria-expanded', String(open));
+            if (!open) return;
+            const text = pageError();
+            errorButton.dataset.error = text;
+            errorButton.hidden = text === '';
+            input.focus();
+        };
+        launcher.addEventListener('click', () => setOpen(drawer.hidden));
+        drawer.querySelector('[data-help-close]').addEventListener('click', () => {
+            setOpen(false);
+            launcher.focus();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !drawer.hidden) setOpen(false);
+        });
+        const ask = async (question) => {
+            const text = (question || '').trim();
+            if (text === '') return;
+            input.value = text;
+            answer.hidden = false;
+            answer.textContent = drawer.dataset.busy;
+            meta.hidden = true;
+            form.classList.add('help-busy');
+            try {
+                const response = await fetch(drawer.dataset.action, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': drawer.dataset.csrf,
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({question: text, page: drawer.dataset.page}),
+                });
+                const data = await response.json().catch(() => ({}));
+                answer.textContent = data.answer || drawer.dataset.failed;
+                const source = data.source === 'model' ? drawer.dataset.sourceModel : drawer.dataset.sourceDocs;
+                const refs = (data.references || []).map(item => item.title).filter(Boolean).join(' · ');
+                meta.textContent = refs === '' ? source : `${source} — ${refs}`;
+                meta.hidden = false;
+            } catch {
+                answer.textContent = drawer.dataset.failed;
+            }
+            form.classList.remove('help-busy');
+        };
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            ask(input.value);
+        });
+        errorButton.addEventListener('click', () => ask(errorButton.dataset.error || pageError()));
+    })();
+</script>
+@endif
 </body>
 </html>

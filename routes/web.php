@@ -18,6 +18,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\DesktopLicenceController;
 use App\Http\Controllers\DesktopOwnerSetupController;
 use App\Http\Controllers\DrawModeController;
+use App\Http\Controllers\HelpAssistantController;
 use App\Http\Controllers\Operator\AgentSessionController;
 use App\Http\Controllers\Operator\DashboardController;
 use App\Http\Controllers\Operator\OfflineSaleSyncController;
@@ -91,6 +92,12 @@ Route::middleware(['auth', 'active', 'preferences'])->group(function (): void {
         'live',
     ])->name('dashboard.live');
     Route::view('/manual', 'manual.index')->name('manual');
+    // Hosted installs only: a desktop copy runs offline and the drawer is never
+    // rendered there, so the route itself answers 404. The limiter prefix keeps
+    // asking from sharing a counter with the rest of the area.
+    Route::post('/help/assistant', HelpAssistantController::class)
+        ->middleware('throttle:20,1,help-ask.')
+        ->name('help.assistant');
     Route::get('/draw-mode', [DrawModeController::class, 'index'])->name('draw-mode.index');
     Route::post('/draw-mode', [DrawModeController::class, 'store'])->name('draw-mode.store');
     Route::post('/draw-mode/switch', [DrawModeController::class, 'switch'])->name('draw-mode.switch');
